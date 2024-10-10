@@ -20,6 +20,13 @@ class Package:
     origin : int = 0
     quantity : int = 1
     
+    
+def load_data():
+    coordx = np.load('coordsX')
+    coordy = np.load('coordsY')
+    D = np.load('distance_matrix')
+    
+    return D, coordx, coordy
 
 @njit(parallel = True)
 def generate_D(n, grid_size):
@@ -38,7 +45,8 @@ def generate_D(n, grid_size):
 class AssignmentGame:
     def __init__(self, 
                  transporter : Transporter = None,
-                 grid_size : int = 12,
+                 grid_size : int = 12, # If there is no real data
+                 real_data : bool = False,
                  hub : int = 0,
                  seed = None,
                  max_capacity = 15,
@@ -71,16 +79,11 @@ class AssignmentGame:
             self.hub = grid_size**2//2
         self.transporters_vehicles_colors = ('lightcoral', 'lightgreen', 'lightyellow', 'lightblues')
         
-        # self.G = nx.grid_2d_graph(grid_size, grid_size)
-        # distances = {
-        #     e : {
-        #         'distance' : np.random.binomial(12, 0.1)+1
-        #     }
-        #     for e in self.G.edges
-        # }
-        # nx.set_edge_attributes(self.G, distances)
-        # self.distance_matrix, , coordx, self.coordy = nx.floyd_warshall_numpy(self.G, weight = 'distance')
-        self.distance_matrix, self.coordx, self.coordy = generate_D(grid_size**2, grid_size)
+        if real_data:
+            self.distance_matrix, self.coordx, self.coordy = load_data()
+        else:
+            self.distance_matrix, self.coordx, self.coordy = generate_D(grid_size**2, grid_size)
+            
         self.time_matrix = self.distance_matrix/40 #In cities, the average speed is 40 km/h
         
         
