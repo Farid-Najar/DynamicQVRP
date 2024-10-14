@@ -4,4 +4,4 @@ __pycache__
 # *.zip
 ppo
 ppo_mask
-game*.pkl
+# game*.pkl
