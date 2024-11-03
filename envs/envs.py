@@ -8,7 +8,7 @@ from numba.typed import List
 from sklearn.preprocessing import MinMaxScaler, normalize
 from sklearn import preprocessing
 
-from DynamicQVRP.envs.assignment import AssignmentEnv
+from envs.assignment import AssignmentEnv
 
 from typing import Any, Dict, Optional
 from time import time

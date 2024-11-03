@@ -1,6 +1,6 @@
 from typing import Dict, List
 import numpy as np
-from DynamicQVRP.envs.assignment import AssignmentEnv, GameEnv
+from envs.assignment import AssignmentEnv, GameEnv
 
 #import itertools as it
 import multiprocess as mp
@@ -8,7 +8,7 @@ from numpy import random as rd
 from numpy import exp
 from copy import deepcopy
 
-def recuit(game : AssignmentEnv, T_init, T_limit, lamb = .99, var = False, id = 0, log = False, H = 500) :
+def OA_SA(game : AssignmentEnv, T_init, T_limit, lamb = .99, var = False, id = 0, log = False, H = 500) :
     """
     This function finds a solution for the steiner problem
         using annealing algorithm
@@ -75,7 +75,7 @@ def recuit(game : AssignmentEnv, T_init, T_limit, lamb = .99, var = False, id = 
         print(eval_best)
     return best, list_best_costs, infos
 
-def recuit_tsp(env : GameEnv, T_init, T_limit, lamb = .99, var = False, id = 0, log = False, H = 500) :
+def VA_SA(env : GameEnv, T_init, T_limit, lamb = .99, var = False, id = 0, log = False, H = 500) :
     """
     This function finds a solution for the steiner problem
         using annealing algorithm
@@ -159,7 +159,7 @@ def recuit_multiple(game : AssignmentEnv, T_init, T_limit = 2, nb_researchers = 
     
     def process(g, id, q):
         res = dict()
-        best, list_best_costs, info = recuit(g, T_init = T_init, T_limit = T_limit, lamb = lamb, id = id, log=log, H=H)
+        best, list_best_costs, info = OA_SA(g, T_init = T_init, T_limit = T_limit, lamb = lamb, id = id, log=log, H=H)
         res['sol'] = best
         res['list_best_costs'] = list_best_costs
         res['infos'] = info
@@ -256,4 +256,4 @@ if __name__ == '__main__' :
                         obs_mode='elimination_gain', 
                           change_instance = False, instance_id = 0))
     env.reset()
-    recuit_tsp(env, 1000, 1)
+    VA_SA(env, 1000, 1)

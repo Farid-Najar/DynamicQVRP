@@ -8,7 +8,7 @@ from numba.typed import List
 from sklearn.preprocessing import MinMaxScaler, normalize
 from sklearn import preprocessing
 
-from DynamicQVRP.envs.transporter import Transporter
+from envs.transporter import Transporter
 
 from typing import Any, Dict, Optional
 from time import time
@@ -22,10 +22,10 @@ class Package:
     
     
 def load_data():
-    coordx = np.load('coordsX.npy')
-    coordy = np.load('coordsY.npy')
-    D = np.load('distance_matrix.npy')
-    probs = np.load('prob_dests.npy')
+    coordx = np.load('data/coordsX.npy')
+    coordy = np.load('data/coordsY.npy')
+    D = np.load('data/distance_matrix.npy')
+    probs = np.load('data/prob_dests.npy')
     
     return D, coordx, coordy, probs
 
@@ -1119,10 +1119,10 @@ class RemoveActionEnv(gym.Env):
             self.action_mask[a] = False
             a = (self.destinations[:, None] == a).argmax(axis=0)
         
-        if self.action_mode == 'all_nodes':
-            obs = self.action_mask.astype(int)
-        else:
-            obs = self.obs
+        # if self.action_mode == 'all_nodes':
+        #     obs = self.action_mask.astype(int)
+        # else:
+        #     obs = self.obs
             
         done = d or bool(self.t > (self.H-1))
         
@@ -1550,6 +1550,8 @@ class GameEnv(gym.Env):
                          node_shape='s',
                          arrows=True
         )
+        
+        plt.ylim(min(self.coordy[self.dests]) - 1, max(self.coordy[self.dests])+1)
 
         # handles, labels = ax.get_legend_handles_labels()
         # labels = list(range(len(colors)))
