@@ -47,7 +47,7 @@ class AssignmentGame:
     def __init__(self, 
                  transporter : Transporter = None,
                  grid_size : int = 12, # If there is no real data
-                 real_data : bool = False,
+                 real_data : bool = True,
                  hub : int = 0,
                  seed = None,
                  max_capacity = 15,
@@ -569,7 +569,7 @@ class AssignmentEnv(gym.Env):
                  saved_routes = None,
                  saved_dests = None,
                  saved_q = None,
-                 obs_mode = 'routes', # possible values ['multi', 'cost_matrix','routes', 'action', 'elimination_gain', 'assignment', 'game', 'state']
+                 obs_mode = 'multi', # possible values ['multi', 'cost_matrix','routes', 'action', 'elimination_gain', 'assignment', 'game', 'state', 'excess']
                  change_instance = True,
                  instance_id = 0,
                  ):
@@ -595,7 +595,8 @@ class AssignmentEnv(gym.Env):
                 "other" : (self._game.max_capacity + 2)*self._game.num_vehicles + 1
             }
             
-            
+        elif obs_mode == 'excess':
+            self.obs_dim = 1
         
         elif obs_mode == 'routes':
             self.obs_dim = ((2*(self._game.max_capacity+2)-1)*self._game.num_vehicles) + 2*self._game.num_packages +1
@@ -639,6 +640,9 @@ class AssignmentEnv(gym.Env):
             self.observation_space = gym.spaces.Box(0, 1, (1, d, d,), np.float64)
         elif obs_mode == 'elimination_gain':
             self.observation_space = gym.spaces.Box(0, 1, (self.obs_dim,), np.float64)
+            
+        elif obs_mode == 'excess':
+            self.obs_dim = gym.spaces.Box(-self._game.Q, self._game.Q, (self.obs_dim,), np.float64)
         else:
             self.observation_space = gym.spaces.Box(0, 1e10, (self.obs_dim,), np.float64)
         self.action_space = gym.spaces.MultiBinary(self._game.num_packages)
@@ -776,6 +780,8 @@ class AssignmentEnv(gym.Env):
         # else:
         #     self.initial_routes = self.saved_routes[self.order[self.reset_counter]]
         
+        if self.obs_mode == 'excess':
+            return info['excess_emission'], info
             
         if self.obs_mode == 'cost_matrix' or self.obs_mode == 'multi':
             
@@ -937,7 +943,13 @@ class AssignmentEnv(gym.Env):
         info['distance_per_vehicle'] = distance
         info['excess_emission'] = total_emissions - self._game.Q
         info['omitted'] = omitted
+        
+        done = bool(info['excess_emission']<=1e-5)
         # info['solution'] = self.solutions if sol is None else sol
+        
+        if self.obs_mode == 'excess':
+            return info['excess_emission'], r, done, done, info
+        
         if self.obs_mode == 'routes':
             self.observation[-len(action)-1] = info['excess_emission']
             
@@ -959,7 +971,6 @@ class AssignmentEnv(gym.Env):
             r = -(total_costs + max(0, total_emissions - self._game.Q)*self._game.CO2_penalty + omission_penalty)
         else:
             info['r'] = -(total_costs + max(0, total_emissions - self._game.Q)*self._game.CO2_penalty + omission_penalty)
-        done = bool(info['excess_emission']<=1e-5)
         # print(type(done))
         
         return self.observation.copy(), r, done, done, info

@@ -1,11 +1,10 @@
 from copy import deepcopy
-from DynamicQVRP.envs.assignment import AssignmentEnv, AssignmentGame, Package, RemoveActionEnv
+from envs.assignment import AssignmentEnv, AssignmentGame, Package, RemoveActionEnv
 import numpy as np
 import pickle
 import multiprocess as mp
-from DynamicQVRP.methods.OR.SA_baseline import recuit
 
-def create_routes(env : AssignmentEnv, nb_routes = 5_000, retain_rate = 0., time_budget = 1, change_quantity = False, real_data = False):
+def create_routes(env : AssignmentEnv, nb_routes = 5_000, retain_rate = 0., time_budget = 1, change_quantity = False):
     
     margin = 0
     nb_routes += margin
@@ -50,13 +49,13 @@ def create_routes(env : AssignmentEnv, nb_routes = 5_000, retain_rate = 0., time
         comment = f'_retain{retain_rate}'
     else:
         comment = ''
-    if real_data:
-        with open(f'./real_game_K{env._game.num_packages}{comment}.pkl', 'wb') as f:
-            pickle.dump(env._game, f, -1)
+    # if real_data:
+    #     with open(f'./real_game_K{env._game.num_packages}{comment}.pkl', 'wb') as f:
+    #         pickle.dump(env._game, f, -1)
 
-    else:
-        with open(f'./game_K{env._game.num_packages}{comment}.pkl', 'wb') as f:
-            pickle.dump(env._game, f, -1)
+    # else:
+    with open(f'data/game_K{env._game.num_packages}{comment}.pkl', 'wb') as f:
+        pickle.dump(env._game, f, -1)
     
     q = mp.Manager().Queue()
     
@@ -97,93 +96,13 @@ def create_routes(env : AssignmentEnv, nb_routes = 5_000, retain_rate = 0., time
     routes = routes[:nb_routes-margin]
     print('operation succeeded!')
     
-    if real_data:
-        np.save(f'real_routes_K{env._game.num_packages}{comment}', routes)
-        np.save(f'real_destinations_K{env._game.num_packages}{comment}', destinations)
+    # if real_data:
+    #     np.save(f'real_routes_K{env._game.num_packages}{comment}', routes)
+    #     np.save(f'real_destinations_K{env._game.num_packages}{comment}', destinations)
 
-    else:
-        np.save(f'routes_K{env._game.num_packages}{comment}', routes)
-        np.save(f'destinations_K{env._game.num_packages}{comment}', destinations)
-    
-
-def create_labels(K = 100):
-    path = 'TransportersDilemma/RL/'
-    with open(path+f'game_K{K}.pkl', 'rb') as f:
-        g = pickle.load(f)
-    routes = np.load(path+f'routes_K{K}.npy')
-    dests = np.load(path+f'destinations_K{K}.npy')
-    
-    def process(g, id, q):
-        np.random.seed(id)
-        
-        env = RemoveActionEnv(game = g, saved_routes = routes, saved_dests=dests, 
-        #   obs_mode='action', 
-          change_instance = False, rewards_mode='normalized_terminal', instance_id = id)
-        env.reset()
-        action_SA, *_ = recuit(env._env, 5000, 1, 0.999, H=100_000)
-        q.put((id, action_SA))
-        print(f'{id} done')
-    
-    q = mp.Manager().Queue()
-    
-    y = np.zeros((len(dests), K))
-    ps = []
-    
-    for i in range(len(y)):
-        ps.append(mp.Process(target = process, args = (deepcopy(g), i, q,)))
-        ps[-1].start()
-        
-    for i in range(len(ps)):
-        ps[i].join()
-        
-    print('all done !')
-    while not q.empty():
-        i, a = q.get()
-        y[i] = a
-        
-    
-    np.save(f'y_K{K}', y)
-    
-
-def create_x(K = 100):
-    path = 'TransportersDilemma/RL/'
-    with open(path+f'game_K{K}.pkl', 'rb') as f:
-        g = pickle.load(f)
-    routes = np.load(path+f'routes_K{K}.npy')
-    dests = np.load(path+f'destinations_K{K}.npy')
-    
-    def process(g, id, q):
-        np.random.seed(id)
-        
-        env = RemoveActionEnv(game = g, saved_routes = routes, saved_dests=dests, 
-        #   obs_mode='action', 
-          change_instance = False, rewards_mode='normalized_terminal', instance_id = id)
-        obs, _ = env.reset()
-        q.put((id, obs))
-        print(f'{id} done')
-    
-    q = mp.Manager().Queue()
-    env = RemoveActionEnv(game = g, saved_routes = routes, saved_dests=dests, 
-        #   obs_mode='action', 
-          change_instance = False, rewards_mode='normalized_terminal', instance_id = 0)
-    obs, _ = env.reset()
-    x = np.zeros((len(dests), *obs.shape))
-    ps = []
-    
-    for i in range(len(x)):
-        ps.append(mp.Process(target = process, args = (deepcopy(g), i, q,)))
-        ps[-1].start()
-        
-    for i in range(len(ps)):
-        ps[i].join()
-        
-    print('all done !')
-    while not q.empty():
-        i, a = q.get()
-        x[i] = a
-        
-    
-    np.save(f'x_K{K}', x)
+    # else:
+    np.save(f'data/routes_K{env._game.num_packages}{comment}', routes)
+    np.save(f'data/destinations_K{env._game.num_packages}{comment}', destinations)
     
 
 def create_quantities(g, nb_routes = 5_000, time_budget = 1, real_data = False):
@@ -314,7 +233,6 @@ def test():
     
 
 if __name__ == '__main__':
-    REAL = True
     n = 200
     
     # g = AssignmentGame(
@@ -330,80 +248,46 @@ if __name__ == '__main__':
     # create_routes(env, n, time_budget=30, real_data=REAL)
     
     g = AssignmentGame(
-            real_data=REAL,
-            max_capacity=13,
-            Q = 800,
-            K=50,
-            emissions_KM = [0., .1, .3, .3],
-            costs_KM = [1, 1, 1, 1],
-            seed=42
+            max_capacity=25,
+            Q = 100,
+            K=25,
+            emissions_KM = [.3],
+            costs_KM = [1],
+            seed=1917
         )
     env = AssignmentEnv(g)
-    create_routes(env, n, time_budget=30, retain_rate=.8, real_data=REAL)
-    
-    
-    
-    g = AssignmentGame(
-            real_data=REAL,
-            max_capacity=25,
-            Q = 900,
-            K=100,
-            emissions_KM = [0., .1, .3, .3],
-            costs_KM = [1, 1, 1, 1],
-            seed=42
-        )
-    env = AssignmentEnv(g)
-    create_routes(env, n, time_budget=60, real_data=REAL)
-    
-    g = AssignmentGame(
-            real_data=REAL,
-            max_capacity=25,
-            Q = 500,
-            K=20,
-            emissions_KM = [0., .1, .3, .3],
-            costs_KM = [1, 1, 1, 1],
-            seed=42
-        )
-    # env = AssignmentEnv(g)
-    # create_routes(env, 1050, time_budget=60, retain_rate=1, change_quantity=True)
-    # # create_labels()
-    # # create_x()
-    # # test()
-    create_quantities(g, n, time_budget=30, real_data=REAL)
+    create_routes(env, n, time_budget=3)
     
     # g = AssignmentGame(
-    #         grid_size=20,
-    #         max_capacity=50,
-    #         Q = 75,
-    #         K=250,
-    #         emissions_KM = [0., .1, .1, .3, .3],
-    #         costs_KM = [1, 1, 1, 1, 1],
-    #         seed=42
-    #     )
-    # env = AssignmentEnv(g)
-    # create_routes(env, 1050, time_budget=100)
-    
-    # g = AssignmentGame(
-    #         grid_size=12,
-    #         max_capacity=5,
-    #         Q = 5,
-    #         K=10,
-    #         emissions_KM = [.1, .3],
-    #         costs_KM = [1, 1],
-    #         seed=42
-    #     )
-    # env = AssignmentEnv(g)
-    
-    # g = AssignmentGame(
-    #         real_data=True,
-    #         max_capacity=10,
+    #         max_capacity=13,
     #         Q = 800,
-    #         K=30,
-    #         emissions_KM = [0., .1, .3],
-    #         costs_KM = [1, 1, 1],
+    #         K=50,
+    #         emissions_KM = [0., .1, .3, .3],
+    #         costs_KM = [1, 1, 1, 1],
     #         seed=42
     #     )
     # env = AssignmentEnv(g)
-    # create_routes(env, 1050, time_budget=10)
+    # create_routes(env, n, time_budget=30, retain_rate=.8)
     
-    # create_routes(env, 1000, time_budget=5)
+    
+    
+    # g = AssignmentGame(
+    #         max_capacity=25,
+    #         Q = 900,
+    #         K=100,
+    #         emissions_KM = [0., .1, .3, .3],
+    #         costs_KM = [1, 1, 1, 1],
+    #         seed=42
+    #     )
+    # env = AssignmentEnv(g)
+    # create_routes(env, n, time_budget=60)
+    
+    # g = AssignmentGame(
+    #         max_capacity=25,
+    #         Q = 500,
+    #         K=20,
+    #         emissions_KM = [0., .1, .3, .3],
+    #         costs_KM = [1, 1, 1, 1],
+    #         seed=42
+    #     )
+    # create_quantities(g, n, time_budget=30)

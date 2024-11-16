@@ -8,12 +8,19 @@ from numba.typed import List
 from sklearn.preprocessing import MinMaxScaler, normalize
 from sklearn import preprocessing
 
-from envs.assignment import AssignmentEnv
+from envs.assignment import AssignmentEnv, AssignmentGame, GameEnv
+# from methods import VA_SA
 
 from typing import Any, Dict, Optional
 from time import time
 import gymnasium as gym
 
+import pickle
+
+@njit
+def knn(dests, k):
+    idx = np.argpartition(dests, k)
+    return np.mean(dests[idx[:k]])
 
 @njit
 def _step(
@@ -93,45 +100,64 @@ def _step(
     
     
 class DynamicQVRPEnv(gym.Env):
-    #TODO
+    
     def __init__(self, 
-                 env : AssignmentEnv = None,
+                #  env : AssignmentEnv = None,
+                 K = 50,
+                 DoD = 0.,
+                 retain_rate = 0.,
+                 use_dataset = True,
                  is_0_allowed = False,
-                #  saved_routes = None,
-                #  saved_dests = None,
-                #  change_instance = True,
-                #  instance_id = 0,
+                 Q = 0,
+                 change_instance = True,
+                 instance_id = 0,
+                 re_optimization  = False, #TODO
                  ):
         
-        self._env = env
-        self.K = self._env._game.num_packages
-        self.omission_cost = self._env._game.omission_cost
-        self.CO2_penalty = self._env._game.CO2_penalty
-        self.Q = self._env._game.Q
-        self.emissions_KM = self._env._game.emissions_KM
-        self.costs_KM = self._env._game.costs_KM
-        self.max_capacity = self._env._game.max_capacity
+        if use_dataset:
+            retain_comment = f"_retain{retain_rate}" if retain_rate else ""
+            with open(f'RL/game_K{K}{retain_comment}.pkl', 'rb') as f:
+                g = pickle.load(f)
+            routes = np.load(f'RL/real_routes_K{K}{retain_comment}.npy')
+            dests = np.load(f'RL/real_destinations_K{K}{retain_comment}.npy')
+            
+            if K == 20:
+                qs = np.load(f'RL/quantities_K{K}_retain1.0.npy')
+                
+            self._env = GameEnv(AssignmentEnv(game = g, saved_routes = routes, saved_dests=dests, saved_q = qs,
+                        obs_mode='excess', 
+                          change_instance = change_instance, instance_id = instance_id), is_0_allowed)
+        else:
+            self._env = GameEnv(AssignmentEnv(AssignmentGame(K=K, Q=Q)), is_0_allowed)
+        
+        self.K = self._env.K
+        self.omission_cost = self._env.omission_cost
+        self.CO2_penalty = self._env.CO2_penalty
+        self.Q = self._env.Q
+        self.emissions_KM = self._env.emissions_KM
+        self.costs_KM = self._env.costs_KM
+        self.max_capacity = self._env.max_capacity
         self.is_0_allowed = is_0_allowed
         self.num_actions = len(self.emissions_KM) + 1 if is_0_allowed else len(self.emissions_KM)
         
-        self.coordx = self._env._game.coordx
-        self.coordy = self._env._game.coordy
-        # self.instance_id = instance_id
-        # self.saved_routes = saved_routes
-        # self.saved_dests = saved_dests
-        # self.change_instance = change_instance
+        self.coordx = self._env.coordx
+        self.coordy = self._env.coordy
         
-    
+        #TODO Prepare the dynamic part
+        
+    #TODO
     def reset(self):
         res = self._env.reset()
         self.dests = self._env.destinations
+        self.assignment = np.zeros(self.K, dtype=np.int64)
         self.routes = np.zeros((len(self.emissions_KM), self.max_capacity+2), dtype=np.int64)
-        for i in range(len(self._env.initial_routes)):
+        for v in range(len(self._env.initial_routes)):
             k = 1
-            for j in range(2, len(self._env.initial_routes[i]), 2):
-                if not self._env.initial_routes[i, j]:
+            for j in range(2, len(self._env.initial_routes[v]), 2):
+                if not self._env.initial_routes[v, j]:
                     break
-                self.routes[i, k] = self._env.initial_routes[i, j]
+                self.routes[v, k] = self._env.initial_routes[v, j]
+                self.assignment[self.routes[v, k]-1] = v
                 k += 1
             
         self.quantities = self._env.quantities
@@ -140,7 +166,7 @@ class DynamicQVRPEnv(gym.Env):
         self.omitted = []
         
         return res
-    
+    #TODO
     def step(self, action: np.ndarray) -> tuple[Any, float, bool, bool, dict[str, Any]]:
         
         self.routes = np.zeros((len(self.emissions_KM), self.max_capacity+2), dtype=np.int64)
