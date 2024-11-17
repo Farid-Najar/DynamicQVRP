@@ -199,14 +199,18 @@ class DynamicQVRPEnv(gym.Env):
         self.NA[self.j] = False
         
         if action:
-            self.action_mask[self.j] = True
-            self.A[self.j] = True
+            
             if self.re_optimization:
                 self.assignment, self.routes, self.info = SA_routing(self)
             else:
                 self.assignment, self.routes, self.info = insertion(self)
 
-            # TODO *** consider the case the acceptance cannot be done bcz of the quota
+            if not self.assignment[self.j]:
+                action = 0
+                
+        if action:
+            self.action_mask[self.j] = True
+            self.A[self.j] = True
             r = self.quantities[self.j]
             self.episode_reward += r
             self.remained_capacity -= r
