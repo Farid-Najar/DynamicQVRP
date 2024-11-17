@@ -182,6 +182,7 @@ class DynamicQVRPEnv(gym.Env):
         obs = self._get_obs()
         
         self.info.update({
+            "omitted" : [],
             "episode rewards" : self.episode_reward,
             "quantity accepted" : self.total_capacity - self.remained_capacity,
             "remained capacity" : self.remained_capacity,
@@ -195,7 +196,6 @@ class DynamicQVRPEnv(gym.Env):
         self.h += 1
         assert isinstance(action, int)
         
-        # TODO update masks
         self.NA[self.j] = False
         
         if action:
@@ -206,6 +206,7 @@ class DynamicQVRPEnv(gym.Env):
             else:
                 self.assignment, self.routes, self.info = insertion(self)
 
+            # TODO *** consider the case the acceptance cannot be done bcz of the quota
             r = self.quantities[self.j]
             self.episode_reward += r
             self.remained_capacity -= r
@@ -217,6 +218,10 @@ class DynamicQVRPEnv(gym.Env):
             })
         else:
             r = 0
+            self.omitted.append(self.j)
+            self.info.update({
+                "omitted" : self.omitted,
+            })
         self.j += 1
         obs = self._get_obs()
         
