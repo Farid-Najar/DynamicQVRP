@@ -9,7 +9,6 @@ from numpy import exp
 from copy import deepcopy
 from numba import njit
 
-
 @njit
 def _step(
     action,
@@ -17,21 +16,15 @@ def _step(
     cost_matrix,
     distance_matrix,
     quantities,
-    is_0_allowed,
     max_capacity,
-    omission_cost,
     costs_KM,
     emissions_KM,
 ):
-    info = dict()
     # routes = []#List()
     costs = np.zeros(len(cost_matrix), np.float64)
     emissions = np.zeros(len(cost_matrix), np.float64)
     # info['LCF'] = np.zeros(len(cost_matrix), np.float64)
     # info['omitted'] = alpha    
-    
-    if not is_0_allowed:
-        action += 1
     
     a = action.copy()
     
@@ -61,7 +54,7 @@ def _step(
                 # if k <= max_capacity:
                 costs[i-1] += distance_matrix[routes[i-1][k-1], dest]*costs_KM[i-1]
                 emissions[i-1] += distance_matrix[routes[i-1][k-1], dest]*emissions_KM[i-1]
-                info['LCF'][i-1] += cost_matrix[i-1, routes[i-1][k-1], dest]
+                # info['LCF'][i-1] += cost_matrix[i-1, routes[i-1][k-1], dest]
                 routes[i-1, k] = dest
                 # print(routes[i-1], costs[i-1], emissions[i-1])
                 # if k > 1:
@@ -73,7 +66,7 @@ def _step(
                 
             costs[i-1] += distance_matrix[routes[i-1][k-1], 0]*costs_KM[i-1]
             emissions[i-1] += distance_matrix[routes[i-1][k-1], 0]*emissions_KM[i-1]
-            info['LCF'][i-1] += cost_matrix[i-1, routes[i-1][k-1], 0]
+            # info['LCF'][i-1] += cost_matrix[i-1, routes[i-1][k-1], 0]
             # routes[i].append(0)
             # if k > 1:
             #     obs[routes[i-1][k-1] - 1] = cost_matrix[i-1, routes[i-1][k-2], routes[i-1][k-1]] + \
@@ -83,24 +76,22 @@ def _step(
         # else:
         #     info['omitted'] = alpha
             
-    return routes, a, costs, emissions, info
+    return routes, a, costs, emissions
 
 
 def _run(env, assignment):
-    routes = np.zeros((len(env.emissions_KM), env.max_capacity+2), dtype=np.int64)
-    routes, a, costs, emissions, info = _step(
+    routes, a, costs, emissions = _step(
         assignment,
         env.routes,
         env.cost_matrix,
         env.distance_matrix,
         env.quantities,
-        env.is_0_allowed,
         env.max_capacity,
-        env.omission_cost,
         env.costs_KM,
         env.emissions_KM,
     )
     
+    info = dict()
     total_emission = np.sum(emissions)
     info['assignment'] = a
     info['routes'] = routes
@@ -108,30 +99,40 @@ def _run(env, assignment):
     info['omitted'] = np.where(a==0)[0]
     info['remained_quota'] = env.Q - total_emission
     
+    env.routes = routes
     
-def insertion(env, assignment, i):
+    r = -(np.sum(costs) + max(0, total_emission - env.Q - 1e-5)*env.CO2_penalty + np.sum(a == 0)*env.omission_cost)
+    d = total_emission - env.Q - 1e-5 <= 0
+    # r *= float(d)
+    
+    return r, d, info
+    
+    
+def insertion(env):
+    
+    assignment = env.assignment
     best = 0
-    *_, info = env.step(assignment)
-    eval_best = -info['r']
+    r, d, info = _run(env, assignment)
+    eval_best = r*float(d)
     best_info = deepcopy(info)
     best_routes = env.routes.copy()
     
     for v in range(1, len(env.costs_KM) + 1):
-        assignment[i] = v
-        *_, d, info = env.step(assignment)
-        r = info['r']
+        assignment[env.j] = v
+        r, d, info = _run(env, assignment)
+        
         if r > eval_best and d:
             eval_best = r
             best = v
             best_info = deepcopy(info)
             best_routes = env.routes.copy()
             
-    assignment[i] = best
+    assignment[env.j] = best
     return assignment, best_routes, best_info
         
 
-def SA_routing(env, action_mask : np.ndarray,
-               T_init = 5000, T_limit = 1, lamb = .999, var = False, id = 0, log = False, H = 500) :
+def SA_routing(env,
+               T_init = 50_000, T_limit = 1, lamb = .999, var = False, id = 0, log = False, H = np.inf) :
     """
     This function finds a solution for the steiner problem
         using annealing algorithm
@@ -141,13 +142,17 @@ def SA_routing(env, action_mask : np.ndarray,
     :return: the solution found and the evolution of the best evaluations
     """
     
-    best = np.ones(env.K, int)
+    action_mask = env.action_mask
+    num_actions = len(env.costs_KM)
+    static_mode = env.H == 0
+    
+    best = np.ones(len(env.distance_matrix) - 1, int)
     best[~action_mask] = 0
     solution = best.copy()
     T = T_init
-    *_, info = env.step(best)
+    r, d, info = _run(env, best)
     best_routes = env.routes.copy()
-    eval_best = -info['r']
+    eval_best = -r
     best_info = deepcopy(info)
     eval_solution = eval_best
     m = 0
@@ -155,15 +160,18 @@ def SA_routing(env, action_mask : np.ndarray,
     flag100 = True
     # infos = []
     
-    if env.num_actions <= 2:
+    if not static_mode and num_actions <= 2:
         return best, best_routes, best_info
+    
+    if static_mode:
+        num_actions += 1
     
     while(T>T_limit):
         
         # infos['T'].append(T)
-        sol = rand_neighbor(solution, action_mask, nb_actions=env.num_actions)
-        *_, d, _, info = env.step(sol)
-        eval_sol = -info['r']
+        sol = rand_neighbor(solution, action_mask, nb_actions=num_actions, allow_0 = static_mode)
+        r, d, info = _run(env, sol)
+        eval_sol = -r
         
         if m%20 == 0 and log:
             print(20*'-')
@@ -204,10 +212,11 @@ def SA_routing(env, action_mask : np.ndarray,
     if log:
         print(f'm = {m}')
         print(eval_best)
+    print(f'm = {m}')
     
     return best, best_routes, best_info#, list_best_costs#, infos
 
-def rand_neighbor(solution : np.ndarray, action_mask, nb_changes = 1, nb_actions = 2) :
+def rand_neighbor(solution : np.ndarray, action_mask, nb_changes = 1, nb_actions = 2, allow_0 = False) :
     """
     Generates new random solution.
     :param solution: the solution for which we search a neighbor
@@ -225,6 +234,7 @@ def rand_neighbor(solution : np.ndarray, action_mask, nb_changes = 1, nb_actions
     # else:
     candidates = list(range(nb_actions))
     candidates.remove(solution[i])
-    candidates.remove(0)
+    if not allow_0:
+        candidates.remove(0)
     new_solution[i] = rd.choice(candidates, nb_changes, replace=False)
     return new_solution
