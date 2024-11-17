@@ -5,10 +5,9 @@ import networkx as nx
 import numpy as np
 from numba import njit
 from numba.typed import List
-from sklearn.preprocessing import MinMaxScaler, normalize
-from sklearn import preprocessing
 
 from envs.assignment import AssignmentEnv, AssignmentGame, GameEnv
+from methods.OR.routing import SA_routing, insertion
 # from methods import VA_SA
 
 from typing import Any, Dict, Optional
@@ -18,170 +17,155 @@ import gymnasium as gym
 import pickle
 
 @njit
-def knn(dests, k):
-    idx = np.argpartition(dests, k)
-    return np.mean(dests[idx[:k]])
+def knn(a, k):
+    idx = np.argpartition(a, k)
+    return a[idx[:k]]
 
-@njit
-def _step(
-    action,
-    routes,
-    cost_matrix,
-    distance_matrix,
-    quantities,
-    is_0_allowed,
-    max_capacity,
-    omission_cost,
-    costs_KM,
-    emissions_KM,
-):
-    info = dict()
-    # routes = []#List()
-    costs = np.zeros(len(cost_matrix), np.float64)
-    emissions = np.zeros(len(cost_matrix), np.float64)
-    info['LCF'] = np.zeros(len(cost_matrix), np.float64)
-    obs = np.zeros(action.shape, np.float64)
-    # info['omitted'] = alpha    
-    
-    if not is_0_allowed:
-        action += 1
-    
-    a = action.copy()
-    
-    for i in range(len(cost_matrix)+1):
-        # routes.append([])#List([0]))
-        alpha = list(np.where(action == i)[0] + 1)
-        if i:
-            quantity = 0
-            # routes[i].append(int(0))
-            k = 1
-            while True:
-                if len(alpha) == 0:
-                    break
-                j = int(np.argmin(cost_matrix[i-1, routes[i-1][k-1], np.array(alpha)]))
-                
-                quantity += quantities[alpha[j]-1]
-                
-                if quantity > max_capacity:
-                    # routes[0] += alpha
-                    info['LCF'][i-1] += np.sum(quantities[np.array(alpha)-1])*omission_cost
-                    a[np.array(alpha) - 1] = 0
-                    break
-                # temp = cost_matrix[i-1, routes[i-1][-1], alpha]
-                # print(cost_matrix[i-1, routes[i-1][-1], np.array(alpha)])
-                # print(alpha)
-                dest = alpha.pop(j)
-                # if k <= max_capacity:
-                costs[i-1] += distance_matrix[routes[i-1][k-1], dest]*costs_KM[i-1]
-                emissions[i-1] += distance_matrix[routes[i-1][k-1], dest]*emissions_KM[i-1]
-                info['LCF'][i-1] += cost_matrix[i-1, routes[i-1][k-1], dest]
-                routes[i-1, k] = dest
-                # print(routes[i-1], costs[i-1], emissions[i-1])
-                if k > 1:
-                    obs[routes[i-1][k-1] - 1] = cost_matrix[i-1, routes[i-1][k-2], routes[i-1][k-1]] + \
-                        cost_matrix[i-1, routes[i-1][k-1], routes[i-1][k]] - \
-                        cost_matrix[i-1, routes[i-1][k-2], routes[i-1][k]]
-                
-                k+=1
-                
-            costs[i-1] += distance_matrix[routes[i-1][k-1], 0]*costs_KM[i-1]
-            emissions[i-1] += distance_matrix[routes[i-1][k-1], 0]*emissions_KM[i-1]
-            info['LCF'][i-1] += cost_matrix[i-1, routes[i-1][k-1], 0]
-            # routes[i].append(0)
-            if k > 1:
-                obs[routes[i-1][k-1] - 1] = cost_matrix[i-1, routes[i-1][k-2], routes[i-1][k-1]] + \
-                        cost_matrix[i-1, routes[i-1][k-1], routes[i-1][k]] - \
-                        cost_matrix[i-1, routes[i-1][k-2], routes[i-1][k]]
-                
-        # else:
-        #     info['omitted'] = alpha
-            
-    return routes, a, obs, costs, emissions, info
-    
-    
+
 class DynamicQVRPEnv(gym.Env):
     
     def __init__(self, 
                 #  env : AssignmentEnv = None,
                  K = 50,
+                 Q = 50,
                  DoD = 0.,
+                 vehicle_capacity = 15, # We assume it homogeneous for all vehicles
                  retain_rate = 0.,
                  use_dataset = True,
-                 is_0_allowed = False,
-                 Q = 0,
-                 change_instance = True,
-                 instance_id = 0,
-                 re_optimization  = False, #TODO
+                #  is_0_allowed = True,
+                 re_optimization  = False,
+                 costs_KM = [1], 
+                 emissions_KM = [.3], 
+                 k_min : int = 2,
+                 k_med : int = 5
                  ):
+        
+        self.instance = -1
         
         if use_dataset:
             retain_comment = f"_retain{retain_rate}" if retain_rate else ""
-            with open(f'RL/game_K{K}{retain_comment}.pkl', 'rb') as f:
-                g = pickle.load(f)
-            routes = np.load(f'RL/real_routes_K{K}{retain_comment}.npy')
-            dests = np.load(f'RL/real_destinations_K{K}{retain_comment}.npy')
+            # with open(f'data/game_K{K}{retain_comment}.pkl', 'rb') as f:
+            #     g = pickle.load(f)
+            routes = np.load(f'data/routes_K{K}{retain_comment}.npy')
+            all_dests = np.load(f'data/destinations_K{K}{retain_comment}.npy')
             
             if K == 20:
-                qs = np.load(f'RL/quantities_K{K}_retain1.0.npy')
+                qs = np.load(f'data/quantities_K{K}_retain1.0.npy')
+            else:
+                qs = np.ones((len(all_dests), K))
                 
-            self._env = GameEnv(AssignmentEnv(game = g, saved_routes = routes, saved_dests=dests, saved_q = qs,
+            g = AssignmentGame(K=K, Q=Q, costs_KM=costs_KM, emissions_KM=emissions_KM, max_capacity=vehicle_capacity, dynamic=True)
+            self._env = GameEnv(AssignmentEnv(game = g, saved_routes = routes, saved_dests=all_dests, saved_q = qs,
                         obs_mode='excess', 
-                          change_instance = change_instance, instance_id = instance_id), is_0_allowed)
+                          change_instance = True, instance_id = self.instance+1), True)
         else:
-            self._env = GameEnv(AssignmentEnv(AssignmentGame(K=K, Q=Q)), is_0_allowed)
+            self._env = GameEnv(AssignmentEnv(
+                AssignmentGame(K=K, Q=Q, dynamic=True))
+            , True
+            )
         
-        self.K = self._env.K
-        self.omission_cost = self._env.omission_cost
-        self.CO2_penalty = self._env.CO2_penalty
+        self.H = int(DoD*K) # ou = self.K
+        self.K = K
+        self.p = self._env._env._game.prob_dests
+        self.D = self._env._env._game.distance_matrix
+        # self.omission_cost = self._env.omission_cost
+        # self.CO2_penalty = self._env.CO2_penalty
         self.Q = self._env.Q
-        self.emissions_KM = self._env.emissions_KM
-        self.costs_KM = self._env.costs_KM
-        self.max_capacity = self._env.max_capacity
-        self.is_0_allowed = is_0_allowed
-        self.num_actions = len(self.emissions_KM) + 1 if is_0_allowed else len(self.emissions_KM)
+        self.k_min = k_min
+        self.k_med = k_med
+        self.emissions_KM = emissions_KM
+        self.costs_KM = costs_KM
+        self.max_capacity = vehicle_capacity
+        self.remained_capacity = vehicle_capacity*len(costs_KM)
+        self.total_capacity = vehicle_capacity*len(costs_KM)
+        # self.is_0_allowed = is_0_allowed
+        self.num_actions = len(self.emissions_KM) + 1 #if is_0_allowed else len(self.emissions_KM)
+        self.re_optimization = re_optimization
         
         self.coordx = self._env.coordx
         self.coordy = self._env.coordy
         
-        #TODO Prepare the dynamic part
+        self.observation_space = gym.spaces.Box(0, 1, (6,)) #TODO * Change if obs change
+        self.action_space = gym.spaces.Discrete(2)
         
-    #TODO
-    def reset(self):
-        res = self._env.reset()
-        self.dests = self._env.destinations
-        self.assignment = np.zeros(self.K, dtype=np.int64)
-        self.routes = np.zeros((len(self.emissions_KM), self.max_capacity+2), dtype=np.int64)
-        for v in range(len(self._env.initial_routes)):
-            k = 1
-            for j in range(2, len(self._env.initial_routes[v]), 2):
-                if not self._env.initial_routes[v, j]:
-                    break
-                self.routes[v, k] = self._env.initial_routes[v, j]
-                self.assignment[self.routes[v, k]-1] = v
-                k += 1
+        
+    def _init_instance(self, instance_id):
+        self._env.reset(calculate_routes=False)
+        
+        self.h = 0 # ou = self.K - int(DoD*K)
+        if instance_id < 0:
+            self.instance += 1
+        else:
+            self.instance = instance_id
             
+        self.dests = self._env.dests
         self.quantities = self._env.quantities
         self.distance_matrix = self._env.distance_matrix
-        self.cost_matrix = self._env.costs_matrix
+        self.cost_matrix = self._env.cost_matrix
         self.omitted = []
         
-        return res
-    #TODO
-    def step(self, action: np.ndarray) -> tuple[Any, float, bool, bool, dict[str, Any]]:
+        self.episode_reward = 0
         
-        self.routes = np.zeros((len(self.emissions_KM), self.max_capacity+2), dtype=np.int64)
-        self.routes, a, obs, costs, emissions, info = _step(
-            action,
-            self.routes,
-            self.cost_matrix,
-            self.distance_matrix,
-            self.quantities,
-            self.is_0_allowed,
-            self.max_capacity,
-            self.omission_cost,
-            self.costs_KM,
-            self.emissions_KM,
-        )
+        # self.dests = self.all_dests[self.instance]
+        self.j = self.K - self.H -1
+        
+        self.action_mask = np.ones(self.K, bool)
+        self.action_mask[self.j+1:] = False
+        print(self.action_mask)
+        print(self.j)
+        self.A = np.zeros(len(self.D), bool)
+        self.A[self.dests[:self.j]] = True
+        self.A[self._env._env._game.hub] = True
+        self.NA = ~self.A
+        
+        self.remained_capacity -= np.sum(self.quantities[:self.j])
+        
+        
+    def _update_instance(self):
+        #TODO ***
+        pass
+    
+    def _compute_min_med(self):
+        min_knn = np.mean(knn(self.p[self.A]*self.D[self.A, self.j], self.k_min))
+        med_knn = np.median(knn(self.p[self.NA]*self.D[self.NA, self.j], self.k_med + 1)[1:])
+        
+        return min_knn, med_knn
+    
+    def reset(self, instance_id = -1):
+        
+        
+        self._init_instance(instance_id)
+        
+        self.assignment, self.routes, info = SA_routing(self._env, self.action_mask)
+        
+        min_knn, med_knn = self._compute_min_med()
+        
+        obs = np.array([
+            self.quantities[self.j]/ self.total_capacity, # the quantity rate asked by the current demand
+            self.remained_capacity / self.total_capacity, # the percentage of capacity remained
+            (self.H - self.h) / max(1, self.H), # the remaining demands to come
+            min_knn/np.max(self.D), # The mean of the k nearest neighbors in admitted dests
+            med_knn/np.max(self.D), # The mean of the k nearest neighbors in non activated dests
+            max(0, -info["excess_emission"])/self.Q
+            #TODO * Maybe find a better observations
+        ])
+        
+        info.update({
+            "episode rewards" : self.episode_reward,
+            "quantity accepted" : self.total_capacity - self.remained_capacity,
+            "remained capacity" : self.remained_capacity,
+        })
+        
+        return obs, info
+    
+    #TODO ***
+    def step(self, action: int) -> tuple[Any, float, bool, bool, dict[str, Any]]:
+        
+        self.action_mask[self.dests[self.H + self.h:]] = True
+        self.h += 1
+        
+        self.assignment, self.routes, info = SA_routing(self._env, self.action_mask)
+        
         info = dict(info) # It changes ir from the numba dict type
         # info['LCF'] = np.concatenate([[0], costs + emissions*self.CO2_penalty])
         # info['GCF'] = np.sum(info['LCF'])
@@ -190,31 +174,19 @@ class DynamicQVRPEnv(gym.Env):
         if not self.is_0_allowed:
             action -= 1
         
-        if np.max(info['LCF']) == np.min(info['LCF']) :
-            r = obs/(np.max(obs)*self.quantities) + 1
-        else:
-            r = obs/(np.max(obs)*self.quantities) + (info['LCF'][action] - np.min(info['LCF']))/(np.max(info['LCF']) - np.min(info['LCF']))
-            if np.isnan(r).any():
-                print(self._env.reset_counter)
-                print('obs : ', obs)
-                print('info[LCF] : ', info['LCF'])
-                print('q : ', self.quantities)
-                print('a : ', action)
-        
         # normalizer_const = self.K*self.omission_cost
             
-        total_emission = np.sum(emissions)
-        info['r'] = -(np.sum(costs) + max(0, total_emission - self.Q - 1e-5)*self.CO2_penalty + np.sum(a == 0)*self.omission_cost)
-        info['a'] = a
-        info['routes'] = self.routes
-        info['costs per vehicle'] = costs
-        info['omitted'] = np.where(a==0)[0]
-        info['excess_emission'] = total_emission - self.Q - 1e-5
-        self.omitted = info['omitted']
-        self.obs = obs
+        info.update({
+            "episode rewards" : self.episode_reward,
+            "quantity accepted" : self.total_capacity - self.remained_capacity,
+            "remained capacity" : self.remained_capacity,
+        })
+        
+        trunc = self.h >= self.H
+        done = trunc or self.Q - total_emission <= + 1e-5
         # info['r'] = np.clip((normalizer_const + info['r'])/normalizer_const, 0, 1)
         
-        return obs, r, total_emission <= self.Q + 1e-5, False, info
+        return obs, r, done, trunc, info
     
     
     def render(self):

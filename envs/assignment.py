@@ -58,6 +58,7 @@ class AssignmentGame:
                  CO2_penalty = 10_000,
                  K = 50,
                  Q = 40,
+                 dynamic = False,
                  ):
         
         # if np.all(np.array(transporters_hubs) >= size**2):
@@ -66,6 +67,8 @@ class AssignmentGame:
         assert len(emissions_KM) == len(costs_KM)
         
         num_vehicles = len(emissions_KM)
+        
+        self.dynamic = dynamic
         
         self.total_capacity = max_capacity * num_vehicles
         
@@ -371,7 +374,7 @@ class AssignmentGame:
         # if num_packages is None:
         #     num_packages = self.max_capacity * self.num_vehicles
         # else:
-        assert self.num_packages <= self.max_capacity * self.num_vehicles
+        assert self.dynamic or self.num_packages <= self.max_capacity * self.num_vehicles
             
         # super().reset(seed=seed)
         if packages is None:
@@ -399,7 +402,7 @@ class AssignmentGame:
         else:
             assert len(packages) == self.num_packages
             self.packages = sorted(packages, key=lambda p : p.destination)
-            assert self.total_capacity >= np.sum([
+            assert self.dynamic or self.total_capacity >= np.sum([
                 p.quantity
                 for p in packages
             ])
@@ -1404,17 +1407,19 @@ class GameEnv(gym.Env):
         # self.change_instance = change_instance
         
     
-    def reset(self):
+    def reset(self, calculate_routes = True):
         res = self._env.reset()
         self.dests = self._env.destinations
         self.routes = np.zeros((len(self.emissions_KM), self.max_capacity+2), dtype=np.int64)
-        for i in range(len(self._env.initial_routes)):
-            k = 1
-            for j in range(2, len(self._env.initial_routes[i]), 2):
-                if not self._env.initial_routes[i, j]:
-                    break
-                self.routes[i, k] = self._env.initial_routes[i, j]
-                k += 1
+        
+        if calculate_routes:
+            for i in range(len(self._env.initial_routes)):
+                k = 1
+                for j in range(2, len(self._env.initial_routes[i]), 2):
+                    if not self._env.initial_routes[i, j]:
+                        break
+                    self.routes[i, k] = self._env.initial_routes[i, j]
+                    k += 1
             
         self.quantities = self._env.quantities
         self.distance_matrix = self._env.distance_matrix
@@ -1461,7 +1466,7 @@ class GameEnv(gym.Env):
             
         total_emission = np.sum(emissions)
         info['r'] = -(np.sum(costs) + max(0, total_emission - self.Q - 1e-5)*self.CO2_penalty + np.sum(a == 0)*self.omission_cost)
-        info['a'] = a
+        info['assignment'] = a
         info['routes'] = self.routes
         info['costs per vehicle'] = costs
         info['omitted'] = np.where(a==0)[0]
