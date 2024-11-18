@@ -148,12 +148,19 @@ def SA_routing(env,
     
     best = np.ones(len(env.distance_matrix) - 1, int)
     best[~action_mask] = 0
+    best[env.j] = 1
     solution = best.copy()
     T = T_init
-    r, d, info = _run(env, best)
     best_routes = env.routes.copy()
+    best_info = dict()
+    r, d, info = _run(env, best)
+    if not d:
+        best[env.j] = 0
+        best_info = deepcopy(env.info)
+    else:
+        best_routes = env.routes.copy()
+        best_info = deepcopy(info)
     eval_best = -r
-    best_info = deepcopy(info)
     eval_solution = eval_best
     m = 0
     list_best_costs = [eval_best]

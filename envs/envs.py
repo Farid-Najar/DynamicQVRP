@@ -86,7 +86,6 @@ class DynamicQVRPEnv(gym.Env):
         self.emissions_KM = emissions_KM
         self.costs_KM = costs_KM
         self.max_capacity = vehicle_capacity
-        self.remained_capacity = vehicle_capacity*len(costs_KM)
         self.total_capacity = vehicle_capacity*len(costs_KM)
         # self.is_0_allowed = is_0_allowed
         self.num_actions = len(self.emissions_KM) + 1 #if is_0_allowed else len(self.emissions_KM)
@@ -111,6 +110,8 @@ class DynamicQVRPEnv(gym.Env):
         self.dests = self.all_dests[self.instance]
         self.quantities = self.qs[self.instance]
         
+        self.remained_capacity = self.total_capacity
+        
         l = [self.hub] + list(self.dests)
         self.mask = np.ix_(l, l)
         self.distance_matrix = self.D[self.mask]
@@ -123,10 +124,10 @@ class DynamicQVRPEnv(gym.Env):
         self.episode_reward = 0
         
         # self.dests = self.all_dests[self.instance]
-        self.j = self.K - self.H -1
+        self.j = self.K - self.H
         
         self.action_mask = np.ones(self.K, bool)
-        self.action_mask[self.j+1:] = False
+        self.action_mask[self.j:] = False
         self.A = np.zeros(len(self.D), bool)
         self.A[self.dests[:self.j]] = True
         self.A[self.hub] = True
@@ -164,7 +165,7 @@ class DynamicQVRPEnv(gym.Env):
             min_knn/np.max(self.D), # The mean of the k nearest neighbors in admitted dests
             med_knn/np.max(self.D), # The mean of the k nearest neighbors in non activated dests
             max(0, self.info["remained_quota"])/self.Q
-            #TODO * Maybe find a better observations
+            #TODO * Maybe find better observations
         ])
         
         return obs
@@ -176,23 +177,31 @@ class DynamicQVRPEnv(gym.Env):
         
         self.assignment, self.routes, self.info = SA_routing(self)
         
-        print(self.assignment)
+        # print(self.assignment)
         self.remained_capacity -= np.sum(self.quantities[self.assignment.astype(bool)])
         
         obs = self._get_obs()
         
         self.info.update({
+            'assignment' : self.assignment,
             "omitted" : [],
             "episode rewards" : self.episode_reward,
             "quantity accepted" : self.total_capacity - self.remained_capacity,
             "remained capacity" : self.remained_capacity,
+            "h" : self.h,
+            "j" : self.j,
+            "dest" : self.dests[self.j],
         })
         
         return obs, self.info
     
-    #TODO ***
     def step(self, action: int) -> tuple[Any, float, bool, bool, dict[str, Any]]:
         
+        if self.h >= self.H-1:
+            print("The episode is done :")
+            print(self.info)
+            return
+            
         self.h += 1
         assert isinstance(action, int)
         
@@ -215,22 +224,26 @@ class DynamicQVRPEnv(gym.Env):
             self.episode_reward += r
             self.remained_capacity -= r
 
-            self.info.update({
-                "episode rewards" : self.episode_reward,
-                "quantity accepted" : self.total_capacity - self.remained_capacity,
-                "remained capacity" : self.remained_capacity,
-            })
         else:
             r = 0
-            self.omitted.append(self.j)
-            self.info.update({
-                "omitted" : self.omitted,
-            })
+            self.omitted.append(self.dests[self.j])
+            
         self.j += 1
+        self.info.update({
+            'assignment' : self.assignment,
+            "episode rewards" : self.episode_reward,
+            "quantity accepted" : self.total_capacity - self.remained_capacity,
+            "remained capacity" : self.remained_capacity,
+            "omitted" : self.omitted,
+            "h" : self.h,
+            "j" : self.j,
+            "dest" : self.dests[self.j],
+        })
+        
         obs = self._get_obs()
         
-        trunc = self.h >= self.H
-        done = trunc or -self.info["remained_quota"] <= 1e-4 or self.remained_capacity <= 0
+        trunc = self.h >= self.H-1
+        done = trunc or self.info["remained_quota"] <= 1e-4 or self.remained_capacity <= 0
         # info['r'] = np.clip((normalizer_const + info['r'])/normalizer_const, 0, 1)
         
         return obs, r, done, trunc, self.info
@@ -258,7 +271,7 @@ class DynamicQVRPEnv(gym.Env):
                 # if self.routes[m, j] == 0:
                 #     gained_on_substitution = 0.
                 # else:
-                #     #TODO
+                #     #TODO *
                 #     gained_on_substitution = self.routes[m, j-1] + self.routes[m, j+1] -(
                 #             self.cost_matrix[m, self.dests[int(self.routes[m, j-2])], self.dests[int(self.routes[m, j+2])]]
                 #         )

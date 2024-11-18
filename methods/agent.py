@@ -20,5 +20,5 @@ class GreedyAgent(Agent):
         return 1
     
 class MSAAgent(Agent):
-    #TODO
+    #TODO *** MSA Agent : requires sampling in env
     pass

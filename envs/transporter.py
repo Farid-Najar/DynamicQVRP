@@ -167,42 +167,6 @@ class Transporter:
         self.orders.insert(idx, quantity)
         self.cost_history.append(self.last_cost)
         
-    def compute_marginal_cost(self, node : int, quantity : int, time_budget = 2):
-        """Solve the CVRP problem and computes the additional cost"""
-        # Instantiate the data problem.
-        data = self.data
-        
-        new_nodes = self.nodes.copy()
-        new_nodes.add(node)
-        idx = new_nodes.index(node)
-        
-        data['demands'] = self.orders.copy()
-        data['demands'].insert(idx, quantity)
-        
-        l = [self.transporter_hub] + list(new_nodes)
-        data['distance_matrix'] = self.distance_matrix[np.ix_(l, l)]
-        
-        solution, routing, manager = solve(data, time_budget)
-        
-        # Print solution on console.
-        self.last_cost = self.omission_cost + self.cost_history[-1]
-        
-        if not solution:
-            return self.omission_cost*len(new_nodes)
-        
-        #TODO
-        self.last_cost = 0
-        for vehicle_id in range(data['num_vehicles']):
-            index = routing.Start(vehicle_id)
-            route_distance = 0
-            while not routing.IsEnd(index):
-                previous_index = index
-                index = solution.Value(routing.NextVar(index))
-                route_distance += data['distance_matrix'][previous_index-1][index-1]
-                # print(route_distance)
-            self.last_cost += route_distance
-            
-        return self.last_cost - self.cost_history[-1]
     
 
     def compute_cost(self, nodes, quantities, time_budget = 2):
