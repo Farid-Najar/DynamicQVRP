@@ -10,7 +10,7 @@ from copy import deepcopy
 from numba import njit
 
 @njit
-def _step(
+def NN_routing(
     action,
     routes,
     cost_matrix,
@@ -28,34 +28,40 @@ def _step(
     
     a = action.copy()
     
-    for i in range(len(cost_matrix)+1):
+    for v in range(len(cost_matrix)+1):
         # routes.append([])#List([0]))
-        alpha = list(np.where(action == i)[0] + 1)
-        if i:
+        alpha = list(np.where(a == v)[0] + 1)
+        if v:
             quantity = 0
             # routes[i].append(int(0))
             k = 1
             while True:
                 if len(alpha) == 0:
                     break
-                j = int(np.argmin(cost_matrix[i-1, routes[i-1][k-1], np.array(alpha)]))
+                j = int(np.argmin(cost_matrix[v-1, routes[v-1][k-1], np.array(alpha)]))
                 
                 quantity += quantities[alpha[j]-1]
                 
                 if quantity > max_capacity:
                     # routes[0] += alpha
                     # info['LCF'][i-1] += np.sum(quantities[np.array(alpha)-1])*omission_cost
-                    a[np.array(alpha) - 1] = 0
+                    if v < len(cost_matrix):
+                        a[np.array(alpha) - 1] += 1
+                        # action[np.array(alpha) - 1] += 1
+                    else:
+                        a[np.array(alpha) - 1] = 0
+                        # action[np.array(alpha) - 1] = 0
+                    # print(np.array(alpha), "omitted")
                     break
                 # temp = cost_matrix[i-1, routes[i-1][-1], alpha]
                 # print(cost_matrix[i-1, routes[i-1][-1], np.array(alpha)])
                 # print(alpha)
                 dest = alpha.pop(j)
                 # if k <= max_capacity:
-                costs[i-1] += distance_matrix[routes[i-1][k-1], dest]*costs_KM[i-1]
-                emissions[i-1] += distance_matrix[routes[i-1][k-1], dest]*emissions_KM[i-1]
+                costs[v-1] += distance_matrix[routes[v-1][k-1], dest]*costs_KM[v-1]
+                emissions[v-1] += distance_matrix[routes[v-1][k-1], dest]*emissions_KM[v-1]
                 # info['LCF'][i-1] += cost_matrix[i-1, routes[i-1][k-1], dest]
-                routes[i-1, k] = dest
+                routes[v-1, k] = dest
                 # print(routes[i-1], costs[i-1], emissions[i-1])
                 # if k > 1:
                 #     obs[routes[i-1][k-1] - 1] = cost_matrix[i-1, routes[i-1][k-2], routes[i-1][k-1]] + \
@@ -64,8 +70,8 @@ def _step(
                 
                 k+=1
                 
-            costs[i-1] += distance_matrix[routes[i-1][k-1], 0]*costs_KM[i-1]
-            emissions[i-1] += distance_matrix[routes[i-1][k-1], 0]*emissions_KM[i-1]
+            costs[v-1] += distance_matrix[routes[v-1][k-1], 0]*costs_KM[v-1]
+            emissions[v-1] += distance_matrix[routes[v-1][k-1], 0]*emissions_KM[v-1]
             # info['LCF'][i-1] += cost_matrix[i-1, routes[i-1][k-1], 0]
             # routes[i].append(0)
             # if k > 1:
@@ -80,9 +86,11 @@ def _step(
 
 
 def _run(env, assignment):
-    routes, a, costs, emissions = _step(
+    
+    routes = np.zeros((len(env.emissions_KM), env.max_capacity+2), dtype=np.int64)
+    routes, a, costs, emissions = NN_routing(
         assignment,
-        env.routes,
+        routes,
         env.cost_matrix,
         env.distance_matrix,
         env.quantities,
@@ -91,8 +99,8 @@ def _run(env, assignment):
         env.emissions_KM,
     )
     
-    info = dict()
     total_emission = np.sum(emissions)
+    info = dict()
     info['assignment'] = a
     info['routes'] = routes
     info['costs per vehicle'] = costs
@@ -158,6 +166,7 @@ def SA_routing(env,
         best[env.j] = 0
         best_info = deepcopy(env.info)
     else:
+        best = info['assignment'].copy()
         best_routes = env.routes.copy()
         best_info = deepcopy(info)
     eval_best = -r
@@ -191,7 +200,7 @@ def SA_routing(env,
             print('best cost : ', eval_best)
         if eval_sol < eval_best :
             if d:
-                best = sol.copy()
+                best = info['assignment'].copy()
                 best_routes = env.routes.copy()
                 best_info = deepcopy(info)
             eval_best = eval_sol

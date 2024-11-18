@@ -226,7 +226,7 @@ class DynamicQVRPEnv(gym.Env):
 
         else:
             r = 0
-            self.omitted.append(self.dests[self.j])
+            self.omitted.append(self.j)
             
         self.j += 1
         self.info.update({
@@ -234,7 +234,7 @@ class DynamicQVRPEnv(gym.Env):
             "episode rewards" : self.episode_reward,
             "quantity accepted" : self.total_capacity - self.remained_capacity,
             "remained capacity" : self.remained_capacity,
-            "omitted" : self.omitted,
+            "omitted" : self.dests[self.omitted],
             "h" : self.h,
             "j" : self.j,
             "dest" : self.dests[self.j],
@@ -251,7 +251,7 @@ class DynamicQVRPEnv(gym.Env):
     
     def render(self):
         G = nx.DiGraph()
-        G.add_nodes_from(list(range(len(self.dests))))
+        G.add_nodes_from(list(range(self.j)))
         node_attrs = dict()
         edges = []
         # vehicle_edges = []
@@ -306,7 +306,7 @@ class DynamicQVRPEnv(gym.Env):
         node_attrs[0] = {
                          'vehicle' : 0, 
                         #  'x' : [self.dests[int(self.routes[m, j])], m, gained_on_substitution], 
-                         'pos' : (self.coordx[self._env._game.hub], self.coordy[self._env._game.hub]),
+                         'pos' : (self.coordx[self.hub], self.coordy[self.hub]),
                          'q' : 200
                 }
         G.add_weighted_edges_from(edges)
@@ -338,6 +338,7 @@ class DynamicQVRPEnv(gym.Env):
                          arrows=True
         )
 
+        plt.ylim(min(self.coordy[self.dests]) - 1, max(self.coordy[self.dests])+1)
         # handles, labels = ax.get_legend_handles_labels()
         # labels = list(range(len(colors)))
         ax.scatter([0],[0],color=colors[0],label=f'Omitted')
