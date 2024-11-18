@@ -143,7 +143,7 @@ def SA_routing(env,
     """
     
     action_mask = env.action_mask
-    num_actions = len(env.costs_KM)
+    num_actions = len(env.costs_KM) + 1
     static_mode = env.H == 0
     
     best = np.ones(len(env.distance_matrix) - 1, int)
@@ -219,7 +219,6 @@ def SA_routing(env,
     if log:
         print(f'm = {m}')
         print(eval_best)
-    print(f'm = {m}')
     
     return best, best_routes, best_info#, list_best_costs#, infos
 
