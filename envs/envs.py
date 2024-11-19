@@ -279,6 +279,12 @@ class DynamicQVRPEnv(gym.Env):
         env.action_mask[:self.j+H] = True
         return SA_routing(env)
     
+    def offline_solution(self):
+        env = deepcopy(self)
+        env.action_mask[:] = True
+        return SA_routing(env)
+        
+    
     def render(self):
         G = nx.DiGraph()
         G.add_nodes_from(list(range(self.j)))
