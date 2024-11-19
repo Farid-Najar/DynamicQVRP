@@ -38,5 +38,36 @@ class GreedyAgent(Agent):
         return 1
     
 class MSAAgent(Agent):
-    #TODO *** MSA Agent : requires sampling in env
-    pass
+    
+    def __init__(self,
+                 env, 
+                 horizon = 15,
+                 n_sample = 7,
+                 softmax = False, # if false a majority vote is applied
+                 **kwargs):
+        
+        self.env = env
+        self.n_sample = n_sample
+        self.softmax = softmax
+        self.horizon = horizon
+        
+    def act(self, x):
+        
+        score = np.zeros(self.env.action_space.n)
+        
+        # TODO ** Parallelize the process
+        for _ in range(self.n_sample):
+            assignment, *_ = self.env.sample(self.horizon)
+            
+            score[0] += float(assignment[self.env.j] == 0)
+    
+        score[1] = self.n_sample - score[0]
+        
+        if self.softmax:
+            exp_score = np.exp(score)
+            return np.random.choice(
+                2,
+                p=exp_score/exp_score.sum(),
+            )
+            
+        return int(np.argmax(score))

@@ -262,7 +262,7 @@ class DynamicQVRPEnv(gym.Env):
         p[env.hub] = 0
         p /= p.sum()
         
-        H = min(H, env.H - env.h)
+        H = min(H, env.H - env.h - 1)
         
         future_dests = np.random.choice(len(p), H, False, p)
         env.dests[self.j+1 : self.j+H+1] = future_dests
