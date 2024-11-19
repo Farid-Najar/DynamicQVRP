@@ -84,6 +84,8 @@ def NN_routing(
             
     return routes, a, costs, emissions
 
+#TODO ** Use a better routing
+# The current routing (NN routing) is not very efficient.
 
 def _run(env, assignment):
     
@@ -140,7 +142,7 @@ def insertion(env):
         
 
 def SA_routing(env,
-               T_init = 50_000, T_limit = 1, lamb = .999, var = False, id = 0, log = False, H = np.inf) :
+               T_init = 5_000, T_limit = 1, lamb = .99, var = False, id = 0, log = False, H = np.inf) :
     """
     This function finds a solution for the steiner problem
         using annealing algorithm
@@ -153,8 +155,9 @@ def SA_routing(env,
     action_mask = env.action_mask
     num_actions = len(env.costs_KM) + 1
     static_mode = env.H == 0
+    is_O_allowed = env.is_O_allowed
     
-    best = np.ones(len(env.distance_matrix) - 1, int)
+    best = env.assignment.copy()
     best[~action_mask] = 0
     best[env.j] = 1
     solution = best.copy()
@@ -185,7 +188,7 @@ def SA_routing(env,
     while(T>T_limit):
         
         # infos['T'].append(T)
-        sol = rand_neighbor(solution, action_mask, nb_actions=num_actions, allow_0 = static_mode)
+        sol = rand_neighbor(solution, action_mask, nb_actions=num_actions, allow_0 = is_O_allowed)
         r, d, info = _run(env, sol)
         eval_sol = -r
         
@@ -231,7 +234,7 @@ def SA_routing(env,
     
     return best, best_routes, best_info#, list_best_costs#, infos
 
-def rand_neighbor(solution : np.ndarray, action_mask, nb_changes = 1, nb_actions = 2, allow_0 = False) :
+def rand_neighbor(solution : np.ndarray, action_mask, allow_0, nb_changes = 1, nb_actions = 2) :
     """
     Generates new random solution.
     :param solution: the solution for which we search a neighbor
@@ -249,7 +252,7 @@ def rand_neighbor(solution : np.ndarray, action_mask, nb_changes = 1, nb_actions
     # else:
     candidates = list(range(nb_actions))
     candidates.remove(solution[i])
-    if not allow_0:
+    if not allow_0[i]:
         candidates.remove(0)
     new_solution[i] = rd.choice(candidates, nb_changes, replace=False)
     return new_solution

@@ -125,9 +125,14 @@ class DynamicQVRPEnv(gym.Env):
         
         # self.dests = self.all_dests[self.instance]
         self.j = self.K - self.H
+        self.assignment = np.ones(self.K, int)
         
         self.action_mask = np.ones(self.K, bool)
+        self.is_O_allowed = np.zeros(self.K, bool)
+        
         self.action_mask[self.j:] = False
+        self.assignment[self.j:] = 0
+        self.is_O_allowed[self.j:] = True
         self.A = np.zeros(len(self.D), bool)
         self.A[self.dests[:self.j]] = True
         self.A[self.hub] = True
@@ -219,6 +224,7 @@ class DynamicQVRPEnv(gym.Env):
                 
         if action:
             self.action_mask[self.j] = True
+            self.is_O_allowed[self.j] = False
             self.A[self.j] = True
             r = self.quantities[self.j]
             self.episode_reward += r
@@ -248,6 +254,30 @@ class DynamicQVRPEnv(gym.Env):
         
         return obs, r, done, trunc, self.info
     
+    def sample(self, H):
+        
+        env = deepcopy(self)
+        p = env.p.copy()
+        p[env.dests[:self.j]] = 0
+        p[env.hub] = 0
+        p /= p.sum()
+        
+        H = min(H, env.H - env.h)
+        
+        future_dests = np.random.choice(len(p), H, False, p)
+        env.dests[self.j+1 : self.j+H+1] = future_dests
+        
+        l = [env.hub] + list(env.dests)
+        env.mask = np.ix_(l, l)
+        env.distance_matrix = env.D[env.mask]
+        env.cost_matrix = np.array([
+            (env.costs_KM[v] + env.CO2_penalty*env.emissions_KM[v])*env.distance_matrix
+            for v in range(len(env.costs_KM))
+        ])
+        # TODO * implement quantity sampling
+        
+        env.action_mask[:self.j+H] = True
+        return SA_routing(env)
     
     def render(self):
         G = nx.DiGraph()
