@@ -32,6 +32,25 @@ class Agent:
         pass
     
     
+class OfflineAgent(Agent):
+    
+    def run(self, n, initial_instance = 0):
+        episode_rewards = np.zeros(n)
+        actions = [[] for _ in range(n)]
+        infos = [[] for _ in range(n)]
+        
+        # TODO ** Parallelize the process
+        for i in tqdm(range(n)):
+            self.env.reset(initial_instance + i)
+            assignment, _, info = self.env.offline_solution()
+            episode_rewards[i] = np.sum(
+                self.env.quantities[assignment.astype(bool) & self.env.is_O_allowed]
+            )
+            actions[i] = assignment[self.env.j:]
+            infos[i].append(info)
+                
+        return episode_rewards, actions, infos
+    
 class GreedyAgent(Agent):
     
     def act(self, x):

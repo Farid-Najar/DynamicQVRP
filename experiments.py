@@ -9,7 +9,8 @@ import pickle
 def run_agent(
     agentClass,
     env_configs : dict,
-    agent_configs : dict,
+    agent_configs : dict = {},
+    save_results = False,
     ):
     
     env = DynamicQVRPEnv(**env_configs)
@@ -22,12 +23,9 @@ def run_agent(
         "actions" : actions,
         "infos" : infos
     }
-    pickle.dump(res, f'{agentClass.__name__}.pkl')
-    
-def run_offline(
-    env_configs,
-):
-    env_configs["DoD"] = 0.
+    if save_results:
+        pickle.dump(res, f'{agentClass.__name__}.pkl')
+    return rs, actions, infos
     
 
 def experiment(
