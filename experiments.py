@@ -1,6 +1,6 @@
-import multiprocess as mp
 from tqdm import tqdm
-from methods import Agent, GreedyAgent, MSAAgent
+
+from methods import GreedyAgent, MSAAgent
 from envs import DynamicQVRPEnv
 
 import pickle

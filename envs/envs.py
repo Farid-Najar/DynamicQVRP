@@ -139,6 +139,16 @@ class DynamicQVRPEnv(gym.Env):
         self.NA = ~self.A
         self.NA[self.j] = False
         
+        self.info = {
+            "omitted" : [],
+            "episode rewards" : self.episode_reward,
+            "quantity accepted" : self.total_capacity - self.remained_capacity,
+            "remained capacity" : self.remained_capacity,
+            "h" : self.h,
+            "j" : self.j,
+            "dest" : self.dests[self.j],
+        }
+        
         
         self.routes = np.zeros((len(self.emissions_KM), self.max_capacity+2), dtype=np.int64)
         # self.routing_data = RoutingData(
@@ -279,10 +289,10 @@ class DynamicQVRPEnv(gym.Env):
         env.action_mask[:self.j+H] = True
         return SA_routing(env)
     
-    def offline_solution(self):
+    def offline_solution(self, *args, **kwargs):
         env = deepcopy(self)
         env.action_mask[:] = True
-        return SA_routing(env)
+        return SA_routing(env, *args, **kwargs)
         
     
     def render(self):
