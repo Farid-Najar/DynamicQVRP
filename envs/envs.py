@@ -103,7 +103,7 @@ class DynamicQVRPEnv(gym.Env):
         
         self.h = 0 # ou = self.K - int(DoD*K)
         if instance_id < 0:
-            self.instance += 1
+            self.instance = (self.instance+1)%len(self.all_dests)
         else:
             self.instance = instance_id
             
