@@ -3,10 +3,12 @@ from tqdm import tqdm
 import multiprocess as mp
 from copy import deepcopy
 
+from gymnasium import Env
+
 
 
 class Agent:
-    def __init__(self, env,
+    def __init__(self, env : Env,
                  n_workers = 5,
                  parallelize = False,
                  *args, **kwargs):
@@ -15,7 +17,7 @@ class Agent:
         self.parallelize = parallelize
     
     def act(self, x, *args, **kwargs):
-        pass
+        return self.env.action_space.sample()
     
     def _parallel_run(self, n, initial_instance = 0):
         def process(env, i, q):
@@ -83,13 +85,16 @@ class Agent:
         infos = [[] for _ in range(n)]
         
         for i in tqdm(range(n)):
-            self.env.reset(initial_instance + i)
-            assignment, _, info = self.env.offline_solution()
-            episode_rewards[i] = np.sum(
-                self.env.quantities[assignment.astype(bool) & self.env.is_O_allowed]
-            )
-            actions[i] = assignment[self.env.j:]
+            o, info = self.env.reset(initial_instance + i)
             infos[i].append(info)
+            while True:
+                a = self.act(o)
+                o, r, d, _, info = self.env.step(a)
+                episode_rewards[i] += r
+                actions[i].append(a)
+                infos[i].append(info)
+                if d:
+                    break
         
         return episode_rewards, actions, infos
     
@@ -179,7 +184,7 @@ class MSAAgent(Agent):
         self.softmax = softmax
         self.horizon = horizon
         
-    def act(self, x, env = None):
+    def act(self, x, env = None, *args, **kwargs):
         
         score = np.zeros(self.env.action_space.n)
         

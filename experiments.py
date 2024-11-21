@@ -11,6 +11,7 @@ def run_agent(
     env_configs : dict,
     agent_configs : dict = {},
     save_results = False,
+    title = None,
     ):
     
     env = DynamicQVRPEnv(**env_configs)
@@ -24,7 +25,8 @@ def run_agent(
         "infos" : infos
     }
     if save_results:
-        pickle.dump(res, f'{agentClass.__name__}.pkl')
+        tit = title+'.pkl' if title is not None else f'{agentClass.__name__}.pkl'
+        pickle.dump(res, tit)
     return rs, actions, infos
     
 
