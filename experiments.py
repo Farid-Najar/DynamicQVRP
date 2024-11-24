@@ -1,6 +1,6 @@
 from tqdm import tqdm
 
-from methods import GreedyAgent, MSAAgent
+from methods import GreedyAgent, MSAAgent, Agent, OfflineAgent
 from envs import DynamicQVRPEnv
 
 import pickle
@@ -9,6 +9,7 @@ import pickle
 def run_agent(
     agentClass,
     env_configs : dict,
+    episodes = 10,
     agent_configs : dict = {},
     save_results = False,
     title = None,
@@ -17,7 +18,7 @@ def run_agent(
     env = DynamicQVRPEnv(**env_configs)
     agent = agentClass(env, **agent_configs)
     
-    rs, actions, infos = agent.run(10)
+    rs, actions, infos = agent.run(episodes)
     
     res = {
         "rs" : rs,
@@ -25,12 +26,14 @@ def run_agent(
         "infos" : infos
     }
     if save_results:
-        tit = title+'.pkl' if title is not None else f'{agentClass.__name__}.pkl'
-        pickle.dump(res, tit)
+        tit = 'results/'+title+'.pkl' if title is not None else f'results/{agentClass.__name__}.pkl'
+        with open(tit, 'wb') as f:
+            pickle.dump(res, f)
     return rs, actions, infos
     
 
-def experiment(
+def experiment1(
+        episodes = 200,
     ):
     
     env_configs = {
@@ -42,19 +45,42 @@ def experiment(
         "costs_KM" : [1, 1],
         "emissions_KM" : [.1, .3]
     }
-    agents = [
-        GreedyAgent,
-        MSAAgent
-    ]
     
-    agent_configs = [
-        {},
-        {'n_sample' : 13,},
-    ]
+    agents = {
+        "offline" : dict(
+            agentClass = OfflineAgent,
+            env_configs = env_configs,
+            episodes = episodes,
+            agent_configs = {"n_workers": 10},
+            save_results = True,
+            title = "res_offline",
+        ),
+        "greedy" : dict(
+            agentClass = GreedyAgent,
+            env_configs = env_configs,
+            episodes = episodes,
+            agent_configs = {},
+            save_results = True,
+            title = "res_greedy",
+        ),
+        "random" : dict(
+            agentClass = Agent,
+            env_configs = env_configs,
+            episodes = episodes,
+            agent_configs = {},
+            save_results = True,
+            title = "res_random",
+        ),
+        "MSA" : dict(
+            agentClass = MSAAgent,
+            env_configs = env_configs,
+            episodes = episodes,
+            agent_configs = dict(n_sample=21, parallelize = True),
+            save_results = True,
+            title = "res_MSA",
+        ),
+    }
     
-    for i in range(len(agents)):
-        run_agent(
-            agents[i],
-            env_configs,
-            agent_configs[i]
-        )
+    for agent_name in agents:
+        run_agent(**agents[agent_name])
+        print(agent_name, "done")

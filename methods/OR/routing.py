@@ -159,7 +159,7 @@ def SA_routing(env,
     
     best = env.assignment.copy()
     best[~action_mask] = 0
-    best[env.j] = 1
+    best[env.j] = 1 if env.h > 0 else 0
     solution = best.copy()
     T = T_init
     best_routes = env.routes.copy()

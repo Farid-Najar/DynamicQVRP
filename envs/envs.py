@@ -130,7 +130,7 @@ class DynamicQVRPEnv(gym.Env):
         self.action_mask = np.ones(self.K, bool)
         self.is_O_allowed = np.zeros(self.K, bool)
         
-        self.action_mask[self.j:] = False
+        self.action_mask[self.j+1:] = False
         self.assignment[self.j:] = 0
         self.is_O_allowed[self.j:] = True
         self.A = np.zeros(len(self.D), bool)
@@ -151,6 +151,10 @@ class DynamicQVRPEnv(gym.Env):
         
         
         self.routes = np.zeros((len(self.emissions_KM), self.max_capacity+2), dtype=np.int64)
+        
+        self.assignment, self.routes, self.info = SA_routing(self)
+        
+        self.remained_capacity -= np.sum(self.quantities[self.assignment.astype(bool)])
         # self.routing_data = RoutingData(
         #     self.routes,
         #     self.cost_matrix,
@@ -190,11 +194,6 @@ class DynamicQVRPEnv(gym.Env):
         
         self._init_instance(instance_id)
         
-        self.assignment, self.routes, self.info = SA_routing(self)
-        
-        # print(self.assignment)
-        self.remained_capacity -= np.sum(self.quantities[self.assignment.astype(bool)])
-        
         obs = self._get_obs()
         
         self.info.update({
@@ -233,7 +232,6 @@ class DynamicQVRPEnv(gym.Env):
                 action = 0
                 
         if action:
-            self.action_mask[self.j] = True
             self.is_O_allowed[self.j] = False
             self.A[self.j] = True
             r = self.quantities[self.j]
@@ -241,6 +239,7 @@ class DynamicQVRPEnv(gym.Env):
             self.remained_capacity -= r
 
         else:
+            self.action_mask[self.j] = False
             r = 0
             self.omitted.append(self.j)
             

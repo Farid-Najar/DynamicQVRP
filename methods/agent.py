@@ -17,7 +17,7 @@ class Agent:
         self.parallelize = parallelize
     
     def act(self, x, *args, **kwargs):
-        return self.env.action_space.sample()
+        return int(self.env.action_space.sample())
     
     def _parallel_run(self, n, initial_instance = 0):
         def process(env, i, q):
