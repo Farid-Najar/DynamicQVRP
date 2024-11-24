@@ -130,7 +130,7 @@ class DynamicQVRPEnv(gym.Env):
         self.action_mask = np.ones(self.K, bool)
         self.is_O_allowed = np.zeros(self.K, bool)
         
-        self.action_mask[self.j+1:] = False
+        self.action_mask[self.j:] = False
         self.assignment[self.j:] = 0
         self.is_O_allowed[self.j:] = True
         self.A = np.zeros(len(self.D), bool)
@@ -153,6 +153,8 @@ class DynamicQVRPEnv(gym.Env):
         self.routes = np.zeros((len(self.emissions_KM), self.max_capacity+2), dtype=np.int64)
         
         self.assignment, self.routes, self.info = SA_routing(self)
+        
+        self.action_mask[self.j] = True
         
         self.remained_capacity -= np.sum(self.quantities[self.assignment.astype(bool)])
         # self.routing_data = RoutingData(
@@ -368,14 +370,17 @@ class DynamicQVRPEnv(gym.Env):
         colors.append('lightgreen')
         if len(self.emissions_KM) > 3:
             colors.append('lightblue')
-        colors.append('lightyellow')
+        colors.append('yellow')
         colors.append('lightcoral')#'red')
         G_ncolors = [colors[m] for m in nx.get_node_attributes(G,'vehicle').values()]
         G_ncolors[0] = 'gray'
 
         _, ax = plt.subplots(figsize=(12, 7))
         weights = list(nx.get_edge_attributes(G,'weight').values())
-        ax.scatter(self.coordx[self.dests], self.coordy[self.dests], color='lightgray', s = .8*size, label='Unactivated')
+        # ax.scatter(self.coordx[self.dests], self.coordy[self.dests], color='lightgray', s = .6*size, label='Unactivated')
+        ax.scatter(self.coordx, self.coordy, color='lightgray', s = .6*size, label='Unactivated')
+        # print(self.coordx[self.dests[self.j]], self.coordy[self.dests[self.j]])
+        ax.scatter(self.coordx[self.dests[self.j]], self.coordy[self.dests[self.j]], color='blue', s = size, label='Current demand')
         nx.draw_networkx(G, 
                          pos = nx.get_node_attributes(G,'pos'),  
                          ax=ax, 
@@ -402,10 +407,10 @@ class DynamicQVRPEnv(gym.Env):
         plt.ylim(min(self.coordy[self.dests]) - 1, max(self.coordy[self.dests])+1)
         # handles, labels = ax.get_legend_handles_labels()
         # labels = list(range(len(colors)))
-        ax.scatter([0],[0],color=colors[0],label=f'Omitted')
-        for i in range(1, len(colors)):
-            ax.scatter([0],[0],color=colors[i],label=f'Vehicle {i}')
-        ax.scatter([0],[0],color='white')
+        ax.scatter([0],[0],color=colors[0],label=f'Omitted', s = size, marker='s')
+        for i in range(1, len(self.routes)+1):
+            ax.scatter([0],[0],color=colors[i],label=f'Vehicle {i}', s = size, marker='s')
+        ax.scatter([0],[0],color='white', s = size, marker='s')
 
         # reverse the order
         plt.draw()
