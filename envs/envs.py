@@ -294,21 +294,24 @@ class DynamicQVRPEnv(gym.Env):
         return SA_routing(env, *args, **kwargs)
         
     
-    def render(self):
+    def render(self, size = 100, show_node_num =False):
         G = nx.DiGraph()
-        G.add_nodes_from(list(range(self.j)))
+        G.add_nodes_from(list(range(self.j+1)))
+        # Go = nx.DiGraph()
+        # Go.add_nodes_from(self.omitted)
         node_attrs = dict()
         edges = []
         # vehicle_edges = []
-        print(self.routes.shape)
+        # print(self.routes.shape)
         for o in self.omitted:
             node_attrs[o+1] = {
                          'vehicle' : 0, 
                         #  'x' : [self.dests[int(self.routes[m, j])], m, gained_on_substitution], 
                          'pos' : (self.coordx[self.dests[o]], self.coordy[self.dests[o]]),
-                         'q' : 50*self.quantities[o],
+                         'q' : size*self.quantities[o],
             }
         
+        # Go_attrs = deepcopy(node_attrs)
         for m in range(len(self.routes)):
             j = 1
             # vehicle_edges.append([])
@@ -324,7 +327,7 @@ class DynamicQVRPEnv(gym.Env):
                          'vehicle' : m+1, 
                         #  'x' : [self.dests[int(self.routes[m, j])], m, gained_on_substitution], 
                          'pos' : (self.coordx[self.dests[int(self.routes[m, j])-1]], self.coordy[self.dests[int(self.routes[m, j])-1]]),
-                         'q' : 50*self.quantities[self.routes[m, j]-1],
+                         'q' : size*self.quantities[self.routes[m, j]-1],
                 }
                 # G_ncolors[int(route[m, j])] = colors[m]
                 # if int(route[m, j]):
@@ -352,14 +355,16 @@ class DynamicQVRPEnv(gym.Env):
                          'vehicle' : 0, 
                         #  'x' : [self.dests[int(self.routes[m, j])], m, gained_on_substitution], 
                          'pos' : (self.coordx[self.hub], self.coordy[self.hub]),
-                         'q' : 200
+                         'q' : size*2
                 }
         G.add_weighted_edges_from(edges)
         # print(G.nodes)
         nx.set_node_attributes(G, node_attrs)
+        # nx.set_node_attributes(Go, Go_attrs)
         
         colors = []#'#1f78b4' for _ in range(len(G.nodes))]
-        colors.append('lightgray')
+        # colors.append('lightgray')
+        colors.append('red')
         colors.append('lightgreen')
         if len(self.emissions_KM) > 3:
             colors.append('lightblue')
@@ -368,13 +373,14 @@ class DynamicQVRPEnv(gym.Env):
         G_ncolors = [colors[m] for m in nx.get_node_attributes(G,'vehicle').values()]
         G_ncolors[0] = 'gray'
 
-        _, ax = plt.subplots(figsize=(10, 7))
+        _, ax = plt.subplots(figsize=(12, 7))
         weights = list(nx.get_edge_attributes(G,'weight').values())
+        ax.scatter(self.coordx[self.dests], self.coordy[self.dests], color='lightgray', s = .8*size, label='Unactivated')
         nx.draw_networkx(G, 
                          pos = nx.get_node_attributes(G,'pos'),  
                          ax=ax, 
                          font_size=5, 
-                         with_labels=True,
+                         with_labels=show_node_num,
                          node_size=list(nx.get_node_attributes(G,'q').values()), 
                          node_color=G_ncolors,
                          edge_color = weights,
@@ -382,6 +388,16 @@ class DynamicQVRPEnv(gym.Env):
                          node_shape='s',
                          arrows=True
         )
+        
+        # ax.scatter(self.coordx[self.dests[self.omitted]], self.coordy[self.dests[self.omitted]], edgecolors='red', marker='o', s=size*2, facecolors='none')
+        # nx.draw_networkx(Go, 
+        #                  pos = nx.get_node_attributes(Go,'pos'),  
+        #                  ax=ax, 
+        #                  font_size=5, 
+        #                  node_size=list(nx.get_node_attributes(Go,'q').values()), 
+        #                  node_color='red',
+        #                  node_shape='x',
+        # )
 
         plt.ylim(min(self.coordy[self.dests]) - 1, max(self.coordy[self.dests])+1)
         # handles, labels = ax.get_legend_handles_labels()
@@ -397,7 +413,11 @@ class DynamicQVRPEnv(gym.Env):
         mesh = ax.pcolormesh(([], []), cmap = plt.cm.jet)
         mesh.set_clim(np.min(weights),np.max(weights))
         # Visualizing colorbar part -start
-        plt.colorbar(mesh,ax=ax)
+        cbar = plt.colorbar(mesh,ax=ax)
+        cbar.formatter.set_powerlimits((0, 0))
+        # to get 10^3 instead of 1e3
+        cbar.formatter.set_useMathText(True)
+
         # plt.colorbar()
         # plt.style.use("dark_background")
         # plt.legend()
