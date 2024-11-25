@@ -170,7 +170,7 @@ class DynamicQVRPEnv(gym.Env):
         
         
     def _compute_min_med(self):
-        min_knn = np.mean(knn(self.p[self.A]*self.D[self.A, self.j], self.k_min))
+        min_knn = np.mean(knn(self.D[self.A, self.j], self.k_min))
         med_knn = np.median(knn(self.p[self.NA]*self.D[self.NA, self.j], self.k_med))
         
         return min_knn, med_knn

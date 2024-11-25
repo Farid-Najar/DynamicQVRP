@@ -32,19 +32,27 @@ def run_agent(
     return rs, actions, infos
     
 
-def experiment1(
+def experiment(
         episodes = 200,
+        env_configs = {
+            "K" : 50,
+            "Q" : 100, 
+            "DoD" : 0.5,
+            "vehicle_capacity" : 25,
+            "re_optimization" : False,
+            "costs_KM" : [1, 1],
+            "emissions_KM" : [.1, .3]
+        },
     ):
+    """Compares different methods implemented so far between them on the 
+    same environment.
+
+    Parameters
+    ----------
+    episodes : int, optional
+        The number of episodes to run for each agent, by default 200
+    """
     
-    env_configs = {
-        "K" : 50,
-        "Q" : 100, 
-        "DoD" : 0.5,
-        "vehicle_capacity" : 25,
-        "re_optimization" : False,
-        "costs_KM" : [1, 1],
-        "emissions_KM" : [.1, .3]
-    }
     
     agents = {
         "offline" : dict(
@@ -84,3 +92,15 @@ def experiment1(
     for agent_name in agents:
         run_agent(**agents[agent_name])
         print(agent_name, "done")
+        
+if __name__ == "__main__":
+    experiment(env_configs = {
+            "K" : 50,
+            "Q" : 100, 
+            "DoD" : 0.5,
+            "vehicle_capacity" : 25,
+            "re_optimization" : True,
+            "costs_KM" : [1, 1],
+            "emissions_KM" : [.1, .3]
+        },
+    )
