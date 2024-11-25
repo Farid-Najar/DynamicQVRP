@@ -175,7 +175,7 @@ def SA_routing(env,
     eval_best = -r
     eval_solution = eval_best
     m = 0
-    list_best_costs = [eval_best]
+    # list_best_costs = [eval_best]
     flag100 = True
     # infos = []
     
@@ -213,11 +213,11 @@ def SA_routing(env,
             prob = 1
         else :
             prob = exp((eval_best - eval_sol)/T)
-        rand = rd.random()
-        if rand <= prob :
+        
+        if rd.random() <= prob :
             solution = sol
             eval_solution = eval_sol
-        list_best_costs.append(eval_best)
+        # list_best_costs.append(eval_best)
         T *= lamb
         m += 1
         if m >= H:

@@ -226,6 +226,7 @@ class DynamicQVRPEnv(gym.Env):
         if action:
             
             if self.re_optimization:
+                self.assignment, self.routes, self.info = insertion(self)
                 self.assignment, self.routes, self.info = SA_routing(self)
             else:
                 self.assignment, self.routes, self.info = insertion(self)
@@ -246,6 +247,7 @@ class DynamicQVRPEnv(gym.Env):
             self.omitted.append(self.j)
             
         self.j += 1
+        self.action_mask[self.j] = True
         self.info.update({
             'assignment' : self.assignment,
             "episode rewards" : self.episode_reward,
@@ -297,6 +299,7 @@ class DynamicQVRPEnv(gym.Env):
         
     
     def render(self, size = 100, show_node_num =False):
+        # print(self.assignment)
         G = nx.DiGraph()
         G.add_nodes_from(list(range(self.j+1)))
         # Go = nx.DiGraph()
