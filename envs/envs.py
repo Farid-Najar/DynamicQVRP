@@ -16,7 +16,22 @@ import pickle
 
 @njit
 def knn(a, k):
-    idx = np.argpartition(a, k)
+    """It computes the k nearest neighbors (k mins of array a)
+    If k > len(a), it takes k = len(a)
+
+    Parameters
+    ----------
+    a : np.ndarray
+        The array
+    k : int
+        The number of mins
+
+    Returns
+    -------
+    np.ndarray
+        k mins of array a
+    """
+    idx = np.argpartition(a, min(len(a)-1, k))
     return a[idx[:k]]
 
 def load_data():
@@ -154,6 +169,9 @@ class DynamicQVRPEnv(gym.Env):
         
         self.assignment, self.routes, self.info = SA_routing(self)
         
+        if "remained_quota" not in self.info.keys():
+            raise("The Quota Q might be too low.")
+        
         self.action_mask[self.j] = True
         
         self.remained_capacity -= np.sum(self.quantities[self.assignment.astype(bool)])
@@ -170,8 +188,23 @@ class DynamicQVRPEnv(gym.Env):
         
         
     def _compute_min_med(self):
-        min_knn = np.mean(knn(self.D[self.A, self.j], self.k_min))
-        med_knn = np.median(knn(self.p[self.NA]*self.D[self.NA, self.j], self.k_med))
+        p = self.p.copy()
+        p[~self.NA] = 0
+        p /= p.sum()
+        
+        masks = [
+            np.concatenate([[self.hub], self.dests[np.where(self.assignment == v)[0]]])
+            for v in range(1, len(self.costs_KM)+1)
+        ]
+        min_knn = np.median([
+            np.mean(knn(
+                self.D[mask, self.dests[self.j]], self.k_min
+            ))
+            for mask in masks if len(mask)
+        ])
+        # min_knn = np.mean(knn(self.D[self.A, self.dests[self.j]], self.k_min))
+        med_knn = np.median(knn(p[self.NA]*self.D[self.NA, self.dests[self.j]], self.k_med))
+        
         
         return min_knn, med_knn
     
@@ -216,7 +249,7 @@ class DynamicQVRPEnv(gym.Env):
         if self.h >= self.H-1:
             print("The episode is done :")
             print(self.info)
-            return
+            return -1, 0, True, True, self.info
             
         self.h += 1
         assert isinstance(action, int)
@@ -380,8 +413,13 @@ class DynamicQVRPEnv(gym.Env):
 
         _, ax = plt.subplots(figsize=(12, 7))
         weights = list(nx.get_edge_attributes(G,'weight').values())
+        
+        p = self.p.copy()
+        p[~self.NA] = 0
+        p /= p.sum()
+        
         # ax.scatter(self.coordx[self.dests], self.coordy[self.dests], color='lightgray', s = .6*size, label='Unactivated')
-        ax.scatter(self.coordx, self.coordy, color='lightgray', s = .6*size, label='Unactivated')
+        ax.scatter(self.coordx[self.NA], self.coordy[self.NA], color='lightgray', s = 100*p[self.NA]*size, label='Unactivated')
         # print(self.coordx[self.dests[self.j]], self.coordy[self.dests[self.j]])
         ax.scatter(self.coordx[self.dests[self.j]], self.coordy[self.dests[self.j]], color='blue', s = size, label='Current demand')
         nx.draw_networkx(G, 

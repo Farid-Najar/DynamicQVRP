@@ -94,13 +94,26 @@ def experiment(
         print(agent_name, "done")
         
 if __name__ == "__main__":
+    # VRP with 2 vehicles
+    # experiment(env_configs = {
+    #         "K" : 50,
+    #         "Q" : 100, 
+    #         "DoD" : 0.5,
+    #         "vehicle_capacity" : 25,
+    #         "re_optimization" : True,
+    #         "costs_KM" : [1, 1],
+    #         "emissions_KM" : [.1, .3]
+    #     },
+    # )
+    
+    # TSP
     experiment(env_configs = {
             "K" : 50,
-            "Q" : 100, 
-            "DoD" : 0.5,
-            "vehicle_capacity" : 25,
+            "Q" : 150, 
+            "DoD" : 0.8,
+            "vehicle_capacity" : 30,
             "re_optimization" : True,
-            "costs_KM" : [1, 1],
-            "emissions_KM" : [.1, .3]
+            "costs_KM" : [1],
+            "emissions_KM" : [.3]
         },
     )
