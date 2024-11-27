@@ -327,7 +327,11 @@ class DynamicQVRPEnv(gym.Env):
     
     def offline_solution(self, *args, **kwargs):
         env = deepcopy(self)
-        env.action_mask[:] = True
+        if len(self.cost_matrix) > 1:
+            env.action_mask[:] = True
+        else:
+            env.action_mask = env.is_O_allowed.copy()
+        env.H = 0
         return SA_routing(env, *args, **kwargs)
         
     

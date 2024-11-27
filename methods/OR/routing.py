@@ -158,7 +158,7 @@ def SA_routing(env,
     is_O_allowed = env.is_O_allowed
     
     best = env.assignment.copy()
-    best[~action_mask] = 0
+    best[~action_mask & is_O_allowed] = 0
     best[env.j] = 1 if env.h > 0 else 0
     solution = best.copy()
     T = T_init
@@ -182,8 +182,8 @@ def SA_routing(env,
     if not static_mode and num_actions <= 2:
         return best, best_routes, best_info
     
-    if static_mode:
-        num_actions += 1
+    # if static_mode:
+    #     num_actions += 1
     
     while(T>T_limit):
         
