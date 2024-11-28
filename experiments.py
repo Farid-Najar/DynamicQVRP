@@ -59,7 +59,7 @@ def experiment(
             agentClass = OfflineAgent,
             env_configs = env_configs,
             episodes = episodes,
-            agent_configs = {"n_workers": 10},
+            agent_configs = {"n_workers": 7},
             save_results = True,
             title = "res_offline",
         ),
