@@ -225,9 +225,10 @@ class SLAgent(Agent):
         hidden_layers = [512, 512, 256],#[1024, 1024, 512, 256] [512, 512, 256]
         n_actions: int = 1,
         load_model = True,
-        *args, **kwargs
+        # *args, 
+        **kwargs
         ):
-        super().__init__(env, *args, **kwargs)
+        super().__init__(env, **kwargs)
         self.model = NN(
             env.observation_space.shape[0],
             hidden_layers,

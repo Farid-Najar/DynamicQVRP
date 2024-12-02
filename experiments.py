@@ -1,6 +1,6 @@
 from tqdm import tqdm
 
-from methods import GreedyAgent, MSAAgent, Agent, OfflineAgent
+from methods import GreedyAgent, MSAAgent, Agent, OfflineAgent, SLAgent
 from envs import DynamicQVRPEnv
 
 import pickle
@@ -58,37 +58,45 @@ def experiment(
         pickle.dump(env_configs, f)
     
     agents = {
-        "greedy" : dict(
-            agentClass = GreedyAgent,
+        # "greedy" : dict(
+        #     agentClass = GreedyAgent,
+        #     env_configs = env_configs,
+        #     episodes = episodes,
+        #     agent_configs = {},
+        #     save_results = True,
+        #     title = "res_greedy",
+        # ),
+        # "random" : dict(
+        #     agentClass = Agent,
+        #     env_configs = env_configs,
+        #     episodes = episodes,
+        #     agent_configs = {},
+        #     save_results = True,
+        #     title = "res_random",
+        # ),
+        # "offline" : dict(
+        #     agentClass = OfflineAgent,
+        #     env_configs = env_configs,
+        #     episodes = episodes,
+        #     agent_configs = {"n_workers": 7},
+        #     save_results = True,
+        #     title = "res_offline",
+        # ),
+        # "MSA" : dict(
+        #     agentClass = MSAAgent,
+        #     env_configs = env_configs,
+        #     episodes = episodes,
+        #     agent_configs = dict(n_sample=21, parallelize = True),
+        #     save_results = True,
+        #     title = "res_MSA",
+        # ),
+        "SL" : dict(
+            agentClass = SLAgent,
             env_configs = env_configs,
             episodes = episodes,
-            agent_configs = {},
+            agent_configs = dict(),
             save_results = True,
-            title = "res_greedy",
-        ),
-        "random" : dict(
-            agentClass = Agent,
-            env_configs = env_configs,
-            episodes = episodes,
-            agent_configs = {},
-            save_results = True,
-            title = "res_random",
-        ),
-        "offline" : dict(
-            agentClass = OfflineAgent,
-            env_configs = env_configs,
-            episodes = episodes,
-            agent_configs = {"n_workers": 7},
-            save_results = True,
-            title = "res_offline",
-        ),
-        "MSA" : dict(
-            agentClass = MSAAgent,
-            env_configs = env_configs,
-            episodes = episodes,
-            agent_configs = dict(n_sample=21, parallelize = True),
-            save_results = True,
-            title = "res_MSA",
+            title = "res_SL",
         ),
     }
     
@@ -113,7 +121,9 @@ if __name__ == "__main__":
     )
     
     # TSP
-    # experiment(env_configs = {
+    # experiment(
+        # 500,
+        # env_configs = {
     #         "K" : 50,
     #         "Q" : 150, 
     #         "DoD" : 0.8,
