@@ -28,56 +28,64 @@ def NN_routing(
     
     a = action.copy()
     
-    for v in range(len(cost_matrix)+1):
+    alphas = [list(np.where(a == v)[0] + 1) for v in range(1, len(cost_matrix)+1)]
+    vs = np.argsort(np.array([len(l) for l in alphas]))[::-1]
+    # print(alphas)
+    # print(vs)
+    
+    for i in range(len(vs)):
         # routes.append([])#List([0]))
-        alpha = list(np.where(a == v)[0] + 1)
-        if v:
-            quantity = 0
-            # routes[i].append(int(0))
-            k = 1
-            while True:
-                if len(alpha) == 0:
-                    break
-                j = int(np.argmin(cost_matrix[v-1, routes[v-1][k-1], np.array(alpha)]))
-                
-                quantity += quantities[alpha[j]-1]
-                
-                if quantity > max_capacity:
-                    # routes[0] += alpha
-                    # info['LCF'][i-1] += np.sum(quantities[np.array(alpha)-1])*omission_cost
-                    if v < len(cost_matrix):
-                        a[np.array(alpha) - 1] += 1
-                        # action[np.array(alpha) - 1] += 1
-                    else:
-                        a[np.array(alpha) - 1] = 0
-                        # action[np.array(alpha) - 1] = 0
-                    # print(np.array(alpha), "omitted")
-                    break
-                # temp = cost_matrix[i-1, routes[i-1][-1], alpha]
-                # print(cost_matrix[i-1, routes[i-1][-1], np.array(alpha)])
-                # print(alpha)
-                dest = alpha.pop(j)
-                # if k <= max_capacity:
-                costs[v-1] += distance_matrix[routes[v-1][k-1], dest]*costs_KM[v-1]
-                emissions[v-1] += distance_matrix[routes[v-1][k-1], dest]*emissions_KM[v-1]
-                # info['LCF'][i-1] += cost_matrix[i-1, routes[i-1][k-1], dest]
-                routes[v-1, k] = dest
-                # print(routes[i-1], costs[i-1], emissions[i-1])
-                # if k > 1:
-                #     obs[routes[i-1][k-1] - 1] = cost_matrix[i-1, routes[i-1][k-2], routes[i-1][k-1]] + \
-                #         cost_matrix[i-1, routes[i-1][k-1], routes[i-1][k]] - \
-                #         cost_matrix[i-1, routes[i-1][k-2], routes[i-1][k]]
-                
-                k+=1
-                
-            costs[v-1] += distance_matrix[routes[v-1][k-1], 0]*costs_KM[v-1]
-            emissions[v-1] += distance_matrix[routes[v-1][k-1], 0]*emissions_KM[v-1]
-            # info['LCF'][i-1] += cost_matrix[i-1, routes[i-1][k-1], 0]
-            # routes[i].append(0)
+        # if v:
+        v = vs[i] + 1
+        alpha = alphas[v-1]
+        quantity = 0
+        # routes[i].append(int(0))
+        k = 1
+        while True:
+            if len(alpha) == 0:
+                break
+            j = int(np.argmin(cost_matrix[v-1, routes[v-1][k-1], np.array(alpha)]))
+            
+            quantity += quantities[alpha[j]-1]
+            
+            if quantity > max_capacity:
+                # routes[0] += alpha
+                # info['LCF'][i-1] += np.sum(quantities[np.array(alpha)-1])*omission_cost
+                if i < len(vs)-1:
+                    a[np.array(alpha) - 1] = vs[i+1] + 1
+                    alphas[vs[i+1]].extend(alpha)
+                    # action[np.array(alpha) - 1] += 1
+                else:
+                    # a[np.array(alpha) - 1] = 0
+                    raise(Exception("Something is going wrong. This function (NN_routing) cannot calculate routes."))
+                    # action[np.array(alpha) - 1] = 0
+                # print(np.array(alpha), "omitted")
+                break
+            # temp = cost_matrix[i-1, routes[i-1][-1], alpha]
+            # print(cost_matrix[i-1, routes[i-1][-1], np.array(alpha)])
+            # print(alpha)
+            dest = alpha.pop(j)
+            # if k <= max_capacity:
+            costs[v-1] += distance_matrix[routes[v-1][k-1], dest]*costs_KM[v-1]
+            emissions[v-1] += distance_matrix[routes[v-1][k-1], dest]*emissions_KM[v-1]
+            # info['LCF'][i-1] += cost_matrix[i-1, routes[i-1][k-1], dest]
+            routes[v-1, k] = dest
+            # print(routes[i-1], costs[i-1], emissions[i-1])
             # if k > 1:
             #     obs[routes[i-1][k-1] - 1] = cost_matrix[i-1, routes[i-1][k-2], routes[i-1][k-1]] + \
-            #             cost_matrix[i-1, routes[i-1][k-1], routes[i-1][k]] - \
-            #             cost_matrix[i-1, routes[i-1][k-2], routes[i-1][k]]
+            #         cost_matrix[i-1, routes[i-1][k-1], routes[i-1][k]] - \
+            #         cost_matrix[i-1, routes[i-1][k-2], routes[i-1][k]]
+            
+            k+=1
+            
+        costs[v-1] += distance_matrix[routes[v-1][k-1], 0]*costs_KM[v-1]
+        emissions[v-1] += distance_matrix[routes[v-1][k-1], 0]*emissions_KM[v-1]
+        # info['LCF'][i-1] += cost_matrix[i-1, routes[i-1][k-1], 0]
+        # routes[i].append(0)
+        # if k > 1:
+        #     obs[routes[i-1][k-1] - 1] = cost_matrix[i-1, routes[i-1][k-2], routes[i-1][k-1]] + \
+        #             cost_matrix[i-1, routes[i-1][k-1], routes[i-1][k]] - \
+        #             cost_matrix[i-1, routes[i-1][k-2], routes[i-1][k]]
                 
         # else:
         #     info['omitted'] = alpha

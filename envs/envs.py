@@ -246,7 +246,7 @@ class DynamicQVRPEnv(gym.Env):
     
     def step(self, action: int) -> tuple[Any, float, bool, bool, dict[str, Any]]:
         
-        if self.h >= self.H-1:
+        if self.h >= self.H-1 or self.remained_capacity <= 0:
             print("The episode is done :")
             print(self.info)
             return -1, 0, True, True, self.info

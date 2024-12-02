@@ -32,9 +32,9 @@ class NN(nn.Module):#(BaseFeaturesExtractor):
 
     def __init__(self, 
                 #  observation_space: spaces.Box, 
-                 n_observation: spaces.Box, 
-                 hidden_layers = [128, 128, 128],
-                 n_actions: int = 100):
+                 n_observation, 
+                 hidden_layers = [512, 512, 256],
+                 n_actions: int = 1):
         # super().__init__(observation_space, n_actions)
         super().__init__()
         # We assume CxHxW images (channels first)
@@ -50,6 +50,7 @@ class NN(nn.Module):#(BaseFeaturesExtractor):
             
         layers += [
             nn.Linear(hidden_layers[-1], n_actions),
+            # nn.Sigmoid()
             # nn.Softmax()
         ]
 
@@ -61,7 +62,7 @@ class NN(nn.Module):#(BaseFeaturesExtractor):
         return self.linear(observations)
     
 
-def train(x, y, epochs = 10):
+def train(x: torch.Tensor, y: torch.Tensor, epochs = 10, save = False):
     # mps_device = torch.device("mps")
     
     device = torch.device(
@@ -71,13 +72,15 @@ def train(x, y, epochs = 10):
     )
     
     pivot = int(.8*len(x))
+    y = y.view(-1, 1)
+    print(y.shape)
     print(x[:pivot, :].shape)
     print(y[:pivot, :].shape)
     training_set = TensorDataset(x[:pivot, :], y[:pivot, :])
     validation_set = TensorDataset(x[pivot:, :], y[pivot:, :])
     
-    model = NN(spaces.Box(0, 1, (x.shape[1],))).to(device)
-    loss_fn = nn.CrossEntropyLoss()#nn.MSELoss()#nn.BCELoss(reduction='mean')#
+    model = NN(x.shape[1]).to(device)
+    loss_fn = nn.MSELoss()#nn.CrossEntropyLoss()#nn.BCELoss(reduction='mean')#
     # Create data loaders for our datasets; shuffle for training, not for validation
     training_loader = DataLoader(
         training_set, batch_size=256, shuffle=True, num_workers=os.cpu_count()-1,
@@ -86,7 +89,7 @@ def train(x, y, epochs = 10):
         validation_set, batch_size=256, shuffle=False, num_workers=os.cpu_count()-1,
     )
 
-    optimizer = torch.optim.Adam(model.parameters())
+    optimizer = torch.optim.Adam(model.parameters())#,lr=5e-4,  weight_decay=1e-5)
     def train_one_epoch(epoch_index, tb_writer):
         running_loss = 0.
         last_loss = 0.
@@ -165,8 +168,11 @@ def train(x, y, epochs = 10):
         # Track best performance, and save the model's state
         if avg_vloss < best_vloss:
             best_vloss = avg_vloss
-            model_path = 'model_{}_{}'.format(timestamp, epoch)
-            torch.save(model.state_dict(), model_path)
+            print('best ! loss :', best_vloss)
+            if save :
+                # model_path = 'model_{}_{}'.format(timestamp, epoch)
+                model_path = 'model_SL'
+                torch.save(model.state_dict(), model_path)
 
     
 
@@ -174,11 +180,13 @@ if __name__ == '__main__':
     # mps_device = torch.device("mps")
     # torch.set_default_device(mps_device)
     
+    # path = 'DynamicQVRP/data/SL_data/'
     path = 'data/SL_data/'
-    x = np.load(path+'x_50.npy')
-    y = np.load(path+'y_50.npy')
-    x /= np.amax(x, axis=1).reshape(-1, 1)
+    
+    x = np.load(path+'x_downsampled_50.npy')
+    y = np.load(path+'y_downsampled_50.npy')
+    # x /= np.amax(x, axis=1).reshape(-1, 1)
     assert len(x) == len(y)
     print(x.shape)
     
-    train(torch.Tensor(x), torch.Tensor(y), 500)
+    train(torch.Tensor(x), torch.Tensor(y), 500, save=True)
