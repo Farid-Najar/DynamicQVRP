@@ -3,6 +3,10 @@ from tqdm import tqdm
 import multiprocess as mp
 from copy import deepcopy
 
+import torch
+
+from methods.ML.supervised import train, NN
+
 from gymnasium import Env
 
 
@@ -209,3 +213,42 @@ class MSAAgent(Agent):
             )
             
         return int(np.argmax(score))
+    
+    
+class SLAgent(Agent):
+    """The supervised learning agent
+    This agent is trained with the expert advice of the offline agent (VA_SA).
+    """
+    def __init__(
+        self,
+        env,
+        hidden_layers = [512, 512, 256],#[1024, 1024, 512, 256] [512, 512, 256]
+        n_actions: int = 1,
+        load_model = True,
+        *args, **kwargs
+        ):
+        super().__init__(env, *args, **kwargs)
+        self.model = NN(
+            env.observation_space.shape[0],
+            hidden_layers,
+            n_actions
+        )
+        if load_model:
+            self.model.load_state_dict(torch.load('model_SL', weights_only=True))
+            
+        
+    def act(self, x, *args, **kwargs):
+        logit = self.model.forward(torch.Tensor(x))
+        return int(logit>=.5)
+    
+    def train(self, episodes = 300):
+        path = 'data/SL_data/'
+    
+        x = np.load(path+'x_downsampled_50.npy')
+        y = np.load(path+'y_downsampled_50.npy')
+        # x /= np.amax(x, axis=1).reshape(-1, 1)
+        assert len(x) == len(y)
+
+        train(torch.Tensor(x), torch.Tensor(y), episodes, save=True)
+        self.model.load_state_dict(torch.load('model_SL', weights_only=True))
+        # return super().train(episodes)

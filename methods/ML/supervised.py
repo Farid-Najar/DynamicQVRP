@@ -33,7 +33,7 @@ class NN(nn.Module):#(BaseFeaturesExtractor):
     def __init__(self, 
                 #  observation_space: spaces.Box, 
                  n_observation, 
-                 hidden_layers = [512, 512, 256],
+                 hidden_layers = [512, 512, 256],#[1024, 1024, 512, 256] [512, 512, 256]
                  n_actions: int = 1):
         # super().__init__(observation_space, n_actions)
         super().__init__()
@@ -89,7 +89,7 @@ def train(x: torch.Tensor, y: torch.Tensor, epochs = 10, save = False):
         validation_set, batch_size=256, shuffle=False, num_workers=os.cpu_count()-1,
     )
 
-    optimizer = torch.optim.Adam(model.parameters())#,lr=5e-4,  weight_decay=1e-5)
+    optimizer = torch.optim.Adam(model.parameters(),lr=5e-4,  weight_decay=1e-5)
     def train_one_epoch(epoch_index, tb_writer):
         running_loss = 0.
         last_loss = 0.

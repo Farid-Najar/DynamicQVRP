@@ -3,22 +3,27 @@ import os
 print(os.getcwd())
 from envs import DynamicQVRPEnv
 import pickle
+from tqdm import tqdm
 
 def generate_xy():
-    with open('results/res_w_ReOpt/res_offline.pkl', "rb") as f:
+    file = "res_wReOpt_500"
+    
+    with open(f'results/{file}/res_offline.pkl', "rb") as f:
         res_offline = pickle.load(f)
+        
+    with open(f'results/{file}/env_configs.pkl', "rb") as f:
+        env_configs = pickle.load(f)
     x = []
     y = []
     
-    env = DynamicQVRPEnv(50, 100, DoD=0.5, vehicle_capacity=25, re_optimization=True,
-                          costs_KM=[1, 1], emissions_KM=[.1, .3]
-    )
-    for i in range(len(res_offline["actions"])):
+    env = DynamicQVRPEnv(**env_configs)
+    
+    for i in tqdm(range(len(res_offline["actions"]))):
         actions = res_offline["actions"][i]
         o, _ = env.reset(i)
         x.append(o)
         for a in actions:
-            y.append(a)
+            y.append(int(bool(a)))
             o, *_, d, _ = env.step(int(a))
             if d:
                 break
