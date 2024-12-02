@@ -59,6 +59,7 @@ class DynamicQVRPEnv(gym.Env):
                  CO2_penalty = 10_000,
                  k_min : int = 2,
                  k_med : int = 5,
+                 n_scenarios = None,
                  hub = 0
                  ):
         
@@ -66,10 +67,11 @@ class DynamicQVRPEnv(gym.Env):
         
         if use_dataset:
             retain_comment = f"_retain{retain_rate}" if retain_rate else ""
+            scenario_comment = f"_{n_scenarios}" if n_scenarios is not None else ""
             # with open(f'data/game_K{K}{retain_comment}.pkl', 'rb') as f:
             #     g = pickle.load(f)
             # routes = np.load(f'data/routes_K{K}{retain_comment}.npy')
-            self.all_dests = np.load(f'data/destinations_K{K}{retain_comment}.npy').astype(int)
+            self.all_dests = np.load(f'data/destinations_K{K}{retain_comment}{scenario_comment}.npy').astype(int)
             
             if K == 20:
                 qs = np.load(f'data/quantities_K{K}_retain1.0.npy')
