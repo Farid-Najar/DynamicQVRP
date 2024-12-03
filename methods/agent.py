@@ -240,7 +240,7 @@ class SLAgent(Agent):
         
     def act(self, x, *args, **kwargs):
         logit = self.model.forward(torch.Tensor(x))
-        return int(logit>=.5)
+        return int(logit>=.5)#int(torch.argmax(logit))
     
     def train(self, episodes = 300):
         path = 'data/SL_data/'

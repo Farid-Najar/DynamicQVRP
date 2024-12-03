@@ -5,8 +5,7 @@ from envs import DynamicQVRPEnv
 import pickle
 from tqdm import tqdm
 
-def generate_xy():
-    file = "res_wReOpt_500"
+def generate_xy(file = "res_wReOpt_500"):
     
     with open(f'results/{file}/res_offline.pkl', "rb") as f:
         res_offline = pickle.load(f)
@@ -34,8 +33,8 @@ def generate_xy():
     x = np.array(x)
     y = np.array(y)
     
-    np.save('data/SL_data/x_50.npy', x)
-    np.save('data/SL_data/y_50.npy', y)
+    np.save('data/SL_data/x.npy', x)
+    np.save('data/SL_data/y.npy', y)
     
 
 if __name__ == '__main__':
