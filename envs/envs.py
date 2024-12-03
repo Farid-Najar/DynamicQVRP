@@ -308,6 +308,12 @@ class DynamicQVRPEnv(gym.Env):
         p = env.p.copy()
         p[env.dests[:self.j]] = 0
         p[env.hub] = 0
+        
+        if len(self.cost_matrix) > 1:
+            env.action_mask[:] = True
+        else:
+            env.action_mask = env.is_O_allowed.copy()
+            
         p /= p.sum()
         
         H = min(H, env.H - env.h - 1)
