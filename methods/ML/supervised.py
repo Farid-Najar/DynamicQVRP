@@ -24,11 +24,6 @@ import numpy as np
 from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
 
 class NN(nn.Module):#(BaseFeaturesExtractor):
-    """
-    :param observation_space: (gym.Space)
-    :param features_dim: (int) Number of features extracted.
-        This corresponds to the number of unit for the last layer.
-    """
 
     def __init__(self, 
                 #  observation_space: spaces.Box, 
