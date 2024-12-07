@@ -235,7 +235,7 @@ class SLAgent(Agent):
             n_actions
         )
         if load_model:
-            self.model.load_state_dict(torch.load('model_SL', weights_only=True))
+            self.model.load_state_dict(torch.load('methods/ML/models/model_SL', weights_only=True))
             
         
     def act(self, x, *args, **kwargs):
