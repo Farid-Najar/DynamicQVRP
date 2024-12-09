@@ -6,6 +6,7 @@ from copy import deepcopy
 import torch
 
 from methods.ML.supervised import train, NN
+from methods.ML.RL import train_DQN
 
 from gymnasium import Env
 
@@ -251,5 +252,55 @@ class SLAgent(Agent):
         assert len(x) == len(y)
 
         train(torch.Tensor(x), torch.Tensor(y), episodes, save=True)
-        self.model.load_state_dict(torch.load('model_SL', weights_only=True))
+        self.model.load_state_dict(torch.load('methods/ML/models/model_SL', weights_only=True))
+        # return super().train(episodes)
+        
+class RLAgent(Agent):
+    """The reinforcement learning agent
+    This agent is trained with trial and error.
+    """
+    def __init__(
+        self,
+        env : Env,
+        hidden_layers = [512, 512, 256],#[1024, 1024, 512, 256] [512, 512, 256]
+        algo = 'DQN',
+        load_model = True,
+        # *args, 
+        **kwargs
+        ):
+        super().__init__(env, **kwargs)
+        self.model = NN(
+            env.observation_space.shape[0],
+            hidden_layers,
+            env.action_space.n
+        )
+        self.algo = algo
+        if load_model:
+            self.model.load_state_dict(torch.load(f'methods/ML/models/model_{algo}', weights_only=True))
+            # self.model = torch.load(f'methods/ML/models/model_{algo}', weights_only=False)
+            
+        
+    def act(self, x, *args, **kwargs):
+        with torch.no_grad():
+                # t.max(1) will return the largest column value of each row.
+                # second column on max result is index of where max element was
+                # found, so we pick action with the larger expected reward.
+            return self.model(torch.Tensor(x)).max(0).indices.item()
+    
+    def train(self, episodes = 20):
+            
+        train_DQN(
+            self.env,
+            hidden_layers = [512, 512, 256],
+            EPOCHS = episodes,
+            BATCH_SIZE = 128,
+            GAMMA = 0.99,
+            EPS_START = 0.9,
+            EPS_END = 0.05,
+            EPS_DECAY = 1000,
+            TAU = 0.05,
+            LR = 1e-4,
+            save = True
+        )
+        self.model.load_state_dict(torch.load(f'methods/ML/models/model_{self.algo}', weights_only=True))
         # return super().train(episodes)

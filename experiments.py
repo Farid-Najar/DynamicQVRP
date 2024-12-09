@@ -1,6 +1,6 @@
 from tqdm import tqdm
 
-from methods import GreedyAgent, MSAAgent, Agent, OfflineAgent, SLAgent
+from methods import GreedyAgent, MSAAgent, Agent, OfflineAgent, SLAgent, RLAgent
 from envs import DynamicQVRPEnv
 
 import pickle
@@ -90,13 +90,21 @@ def experiment(
         #     save_results = True,
         #     title = "res_MSA",
         # ),
-        "SL" : dict(
-            agentClass = SLAgent,
+        # "SL" : dict(
+        #     agentClass = SLAgent,
+        #     env_configs = env_configs,
+        #     episodes = episodes,
+        #     agent_configs = dict(),
+        #     save_results = True,
+        #     title = "res_SL",
+        # ),
+        "RL" : dict(
+            agentClass = RLAgent,
             env_configs = env_configs,
             episodes = episodes,
             agent_configs = dict(),
             save_results = True,
-            title = "res_SL",
+            title = "res_RL",
         ),
     }
     
@@ -146,6 +154,7 @@ if __name__ == "__main__":
             "re_optimization" : False,
             "costs_KM" : [1],
             "emissions_KM" : [.3],
-            "n_scenarios" : 500  
+            "n_scenarios" : 500 ,
+            # "test"  : True
         },
     )

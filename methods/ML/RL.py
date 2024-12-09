@@ -4,7 +4,7 @@ import multiprocess as mp
 from copy import deepcopy
 
 from gymnasium import Env
-from methods import Agent
+# from methods import Agent
 
 import gymnasium as gym
 import math
@@ -19,6 +19,8 @@ import torch.nn.functional as F
 
 import matplotlib.pyplot as plt
 import matplotlib
+
+from methods.ML.supervised import NN
 
 from time import time
 
@@ -134,18 +136,18 @@ class LinearDQN(nn.Module):
     def forward(self, x):
         return self.layer(x)
 
-class LinearQRL(Agent):
+# class LinearQRL(Agent):
     
-    def __init__(self, env: Env, n_workers=5, parallelize=False, *args, **kwargs):
-        super().__init__(env, n_workers, parallelize, *args, **kwargs)
+#     def __init__(self, env: Env, n_workers=5, parallelize=False, *args, **kwargs):
+#         super().__init__(env, n_workers, parallelize, *args, **kwargs)
         
-        self.device = torch.device(
-            "cuda" if torch.cuda.is_available() else
-            "mps" if torch.backends.mps.is_available() else
-            "cpu"
-        )
+#         self.device = torch.device(
+#             "cuda" if torch.cuda.is_available() else
+#             "mps" if torch.backends.mps.is_available() else
+#             "cpu"
+#         )
         
-def train(
+def train_DQN(
     env,
     hidden_layers = [512, 512, 256],
     EPOCHS = 20,
@@ -179,8 +181,8 @@ def train(
     state, info = env.reset()
     n_observations = len(state)
 
-    policy_net = DQN(n_observations, hidden_layers, n_actions).to(device)
-    target_net = DQN(n_observations, hidden_layers, n_actions).to(device)
+    policy_net = NN(n_observations, deepcopy(hidden_layers), n_actions).to(device)
+    target_net = NN(n_observations, deepcopy(hidden_layers), n_actions).to(device)
     target_net.load_state_dict(policy_net.state_dict())
 
     optimizer = optim.AdamW(policy_net.parameters(), lr=LR, amsgrad=True)
