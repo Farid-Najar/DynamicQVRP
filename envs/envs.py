@@ -93,6 +93,9 @@ class DynamicQVRPEnv(gym.Env):
             # , True
             # )
         
+        self.max_capacity = vehicle_capacity
+        self.total_capacity = vehicle_capacity*len(costs_KM)
+        DoD = 1-(self.total_capacity-DoD*self.total_capacity)/K
         self.H = int(DoD*K) # ou = self.K
         self.K = K
         self.D, self.coordx, self.coordy, self.p = load_data()
@@ -106,8 +109,6 @@ class DynamicQVRPEnv(gym.Env):
         self.k_med = k_med
         self.emissions_KM = emissions_KM
         self.costs_KM = costs_KM
-        self.max_capacity = vehicle_capacity
-        self.total_capacity = vehicle_capacity*len(costs_KM)
         # self.is_0_allowed = is_0_allowed
         self.num_actions = len(self.emissions_KM) + 1 #if is_0_allowed else len(self.emissions_KM)
         self.re_optimization = re_optimization

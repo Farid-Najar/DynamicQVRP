@@ -35,16 +35,17 @@ class NN(nn.Module):#(BaseFeaturesExtractor):
         # We assume CxHxW images (channels first)
         # Re-ordering will be done by pre-preprocessing or wrapper
         # n_inputs = observation_space.shape[0]
-        hidden_layers.insert(0, n_observation)
+        hidden = deepcopy(hidden_layers)
+        hidden.insert(0, n_observation)
         layers = []
-        for l in range(len(hidden_layers)-1):
+        for l in range(len(hidden)-1):
             layers += [
-                nn.Linear(hidden_layers[l], hidden_layers[l+1]),
+                nn.Linear(hidden[l], hidden[l+1]),
                 nn.ReLU()
             ]
             
         layers += [
-            nn.Linear(hidden_layers[-1], n_actions),
+            nn.Linear(hidden[-1], n_actions),
             # nn.Sigmoid()
             # nn.Softmax()
         ]
