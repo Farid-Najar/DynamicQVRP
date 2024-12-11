@@ -20,6 +20,9 @@ import torch.nn.functional as F
 import matplotlib.pyplot as plt
 import matplotlib
 
+from stable_baselines3.common.env_util import make_vec_env
+from stable_baselines3 import PPO, DQN
+
 from methods.ML.supervised import NN
 
 from time import time

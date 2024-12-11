@@ -163,14 +163,14 @@ def experiment_DoD(
                 save_results = True,
                 title = "res_greedy",
             ),
-            "random" : dict(
-                agentClass = Agent,
-                env_configs = env_configs,
-                episodes = episodes,
-                agent_configs = {},
-                save_results = True,
-                title = "res_random",
-            ),
+            # "random" : dict(
+            #     agentClass = Agent,
+            #     env_configs = env_configs,
+            #     episodes = episodes,
+            #     agent_configs = {},
+            #     save_results = True,
+            #     title = "res_random",
+            # ),
             # "offline" : dict(
             #     agentClass = OfflineAgent,
             #     env_configs = env_configs,
@@ -259,12 +259,12 @@ if __name__ == "__main__":
     # TSP different DoDs
     experiment_DoD(
         500,
-        DoDs = [1., .95, .9, .85, .8, .75, .7, .65, .6],
+        DoDs = [1., .95, .9, .85, .8, .75],#[1., .95, .9, .85, .8, .75, .7, .65, .6]
         env_configs = {
             "K" : 50,
             "Q" : 100, 
             "DoD" : 1.,
-            "vehicle_capacity" : 30,
+            "vehicle_capacity" : 20,
             "re_optimization" : False,
             "costs_KM" : [1],
             "emissions_KM" : [.3],

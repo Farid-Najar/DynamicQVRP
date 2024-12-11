@@ -8,6 +8,9 @@ import torch
 from methods.ML.supervised import train, NN
 from methods.ML.RL import train_DQN
 
+from stable_baselines3.common.env_util import make_vec_env
+from stable_baselines3 import PPO, DQN
+
 from gymnasium import Env
 
 
@@ -263,20 +266,29 @@ class RLAgent(Agent):
         self,
         env : Env,
         hidden_layers = [512, 512, 256],#[1024, 1024, 512, 256] [512, 512, 256]
-        algo = 'DQN',
+        algo = 'DQN', # [DQN, PPO]
         load_model = True,
         # *args, 
         **kwargs
         ):
         super().__init__(env, **kwargs)
-        self.model = NN(
-            env.observation_space.shape[0],
-            hidden_layers,
-            env.action_space.n
-        )
-        self.algo = algo
+        # self.model = NN(
+        #     env.observation_space.shape[0],
+        #     hidden_layers,
+        #     env.action_space.n
+        # )
+        self.algo = DQN if algo.upper() == 'DQN' else PPO
+        
+        self.name = algo
+        
+        vec_env = make_vec_env("CartPole-v1", n_envs=4)
+        
+        self.model = self.algo("MlpPolicy", vec_env, verbose=1)#, device="mps")
+        
+        
         if load_model:
-            self.model.load_state_dict(torch.load(f'methods/ML/models/model_{algo}', weights_only=True))
+            # self.model.load_state_dict(torch.load(f'methods/ML/models/model_{algo}', weights_only=True))
+            self.model = self.algo.load(f'methods/ML/models/{self.name}')
             # self.model = torch.load(f'methods/ML/models/model_{algo}', weights_only=False)
             
         
@@ -288,19 +300,23 @@ class RLAgent(Agent):
             return self.model(torch.Tensor(x)).max(0).indices.item()
     
     def train(self, episodes = 20):
+        
+        steps = episodes*self.env.K*len(self.all_dests)
+        self.model.learn(total_timesteps=steps)
+        self.model.save(f'methods/ML/models/{self.name}')
             
-        train_DQN(
-            self.env,
-            hidden_layers = [512, 512, 256],
-            EPOCHS = episodes,
-            BATCH_SIZE = 128,
-            GAMMA = 0.99,
-            EPS_START = 0.9,
-            EPS_END = 0.05,
-            EPS_DECAY = 1000,
-            TAU = 0.05,
-            LR = 1e-4,
-            save = True
-        )
-        self.model.load_state_dict(torch.load(f'methods/ML/models/model_{self.algo}', weights_only=True))
+        # train_DQN(
+        #     self.env,
+        #     hidden_layers = [512, 512, 256],
+        #     EPOCHS = episodes,
+        #     BATCH_SIZE = 128,
+        #     GAMMA = 0.99,
+        #     EPS_START = 0.9,
+        #     EPS_END = 0.05,
+        #     EPS_DECAY = 1000,
+        #     TAU = 0.05,
+        #     LR = 1e-4,
+        #     save = True
+        # )
+        # self.model.load_state_dict(torch.load(f'methods/ML/models/model_{self.algo}', weights_only=True))
         # return super().train(episodes)
