@@ -189,8 +189,9 @@ def SA_routing(env,
     flag100 = True
     # infos = []
     init_flag = not d and env.h == 0 and env.allow_initial_omission
+    full_dyn_flag = env.h == 0 and env.j==0
     
-    if not init_flag and not static_mode and num_actions <= 2:
+    if full_dyn_flag or not init_flag and not static_mode and num_actions <= 2:
         return best, best_routes, best_info
     
     # if static_mode:

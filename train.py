@@ -17,6 +17,17 @@ def train_agents(
             "K" : 50,
             "Q" : 100, 
             "DoD" : 1.,
+            "vehicle_capacity" : 30,
+            "re_optimization" : False,
+            "costs_KM" : [1],
+            "emissions_KM" : [.3],
+            "n_scenarios" : 500 ,
+            # "test"  : True
+        },
+        {
+            "K" : 50,
+            "Q" : 100, 
+            "DoD" : 1,
             "vehicle_capacity" : 20,
             "re_optimization" : False,
             "costs_KM" : [1],
@@ -37,32 +48,43 @@ def train_agents(
         },
         {
             "K" : 50,
-            "Q" : 100, 
-            "DoD" : 1.,
+            "Q" : 110, 
+            "DoD" : .7,
             "vehicle_capacity" : 20,
             "re_optimization" : False,
-            "costs_KM" : [1, 1],
-            "emissions_KM" : [.1, .3],
+            "costs_KM" : [1],
+            "emissions_KM" : [.3],
             "n_scenarios" : 500 ,
             # "test"  : True
         },
-        {
-            "K" : 50,
-            "Q" : 100, 
-            "DoD" : .9,
-            "vehicle_capacity" : 20,
-            "re_optimization" : False,
-            "costs_KM" : [1, 1],
-            "emissions_KM" : [.1, .3],
-            "n_scenarios" : 500 ,
-            # "test"  : True
-        },
+        # {
+        #     "K" : 50,
+        #     "Q" : 100, 
+        #     "DoD" : 1.,
+        #     "vehicle_capacity" : 20,
+        #     "re_optimization" : True,
+        #     "costs_KM" : [1, 1],
+        #     "emissions_KM" : [.1, .3],
+        #     "n_scenarios" : 500 ,
+        #     # "test"  : True
+        # },
+        # {
+        #     "K" : 50,
+        #     "Q" : 100, 
+        #     "DoD" : .9,
+        #     "vehicle_capacity" : 20,
+        #     "re_optimization" : True,
+        #     "costs_KM" : [1, 1],
+        #     "emissions_KM" : [.1, .3],
+        #     "n_scenarios" : 500 ,
+        #     # "test"  : True
+        # },
         ]
     
     envs = [DynamicQVRPEnv(**env_configs) for env_configs in envs_configs]
     # env = DynamicQVRPEnv(**env_configs)
-    agent = RLAgent(envs[0], load_model=False, **agent_configs)
-    agent.train(envs)
+    agent = RLAgent(envs[0], load_model=False, algo='DQN',**agent_configs)
+    agent.train(episodes=15)
     
     
 

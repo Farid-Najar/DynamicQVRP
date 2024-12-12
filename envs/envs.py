@@ -220,6 +220,7 @@ class DynamicQVRPEnv(gym.Env):
         ])
         # min_knn = np.mean(knn(self.D[self.A, self.dests[self.j]], self.k_min))
         med_knn = np.median(knn(p[self.NA]*self.D[self.NA, self.dests[self.j]], self.k_med))
+        # med_knn = np.median(knn(self.D[self.NA, self.dests[self.j]]/(p[self.NA] + 1e-8), self.k_med))
         
         
         return min_knn, med_knn
@@ -233,7 +234,7 @@ class DynamicQVRPEnv(gym.Env):
             self.remained_capacity / self.total_capacity, # the percentage of capacity remained
             (self.H - self.h) / max(1, self.H), # the remaining demands to come
             min_knn/np.max(self.D), # The mean of the k nearest neighbors in admitted dests
-            med_knn/np.max(self.D), # The mean of the k nearest neighbors in non activated dests
+            med_knn/(np.max(self.D)/1e-8), # The mean of the k nearest neighbors in non activated dests
             max(0, self.info["remained_quota"])/self.Q
             #TODO * Maybe find better observations
         ])
@@ -483,7 +484,8 @@ class DynamicQVRPEnv(gym.Env):
         plt.draw()
         plt.legend(bbox_to_anchor=(1.4, 1.0), loc='upper right')
         mesh = ax.pcolormesh(([], []), cmap = plt.cm.jet)
-        mesh.set_clim(np.min(weights),np.max(weights))
+        if self.j or self.h:
+            mesh.set_clim(np.min(weights),np.max(weights))
         # Visualizing colorbar part -start
         cbar = plt.colorbar(mesh,ax=ax)
         cbar.formatter.set_powerlimits((0, 0))

@@ -108,10 +108,22 @@ def experiment(
             agentClass = RLAgent,
             env_configs = env_configs,
             episodes = episodes,
-            agent_configs = dict(),
+            agent_configs = dict(
+                algo = 'DQN'    
+            ),
             save_results = True,
-            title = "res_RL",
+            title = "res_RL_DQN",
         ),
+        # "RL" : dict(
+        #     agentClass = RLAgent,
+        #     env_configs = env_configs,
+        #     episodes = episodes,
+        #     agent_configs = dict(
+        #         algo = 'PPO'    
+        #     ),
+        #     save_results = True,
+        #     title = "res_RL_PPO",
+        # ),
     }
     
     for agent_name in agents:
@@ -242,30 +254,13 @@ if __name__ == "__main__":
     # )
     
     # TSP full dynamic
-    # experiment(
-    #     500,
-    #     env_configs = {
-    #         "K" : 50,
-    #         "Q" : 100, 
-    #         "DoD" : 1.,
-    #         "vehicle_capacity" : 30,
-    #         "re_optimization" : False,
-    #         "costs_KM" : [1],
-    #         "emissions_KM" : [.3],
-    #         "n_scenarios" : 500 ,
-    #         # "test"  : True
-    #     },
-    # )
-    
-    # TSP different DoDs
-    experiment_DoD(
+    experiment(
         500,
-        DoDs = [.7, .65, .6],#[1., .95, .9, .85, .8, .75, .7, .65, .6]
         env_configs = {
             "K" : 50,
             "Q" : 100, 
             "DoD" : 1.,
-            "vehicle_capacity" : 20,
+            "vehicle_capacity" : 30,
             "re_optimization" : False,
             "costs_KM" : [1],
             "emissions_KM" : [.3],
@@ -273,3 +268,20 @@ if __name__ == "__main__":
             # "test"  : True
         },
     )
+    
+    # TSP different DoDs
+    # experiment_DoD(
+    #     500,
+    #     DoDs = [.7, .65, .6],#[1., .95, .9, .85, .8, .75, .7, .65, .6]
+    #     env_configs = {
+    #         "K" : 50,
+    #         "Q" : 100, 
+    #         "DoD" : 1.,
+    #         "vehicle_capacity" : 20,
+    #         "re_optimization" : False,
+    #         "costs_KM" : [1],
+    #         "emissions_KM" : [.3],
+    #         "n_scenarios" : 500 ,
+    #         # "test"  : True
+    #     },
+    # )

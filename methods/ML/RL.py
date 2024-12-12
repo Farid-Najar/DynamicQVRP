@@ -392,10 +392,10 @@ def _train(
         model = algo(
             policy,
             vec_env,
-            policy_kwargs=policy_kwargs,
-            n_steps=n_steps,
+            # policy_kwargs=policy_kwargs,
+            # n_steps=n_steps,
             gamma=gamma,
-            batch_size=n_steps*os.cpu_count(),
+            # batch_size=n_steps*(os.cpu_count()-1),
             # n_epochs=50,
             # learning_rate=5e-5,
             verbose=1,
@@ -427,7 +427,7 @@ def _train(
     )
     # Save the agent
     if save:
-        model.save(f'{str(path)}/{algo.__name__}')
+        model.save(f'{str(path)}/models/{algo.__name__}')
     # del model  # delete trained model to demonstrate loading
     return model
 
@@ -437,7 +437,7 @@ def train_RL(
     algo = PPO,
     policy_kwargs = dict(
         activation_fn=nn.ReLU,
-        share_features_extractor=True,
+        # share_features_extractor=True,
         net_arch=[512, 512, 256]#dict(
         #    pi=[2048, 2048, 1024, 256, 64], 
         #    vf=[2048, 2048, 1024, 256, 64])

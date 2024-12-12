@@ -279,7 +279,7 @@ class RLAgent(Agent):
         # )
         self.algo = DQN if algo.upper() == 'DQN' else PPO
         
-        # self.name = algo
+        self.name = algo
         self.hidden_layers = hidden_layers
         
         vec_env = make_vec_env("CartPole-v1", n_envs=4)
@@ -289,13 +289,14 @@ class RLAgent(Agent):
         
         if load_model:
             # self.model.load_state_dict(torch.load(f'methods/ML/models/model_{algo}', weights_only=True))
-            self.model = self.algo.load(f'methods/ML/models/{self.algo.__name__}')
+            # self.model = self.algo.load(f'methods/ML/models/{self.algo.__name__}/best_model')
+            self.model = self.algo.load(f'methods/ML/{self.algo.__name__}')#/best_model')
             # self.model = torch.load(f'methods/ML/models/model_{algo}', weights_only=False)
             
         
     def act(self, x, *args, **kwargs):
         a, _ = self.model.predict(x)
-        return a
+        return int(a)
     
     def train(self, envs = None, episodes = 20, *args, **kwargs):
         
@@ -317,7 +318,7 @@ class RLAgent(Agent):
             *args, **kwargs
         )
         # self.model = self.algo.load(f'methods/ML/models/{self.algo.__name__}')
-        self.model.save(f'methods/ML/models/{self.name}')
+        # self.model.save(f'methods/ML/models/{self.name}')
             
         # train_DQN(
         #     self.env,
