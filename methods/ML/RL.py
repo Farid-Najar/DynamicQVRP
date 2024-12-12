@@ -20,12 +20,25 @@ import torch.nn.functional as F
 import matplotlib.pyplot as plt
 import matplotlib
 
-from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3 import PPO, DQN
+from stable_baselines3.common.env_util import make_vec_env
+from stable_baselines3.common.evaluation import evaluate_policy
+from stable_baselines3.common.vec_env import SubprocVecEnv, VecMonitor
+from stable_baselines3.common.utils import set_random_seed
+from stable_baselines3.common.callbacks import EvalCallback
+from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
 
 from methods.ML.supervised import NN
 
 from time import time
+
+
+import sys
+import logging
+import os
+from pathlib import Path
+path = Path(os.path.dirname(__file__))
+sys.path.insert(1, str(path.parent.absolute()))
 
 # set up matplotlib
 is_ipython = 'inline' in matplotlib.get_backend()
@@ -333,5 +346,173 @@ def train_DQN(
     np.save(f'results/RL/DQN/rewards_{int(time())}', np.array(epoch_rs))
 
 
+def make_env(envs, rank: int, seed: int = 1917):
+    """
+    Utility function for multiprocessed env.
+
+    :param env_id: the environment ID
+    :param num_env: the number of environments you wish to have in subprocesses
+    :param seed: the inital seed for RNG
+    :param rank: index of the subprocess
+    """
+    def _init():
+        env2 = deepcopy(envs[rank%len(envs)])
+        env2.reset(seed=seed + rank)
+        return env2
+    set_random_seed(seed)
+    return _init
+
+def _train(
+    vec_env,
+    algo = PPO,
+    policy = "MlpPolicy",
+    policy_kwargs = {},
+    algo_file : str|None = None,
+    algo_dir = str(path)+'/ppo',
+    budget = 1000,
+    n_eval = 10,
+    save = True,
+    eval_freq = 200,
+    progress_bar =True,
+    n_steps = 128,
+    gamma = 0.99,
+):
+    
+    # Instantiate the agent
+    if algo_file is not None:
+        try:
+            model = algo.load(algo_file+f'/{algo.__name__}', env=vec_env)
+            assert model.policy_kwargs == policy_kwargs
+        except Exception as e:
+            logging.warning(f'couldnt load the model because this exception has been raised :\n{e}')
+            
+            print(f'path is {path}')
+            raise('couldnt load the model!')
+    else:   
+        model = algo(
+            policy,
+            vec_env,
+            policy_kwargs=policy_kwargs,
+            n_steps=n_steps,
+            gamma=gamma,
+            batch_size=n_steps*os.cpu_count(),
+            # n_epochs=50,
+            # learning_rate=5e-5,
+            verbose=1,
+            tensorboard_log=algo_dir+"/"
+        )
+    logging.info(f"the model parameters :\n {model.__dict__}")
+    # Train the agent and display a progress bar
+    mean_reward, std_reward = evaluate_policy(model, model.get_env(), n_eval_episodes=n_eval)
+    logging.info(f'Before training :\n mean, std = {mean_reward}, {std_reward}')
+    
+    # checkpoint_callback = CheckpointCallback(
+    # #   save_freq=1000,
+    #   save_path="./logs/",
+    #   name_prefix="rl_model",
+    #   save_replay_buffer=True,
+    #   save_vecnormalize=True,
+    # )
+    
+    eval_callback = EvalCallback(vec_env, best_model_save_path=algo_dir,
+                             log_path=algo_dir, eval_freq=eval_freq,
+                             deterministic=True)
+    
+    model.learn(
+        total_timesteps=budget,
+        progress_bar=progress_bar,
+        log_interval=100,
+        callback=eval_callback,
+        # tb_log_name="ppo",
+    )
+    # Save the agent
+    if save:
+        model.save(f'{str(path)}/{algo.__name__}')
+    # del model  # delete trained model to demonstrate loading
+    return model
+
+
+def train_RL(
+    envs,
+    algo = PPO,
+    policy_kwargs = dict(
+        activation_fn=nn.ReLU,
+        share_features_extractor=True,
+        net_arch=[512, 512, 256]#dict(
+        #    pi=[2048, 2048, 1024, 256, 64], 
+        #    vf=[2048, 2048, 1024, 256, 64])
+    ),
+    budget = int(2e4),
+    save = True,
+    save_path = None,
+    eval_freq = 200,
+    progress_bar =True,
+    algo_file = None,
+    n_steps = 128,
+    gamma = 0.99,
+    *args,
+    **kwargs
+):
+    if save_path is None:
+        save_path = str(path)+f'/models/{algo.__name__}'
         
+    logging.basicConfig(
+        filename=save_path+f'/{algo.__name__}.log',
+        filemode='w',
+        format='%(levelname)s - %(name)s :\n%(message)s \n',
+        level=logging.INFO,
+    )
+    logging.info(f'Train {algo.__name__} started !')
+    # Create environment
+    n_eval = len(envs[0].all_dests)
+    # check_env(env)
+    # logging.info(
+    #     f"""
+    #     Environment information :
         
+    #     Q = {env.Q}
+    #     K = {env.K}
+    #     total capacity = {env.total_capacity} 
+    #     """
+    # )
+    # Create environment
+    num_cpu = os.cpu_count()
+    logging.info(f'Number of CPUs = {num_cpu}')
+    vec_env = SubprocVecEnv([make_env(envs, i) for i in range(num_cpu-1)])
+    vec_env = VecMonitor(vec_env, save_path+"/")
+    # log(type(env))
+    
+    model = _train(
+        vec_env,
+        algo=algo,
+        policy_kwargs=policy_kwargs,
+        budget=budget,
+        n_eval=n_eval,
+        save = save,
+        algo_dir=save_path,
+        eval_freq =     eval_freq ,
+        progress_bar =    progress_bar,
+        algo_file = algo_file,
+        n_steps =     n_steps ,
+        gamma = gamma,
+    )
+
+    
+
+    
+
+    # Load the trained agent
+    # NOTE: if you have loading issue, you can pass `log_system_info=True`
+    # to compare the system on which the model was trained vs the current one
+    # model = DQN.load("dqn_lunar", env=env, log_system_info=True)
+    # model = PPO.load("ppo", env=env)
+
+    # Evaluate the agent
+    # NOTE: If you use wrappers with your environment that modify rewards,
+    #       this will be reflected here. To evaluate with original rewards,
+    #       wrap environment in a "Monitor" wrapper before other wrappers.
+    mean_reward, std_reward = evaluate_policy(model, model.get_env(), n_eval_episodes=10)
+    logging.info(f'After training :\n mean, std = {mean_reward}, {std_reward}')
+    
+    return model
+    

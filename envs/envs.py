@@ -62,6 +62,7 @@ class DynamicQVRPEnv(gym.Env):
                  n_scenarios = None,
                  hub = 0,
                  test = False,
+                 allow_initial_omission = True,
                  ):
         
         self.instance = -1
@@ -116,8 +117,10 @@ class DynamicQVRPEnv(gym.Env):
         self.CO2_penalty = CO2_penalty
         self.omission_cost = (2*np.max(self.D) +1)*np.max(self.costs_KM)
         
-        self.observation_space = gym.spaces.Box(0, 1, (6,)) #TODO * Change if obs change
+        self.observation_space = gym.spaces.Box(0, 1, (6,), np.float64) #TODO * Change if obs change
         self.action_space = gym.spaces.Discrete(2)
+        
+        self.allow_initial_omission = allow_initial_omission
         
         
     def _init_instance(self, instance_id):
@@ -150,11 +153,13 @@ class DynamicQVRPEnv(gym.Env):
         self.assignment = np.ones(self.K, int)
         
         self.action_mask = np.ones(self.K, bool)
-        self.is_O_allowed = np.zeros(self.K, bool)
+        self.is_O_allowed = np.ones(self.K, bool)
         
         self.action_mask[self.j:] = False
+        if not self.allow_initial_omission:
+            self.is_O_allowed[:self.j] = False
+            
         self.assignment[self.j:] = 0
-        self.is_O_allowed[self.j:] = True
         self.A = np.zeros(len(self.D), bool)
         self.A[self.dests[:self.j]] = True
         self.A[self.hub] = True
@@ -176,8 +181,12 @@ class DynamicQVRPEnv(gym.Env):
         
         self.assignment, self.routes, self.info = SA_routing(self)
         
+        self.omitted += list(np.where(self.assignment[:self.j]==0)[0])
+        
+        self.is_O_allowed[:self.j] = False
+        
         if "remained_quota" not in self.info.keys():
-            raise("The Quota Q might be too low.")
+            raise (Exception("The Quota Q might be too low."))
         
         self.action_mask[self.j] = True
         
@@ -231,7 +240,7 @@ class DynamicQVRPEnv(gym.Env):
         
         return obs
     
-    def reset(self, instance_id = -1):
+    def reset(self, instance_id = -1, *args, **kwargs):
         
         
         self._init_instance(instance_id)
@@ -259,7 +268,7 @@ class DynamicQVRPEnv(gym.Env):
             return -1, 0, True, True, self.info
             
         self.h += 1
-        assert isinstance(action, int)
+        assert isinstance(action, (int, np.int_)), f"type : {type(action)}, {action}"
         
         self.NA[self.j] = False
         
@@ -302,7 +311,7 @@ class DynamicQVRPEnv(gym.Env):
         obs = self._get_obs()
         
         trunc = self.h >= self.H-1
-        done = trunc or self.info["remained_quota"] <= 1e-4 or self.remained_capacity <= 0
+        done = bool(trunc or self.info["remained_quota"] <= 1e-4 or self.remained_capacity <= 0)
         # info['r'] = np.clip((normalizer_const + info['r'])/normalizer_const, 0, 1)
         
         return obs, r, done, trunc, self.info

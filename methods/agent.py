@@ -6,7 +6,7 @@ from copy import deepcopy
 import torch
 
 from methods.ML.supervised import train, NN
-from methods.ML.RL import train_DQN
+from methods.ML.RL import train_RL
 
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3 import PPO, DQN
@@ -279,7 +279,8 @@ class RLAgent(Agent):
         # )
         self.algo = DQN if algo.upper() == 'DQN' else PPO
         
-        self.name = algo
+        # self.name = algo
+        self.hidden_layers = hidden_layers
         
         vec_env = make_vec_env("CartPole-v1", n_envs=4)
         
@@ -288,21 +289,34 @@ class RLAgent(Agent):
         
         if load_model:
             # self.model.load_state_dict(torch.load(f'methods/ML/models/model_{algo}', weights_only=True))
-            self.model = self.algo.load(f'methods/ML/models/{self.name}')
+            self.model = self.algo.load(f'methods/ML/models/{self.algo.__name__}')
             # self.model = torch.load(f'methods/ML/models/model_{algo}', weights_only=False)
             
         
     def act(self, x, *args, **kwargs):
-        with torch.no_grad():
-                # t.max(1) will return the largest column value of each row.
-                # second column on max result is index of where max element was
-                # found, so we pick action with the larger expected reward.
-            return self.model(torch.Tensor(x)).max(0).indices.item()
+        a, _ = self.model.predict(x)
+        return a
     
-    def train(self, episodes = 20):
+    def train(self, envs = None, episodes = 20, *args, **kwargs):
         
-        steps = episodes*self.env.K*len(self.all_dests)
-        self.model.learn(total_timesteps=steps)
+        steps = episodes*self.env.K*len(self.env.all_dests)
+        
+        envs = envs if envs is not None else [self.env]
+        # self.model.learn(total_timesteps=steps)
+        self.model = train_RL(
+            envs,
+            algo = self.algo,
+            policy_kwargs = dict(
+                activation_fn=torch.nn.ReLU,
+                share_features_extractor=True,
+                net_arch=self.hidden_layers#dict(
+                #    pi=[2048, 2048, 1024, 256, 64], 
+                #    vf=[2048, 2048, 1024, 256, 64])
+            ),
+            budget = steps,
+            *args, **kwargs
+        )
+        # self.model = self.algo.load(f'methods/ML/models/{self.algo.__name__}')
         self.model.save(f'methods/ML/models/{self.name}')
             
         # train_DQN(

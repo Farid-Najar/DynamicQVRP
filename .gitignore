@@ -2,9 +2,8 @@ __pycache__
 *.pyc
 .ipynb_checkpoints
 # *.zip
-ppo
-ppo_mask
 # game*.pkl
+*.log
 brouillon.ipynb
 brouillon.py
 runs

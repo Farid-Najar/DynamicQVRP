@@ -208,7 +208,8 @@ def experiment_DoD(
         for agent_name in agents:
             run_agent(**agents[agent_name], path=path)
             print(agent_name, "done")
-        
+     
+       
 if __name__ == "__main__":
     # VRP with 2 vehicles
     # experiment(
@@ -259,7 +260,7 @@ if __name__ == "__main__":
     # TSP different DoDs
     experiment_DoD(
         500,
-        DoDs = [1., .95, .9, .85, .8, .75],#[1., .95, .9, .85, .8, .75, .7, .65, .6]
+        DoDs = [.7, .65, .6],#[1., .95, .9, .85, .8, .75, .7, .65, .6]
         env_configs = {
             "K" : 50,
             "Q" : 100, 

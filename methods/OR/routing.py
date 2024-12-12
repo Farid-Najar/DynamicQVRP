@@ -188,8 +188,9 @@ def SA_routing(env,
     # list_best_costs = [eval_best]
     flag100 = True
     # infos = []
+    init_flag = not d and env.h == 0 and env.allow_initial_omission
     
-    if not static_mode and num_actions <= 2:
+    if not init_flag and not static_mode and num_actions <= 2:
         return best, best_routes, best_info
     
     # if static_mode:
