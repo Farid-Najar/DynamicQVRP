@@ -255,7 +255,7 @@ if __name__ == "__main__":
     
     # TSP full dynamic
     experiment(
-        500,
+        100,
         env_configs = {
             "K" : 50,
             "Q" : 100, 
@@ -264,8 +264,8 @@ if __name__ == "__main__":
             "re_optimization" : False,
             "costs_KM" : [1],
             "emissions_KM" : [.3],
-            "n_scenarios" : 500 ,
-            # "test"  : True
+            # "n_scenarios" : 500 ,
+            "test"  : True
         },
     )
     

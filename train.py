@@ -26,7 +26,7 @@ def train_agents(
         },
         {
             "K" : 50,
-            "Q" : 100, 
+            "Q" : 50, 
             "DoD" : 1,
             "vehicle_capacity" : 20,
             "re_optimization" : False,
@@ -39,7 +39,7 @@ def train_agents(
             "K" : 50,
             "Q" : 100, 
             "DoD" : .9,
-            "vehicle_capacity" : 20,
+            "vehicle_capacity" : 30,
             "re_optimization" : False,
             "costs_KM" : [1],
             "emissions_KM" : [.3],
@@ -48,7 +48,7 @@ def train_agents(
         },
         {
             "K" : 50,
-            "Q" : 110, 
+            "Q" : 100, 
             "DoD" : .7,
             "vehicle_capacity" : 20,
             "re_optimization" : False,

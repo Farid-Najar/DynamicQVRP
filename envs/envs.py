@@ -234,7 +234,8 @@ class DynamicQVRPEnv(gym.Env):
             self.remained_capacity / self.total_capacity, # the percentage of capacity remained
             (self.H - self.h) / max(1, self.H), # the remaining demands to come
             min_knn/np.max(self.D), # The mean of the k nearest neighbors in admitted dests
-            med_knn/(np.max(self.D)/1e-8), # The mean of the k nearest neighbors in non activated dests
+            med_knn/(np.max(self.D)), # The mean of the k nearest neighbors in non activated dests
+            # med_knn/(np.max(self.D)/1e-8), # The mean of the k nearest neighbors in non activated dests
             max(0, self.info["remained_quota"])/self.Q
             #TODO * Maybe find better observations
         ])

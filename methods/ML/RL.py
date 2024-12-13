@@ -357,7 +357,7 @@ def make_env(envs, rank: int, seed: int = 1917):
     """
     def _init():
         env2 = deepcopy(envs[rank%len(envs)])
-        env2.reset(seed=seed + rank)
+        env2.reset(rank, seed=seed + rank)
         return env2
     set_random_seed(seed)
     return _init
@@ -365,42 +365,33 @@ def make_env(envs, rank: int, seed: int = 1917):
 def _train(
     vec_env,
     algo = PPO,
-    policy = "MlpPolicy",
-    policy_kwargs = {},
-    algo_file : str|None = None,
+    algo_kwargs = dict(
+        policy = "MlpPolicy",
+        policy_kwargs = {},
+        gamma = 0.99,
+    ),
+    # algo_file : str|None = None,
     algo_dir = str(path)+'/ppo',
     budget = 1000,
     n_eval = 10,
     save = True,
     eval_freq = 200,
     progress_bar =True,
-    n_steps = 128,
-    gamma = 0.99,
 ):
     
     # Instantiate the agent
-    if algo_file is not None:
-        try:
-            model = algo.load(algo_file+f'/{algo.__name__}', env=vec_env)
-            assert model.policy_kwargs == policy_kwargs
-        except Exception as e:
-            logging.warning(f'couldnt load the model because this exception has been raised :\n{e}')
+    # if algo_file is not None:
+    #     try:
+    #         model = algo.load(algo_file+f'/{algo.__name__}', env=vec_env)
+    #         assert model.policy_kwargs == policy_kwargs
+    #     except Exception as e:
+    #         logging.warning(f'couldnt load the model because this exception has been raised :\n{e}')
             
-            print(f'path is {path}')
-            raise('couldnt load the model!')
-    else:   
-        model = algo(
-            policy,
-            vec_env,
-            # policy_kwargs=policy_kwargs,
-            # n_steps=n_steps,
-            gamma=gamma,
-            # batch_size=n_steps*(os.cpu_count()-1),
-            # n_epochs=50,
-            # learning_rate=5e-5,
-            verbose=1,
-            tensorboard_log=algo_dir+"/"
-        )
+    #         print(f'path is {path}')
+    #         raise('couldnt load the model!')
+    # else:   
+    model = algo(**algo_kwargs)
+
     logging.info(f"the model parameters :\n {model.__dict__}")
     # Train the agent and display a progress bar
     mean_reward, std_reward = evaluate_policy(model, model.get_env(), n_eval_episodes=n_eval)
@@ -421,7 +412,7 @@ def _train(
     model.learn(
         total_timesteps=budget,
         progress_bar=progress_bar,
-        log_interval=100,
+        log_interval=1000,
         callback=eval_callback,
         # tb_log_name="ppo",
     )
@@ -435,24 +426,19 @@ def _train(
 def train_RL(
     envs,
     algo = PPO,
-    policy_kwargs = dict(
-        activation_fn=nn.ReLU,
-        # share_features_extractor=True,
-        net_arch=[512, 512, 256]#dict(
-        #    pi=[2048, 2048, 1024, 256, 64], 
-        #    vf=[2048, 2048, 1024, 256, 64])
-    ),
+    net_arch : list =[512, 512, 256],
     budget = int(2e4),
     save = True,
     save_path = None,
     eval_freq = 200,
     progress_bar =True,
     algo_file = None,
-    n_steps = 128,
+    n_steps = 32,
     gamma = 0.99,
     *args,
     **kwargs
 ):
+    
     if save_path is None:
         save_path = str(path)+f'/models/{algo.__name__}'
         
@@ -482,19 +468,60 @@ def train_RL(
     vec_env = VecMonitor(vec_env, save_path+"/")
     # log(type(env))
     
+    if algo == PPO:
+        algo_kwargs = dict(
+            env = vec_env,
+            policy_kwargs = dict(
+                activation_fn=nn.ReLU,
+                share_features_extractor=True,
+                net_arch=net_arch.copy(),
+                optimizer_class = optim.AdamW,
+                optimizer_kwargs = dict(
+                    amsgrad=True
+                ),
+            ),
+            n_steps = 128,
+            batch_size=n_steps*(os.cpu_count()-1),
+            # learning_rate=5e-5, #TODO change
+            verbose=1,
+            gamma=gamma,
+            tensorboard_log=save_path+"/"
+            
+        )
+    else:
+        algo_kwargs = dict(
+            env = vec_env,
+            policy = "MlpPolicy",
+            policy_kwargs = dict(
+                activation_fn=nn.ReLU,
+                net_arch=net_arch.copy(),
+                optimizer_class = optim.AdamW,
+                optimizer_kwargs = dict(
+                    amsgrad=True
+                ),
+            ),
+            target_update_interval=5000,
+            tau=.05,
+            batch_size=128,
+            buffer_size=10_000,
+            learning_rate=1e-4,
+            exploration_fraction=0.1,
+            verbose=1,
+            gamma=gamma,
+            
+        )
+    
     model = _train(
         vec_env,
+        algo_kwargs=algo_kwargs,
         algo=algo,
-        policy_kwargs=policy_kwargs,
         budget=budget,
         n_eval=n_eval,
         save = save,
         algo_dir=save_path,
         eval_freq =     eval_freq ,
         progress_bar =    progress_bar,
-        algo_file = algo_file,
-        n_steps =     n_steps ,
-        gamma = gamma,
+        # algo_file = algo_file,
     )
 
     
