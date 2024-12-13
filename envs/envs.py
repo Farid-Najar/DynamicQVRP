@@ -63,6 +63,7 @@ class DynamicQVRPEnv(gym.Env):
                  hub = 0,
                  test = False,
                  allow_initial_omission = True,
+                 unknown_p = False,
                  ):
         
         self.instance = -1
@@ -100,6 +101,9 @@ class DynamicQVRPEnv(gym.Env):
         self.H = int(DoD*K) # ou = self.K
         self.K = K
         self.D, self.coordx, self.coordy, self.p = load_data()
+        
+        if unknown_p:
+            self.p[:] = 1.
         
         self.qs = qs
         # self.omission_cost = self._env.omission_cost

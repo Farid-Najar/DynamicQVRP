@@ -80,6 +80,34 @@ def experiment(
         #     save_results = True,
         #     title = "res_random",
         # ),
+        # "SL" : dict(
+        #     agentClass = SLAgent,
+        #     env_configs = env_configs,
+        #     episodes = episodes,
+        #     agent_configs = dict(),
+        #     save_results = True,
+        #     title = "res_SL",
+        # ),
+        "RL" : dict(
+            agentClass = RLAgent,
+            env_configs = env_configs,
+            episodes = episodes,
+            agent_configs = dict(
+                algo = 'DQN_equiProb'    
+            ),
+            save_results = True,
+            title = "res_RL_DQN_equiProb",
+        ),
+        # "RL" : dict(
+        #     agentClass = RLAgent,
+        #     env_configs = env_configs,
+        #     episodes = episodes,
+        #     agent_configs = dict(
+        #         algo = 'PPO'    
+        #     ),
+        #     save_results = True,
+        #     title = "res_RL_PPO",
+        # ),
         # "offline" : dict(
         #     agentClass = OfflineAgent,
         #     env_configs = env_configs,
@@ -95,34 +123,6 @@ def experiment(
         #     agent_configs = dict(n_sample=21, parallelize = True),
         #     save_results = True,
         #     title = "res_MSA",
-        # ),
-        # "SL" : dict(
-        #     agentClass = SLAgent,
-        #     env_configs = env_configs,
-        #     episodes = episodes,
-        #     agent_configs = dict(),
-        #     save_results = True,
-        #     title = "res_SL",
-        # ),
-        "RL" : dict(
-            agentClass = RLAgent,
-            env_configs = env_configs,
-            episodes = episodes,
-            agent_configs = dict(
-                algo = 'DQN'    
-            ),
-            save_results = True,
-            title = "res_RL_DQN",
-        ),
-        # "RL" : dict(
-        #     agentClass = RLAgent,
-        #     env_configs = env_configs,
-        #     episodes = episodes,
-        #     agent_configs = dict(
-        #         algo = 'PPO'    
-        #     ),
-        #     save_results = True,
-        #     title = "res_RL_PPO",
         # ),
     }
     
@@ -253,7 +253,23 @@ if __name__ == "__main__":
     #     },
     # )
     
-    # TSP full dynamic
+    # # TSP full dynamic
+    # experiment(
+    #     100,
+    #     env_configs = {
+    #         "K" : 50,
+    #         "Q" : 100, 
+    #         "DoD" : 1.,
+    #         "vehicle_capacity" : 30,
+    #         "re_optimization" : False,
+    #         "costs_KM" : [1],
+    #         "emissions_KM" : [.3],
+    #         "n_scenarios" : 100 ,
+    #         "test"  : True
+    #     },
+    # )
+    
+    # TSP full dynamic, equi probable
     experiment(
         100,
         env_configs = {
@@ -264,8 +280,9 @@ if __name__ == "__main__":
             "re_optimization" : False,
             "costs_KM" : [1],
             "emissions_KM" : [.3],
-            # "n_scenarios" : 500 ,
-            "test"  : True
+            "n_scenarios" : 100 ,
+            "test"  : True,
+            "unknown_p" : True
         },
     )
     
