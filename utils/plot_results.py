@@ -1,6 +1,67 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
+from stable_baselines3.common.results_plotter import load_results, ts2xy
+from stable_baselines3.common import results_plotter
+import pandas as pd
+
+def moving_average(values, window):
+    """
+    Smooth values by doing a moving average
+    :param values: (numpy array)
+    :param window: (int)
+    :return: (numpy array)
+    """
+    rolled = pd.Series(values).rolling(window)
+    std = np.array(rolled.std())#/np.sqrt(window)
+    mean = np.array(rolled.mean())
+    # weights = np.repeat(1.0, window) / window
+    return mean, std#np.convolve(values, weights, "valid"), std
+
+
+def plot_results(log_folder, 
+                 title="Learning Curve", 
+                 label = None,
+                 window = 75,
+                 ylim = None,
+                 n = 0,
+                 ):
+    """
+    plot the results
+
+    :param log_folder: (str) the save location of the results to plot
+    :param title: (str) the title of the task to plot
+    """
+    if n:
+        ys = []
+        for i in range(n):
+            x, y = ts2xy(load_results(log_folder[:-1]+str(i)), "timesteps")
+            ys.append(y[:10_000])
+            print(len(y))
+        y = np.mean(ys, axis=0)
+    else:
+        x, y = ts2xy(load_results(log_folder), "timesteps")
+    y, std = moving_average(y, window=window)
+    # Truncate x
+    x = x[len(x) - len(y) :]
+
+    fig = plt.figure(title)
+    if label is None:
+        label = 'mean rewards $\pm 2\sigma$'
+    plt.plot(x, y, label=label)
+    plt.fill_between(x, y - 2*std, y + 2*std, alpha=0.2)
+    plt.xlabel("Number of Timesteps")
+    plt.ylabel("Rewards")
+    plt.gca().ticklabel_format(axis='x', style='sci', scilimits=(0, 0))
+    if ylim is not None:
+        plt.ylim(ylim)
+    plt.title(title + " Smoothed")
+    # plt.legend()
+    # plt.legend(bbox_to_anchor=(1.05, 1.0), loc='upper left')
+    return x
+    # plt.show()
+    
+
 def addlabels(x,y):
     for i in range(len(x)):
         plt.text(i, np.sign(y[i])*1.2 + y[i], y[i], ha = 'center')
