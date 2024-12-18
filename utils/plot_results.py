@@ -179,13 +179,55 @@ def plot_improvement(data : dict):
     plt.ylim(1.2*min(100*gap), 1.2*max(100*gap))
 
     # plt.hlines(1, 0.5, len(gap)+.5, colors='red')
-    plt.title("Mean % improvement compared to greedy by methods")
+    plt.title("Improvement % of mean rewards compared to greedy")
     plt.ylabel("Improvement in %")
     plt.show()
+   
+def plot_improvement2(data : dict):
+
+    gap = np.array([
+        # res_offline["rs"].mean()/res_greedy["rs"].mean(),
+        np.mean(data[k]["rs"]/data["Greedy"]["rs"])
+        for k in data.keys()
+    ])
+
+    args = np.argsort(-gap)
+    gap = gap[args]
+
+    gap -= 1
+
+    mask_neg = gap < 0
+    mask_pos = gap >= 0
+
+    x = np.array(list(data.keys()))
+
+    x = x[args]
+
+    plt.bar(
+        x[mask_pos],
+        100*gap[mask_pos],
+        color='green'
+    )
+
+    plt.bar(
+        x[mask_neg],
+        100*gap[mask_neg],
+        color='red'
+    )
     
+    # calling the function to add value labels
+    addlabels(x, np.round(100*gap, 2))
+    
+    plt.ylim(1.2*min(100*gap), 1.2*max(100*gap))
+
+    # plt.hlines(1, 0.5, len(gap)+.5, colors='red')
+    plt.title("Mean % improvement compared to greedy")
+    plt.ylabel("Improvement in %")
+    plt.show() 
 
 def plot(data : dict):
     plot_improvement(data)
+    plot_improvement2(data)
     plot_mean_rewards(data)
     plot_rewards_dist(data)
     plot_gap_offline(data)

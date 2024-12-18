@@ -64,30 +64,40 @@ def experiment(
         pickle.dump(env_configs, f)
     
     agents = {
-        # "greedy" : dict(
-        #     agentClass = GreedyAgent,
-        #     env_configs = env_configs,
-        #     episodes = episodes,
-        #     agent_configs = {},
-        #     save_results = True,
-        #     title = "res_greedy",
-        # ),
-        # "random" : dict(
-        #     agentClass = Agent,
-        #     env_configs = env_configs,
-        #     episodes = episodes,
-        #     agent_configs = {},
-        #     save_results = True,
-        #     title = "res_random",
-        # ),
-        # "SL" : dict(
-        #     agentClass = SLAgent,
-        #     env_configs = env_configs,
-        #     episodes = episodes,
-        #     agent_configs = dict(),
-        #     save_results = True,
-        #     title = "res_SL",
-        # ),
+        "greedy" : dict(
+            agentClass = GreedyAgent,
+            env_configs = env_configs,
+            episodes = episodes,
+            agent_configs = {},
+            save_results = True,
+            title = "res_greedy",
+        ),
+        "random" : dict(
+            agentClass = Agent,
+            env_configs = env_configs,
+            episodes = episodes,
+            agent_configs = {},
+            save_results = True,
+            title = "res_random",
+        ),
+        "SL" : dict(
+            agentClass = SLAgent,
+            env_configs = env_configs,
+            episodes = episodes,
+            agent_configs = dict(),
+            save_results = True,
+            title = "res_SL",
+        ),
+        "RL" : dict(
+            agentClass = RLAgent,
+            env_configs = env_configs,
+            episodes = episodes,
+            agent_configs = dict(
+                algo = 'DQN'    
+            ),
+            save_results = True,
+            title = "res_RL_DQN",
+        ),
         "RL" : dict(
             agentClass = RLAgent,
             env_configs = env_configs,

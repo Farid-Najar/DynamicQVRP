@@ -64,7 +64,7 @@ class DynamicQVRPEnv(gym.Env):
                  test = False,
                  allow_initial_omission = True,
                  unknown_p = False,
-                 ):
+        ):
         
         self.instance = -1
         
