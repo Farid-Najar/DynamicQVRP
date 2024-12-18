@@ -8,6 +8,7 @@ from numpy import random as rd
 from numpy import exp
 from copy import deepcopy
 from numba import njit
+from numba.typed import List
 
 @njit
 def NN_routing(
@@ -100,6 +101,7 @@ def _run(env, assignment):
     routes = np.zeros((len(env.emissions_KM), env.max_capacity+2), dtype=np.int64)
     if np.sum(assignment.astype(bool).astype(int)) > env.total_capacity:
         return 0, False, {}
+    
     routes, a, costs, emissions = NN_routing(
         assignment,
         routes,
@@ -107,8 +109,8 @@ def _run(env, assignment):
         env.distance_matrix,
         env.quantities,
         env.max_capacity,
-        env.costs_KM,
-        env.emissions_KM,
+        List(env.costs_KM),
+        List(env.emissions_KM),
     )
     
     total_emission = np.sum(emissions)

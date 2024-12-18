@@ -1,5 +1,12 @@
 import unittest
 
+import numpy as np
+
+import sys
+import os
+# Add the DynamicQVRP directory to the Python path
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 from envs import DynamicQVRPEnv
 from stable_baselines3.common.env_checker import check_env
 
@@ -8,6 +15,47 @@ class TestEnv(unittest.TestCase):
     def test_sb3(self):
         env = DynamicQVRPEnv()
         check_env(env)
+
+class TestDynamicQVRPEnv(unittest.TestCase):
+
+    def setUp(self):
+        self.env = DynamicQVRPEnv()
+
+    def test_reset(self):
+        state, info = self.env.reset()
+        self.assertIsNotNone(state, "Reset method should return the initial state")
+        self.assertIsInstance(state, np.ndarray, "State should be a list")
+        self.assertIsInstance(info, dict, "info should be a dictionary")
+
+    def test_step(self):
+        self.env.reset()
+        action = 0  # Assuming action space includes 0
+        next_state, reward, done, trunc, info = self.env.step(action)
+        self.assertIsNotNone(next_state, "Step method should return the next state")
+        self.assertIsInstance(next_state, np.ndarray, "Next state should be a list")
+        self.assertIsInstance(reward, (int, float), "Reward should be a number")
+        self.assertIsInstance(done, bool, "Done should be a boolean")
+        self.assertIsInstance(trunc, bool, "Trunc should be a boolean")
+        self.assertIsInstance(info, dict, "Info should be a dictionary")
+
+    def test_action_space(self):
+        self.assertTrue(hasattr(self.env, 'action_space'), "Environment should have an action space")
+        self.assertIsNotNone(self.env.action_space, "Action space should not be None")
+
+    def test_observation_space(self):
+        self.assertTrue(hasattr(self.env, 'observation_space'), "Environment should have an observation space")
+        self.assertIsNotNone(self.env.observation_space, "Observation space should not be None")
         
+    def test_observations(self):
+        for _ in range(100):
+            state, _ = self.env.reset()
+            self.assertTrue(self.env.observation_space.contains(state), "The obs must be in observation space")
+            while True:
+                action = self.env.action_space.sample()
+                state, _, done, *_ = self.env.step(action)
+                self.assertTrue(self.env.observation_space.contains(state), "The obs must be in observation space")
+                if done:
+                    break
+
 if __name__ == '__main__':
     unittest.main()
