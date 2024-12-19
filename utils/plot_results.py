@@ -65,24 +65,24 @@ def plot_results(log_folder,
 def addlabels(x,y):
     for i in range(len(x)):
         plt.text(i, np.sign(y[i])*1.2 + y[i], y[i], ha = 'center')
-        
-def plot_gap_greedy(data : dict):
+
+def plot_gap_method(data : dict, method : str):
     gap = {
-        k : data[k]["rs"]/data["Greedy"]["rs"]
-        for k in data.keys() if k != "Greedy"
+        k : data[k]["rs"]/data[method]["rs"] -1
+        for k in data.keys() if k != method
     }
 
     plt.boxplot(
         gap.values(),
         tick_labels=list(gap.keys()),
     )
-    plt.hlines(1, 0.5, len(gap)+.5, colors='red')
-    plt.title("methods/greedy ratio")
+    plt.hlines(0, 0.5, len(gap)+.5, colors='red')
+    plt.title(f"methods/{method} gap")
     plt.show()
     
 def plot_gap_offline(data : dict):
     gap = {
-        k : data[k]["rs"]/data["Offline"]["rs"]
+        k : data[k]["rs"]/data["Offline"]["rs"] -1
         for k in data.keys() if k != "Offline"
     }
 
@@ -90,8 +90,8 @@ def plot_gap_offline(data : dict):
         gap.values(),
         tick_labels=list(gap.keys()),
     )
-    plt.hlines(1, 0.5, len(gap)+.5, colors='red')
-    plt.title("online/offline ratio")
+    plt.hlines(0, 0.5, len(gap)+.5, colors='red')
+    plt.title("online/offline gap")
     plt.show()
     
 def plot_gap_MSA(data : dict):
@@ -231,6 +231,7 @@ def plot(data : dict):
     plot_mean_rewards(data)
     plot_rewards_dist(data)
     plot_gap_offline(data)
-    plot_gap_greedy(data)
-    plot_gap_MSA(data)
+    plot_gap_method(data, 'Greedy')
+    plot_gap_method(data, 'MSA')
+    plot_gap_method(data, 'Random')
     
