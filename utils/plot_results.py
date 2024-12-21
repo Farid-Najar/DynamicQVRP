@@ -135,6 +135,11 @@ def plot_mean_rewards(data : dict):
         list(vs.values()),
 
     )
+    
+    # calling the function to add value labels
+    addlabels(list(vs.keys()), np.round(list(vs.values()), 2))
+    plt.ylim(0, 1.2*max(list(vs.values())))
+    
     # plt.hlines(1, 0.5, len(gap)+.5, colors='red')
     plt.title("Mean rewards by methods")
     plt.show()

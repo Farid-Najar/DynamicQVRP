@@ -32,7 +32,7 @@ def knn(a, k):
         k mins of array a
     """
     idx = np.argpartition(a, min(len(a)-1, k))
-    return a[idx[:k]]
+    return idx[:k]
 
 def load_data():
     coordx = np.load('data/coordsX.npy')
@@ -84,10 +84,6 @@ class DynamicQVRPEnv(gym.Env):
             else:
                 qs = np.ones((len(self.all_dests), K))
                 
-            # g = AssignmentGame(K=K, Q=Q, costs_KM=costs_KM, emissions_KM=emissions_KM, max_capacity=vehicle_capacity, dynamic=True)
-            # self._env = GameEnv(AssignmentEnv(game = g, saved_routes = routes, saved_dests=all_dests, saved_q = qs,
-            #             obs_mode='excess', 
-            #               change_instance = True, instance_id = self.instance+1), True)
         else:
             raise("not implemented yet")
             # self._env = GameEnv(AssignmentEnv(
@@ -208,22 +204,26 @@ class DynamicQVRPEnv(gym.Env):
         
         
     def _compute_min_med(self):
-        p = self.p.copy()
-        p[~self.NA] = 0
+        p = self.p[self.NA].copy()
+        # p[~self.NA] = 0
         p /= p.sum()
         
-        masks = [
-            np.concatenate([[self.hub], self.dests[np.where(self.assignment == v)[0]]])
-            for v in range(1, len(self.costs_KM)+1)
-        ]
-        min_knn = np.median([
-            np.mean(knn(
-                self.D[mask, self.dests[self.j]], self.k_min
-            ))
-            for mask in masks if len(mask)
-        ])
-        # min_knn = np.mean(knn(self.D[self.A, self.dests[self.j]], self.k_min))
-        med_knn = np.median(knn(p[self.NA]*self.D[self.NA, self.dests[self.j]], self.k_med))
+        # masks = [
+        #     np.concatenate([[self.hub], self.dests[np.where(self.assignment == v)[0]]])
+        #     for v in range(1, len(self.costs_KM)+1)
+        # ]
+        # min_knn = np.median([
+        #     np.mean(knn(
+        #         self.D[mask, self.dests[self.j]], self.k_min
+        #     ))
+        #     for mask in masks if len(mask)
+        # ])
+        D_A = self.D[self.A, self.dests[self.j]]
+        D_NA = self.D[self.NA, self.dests[self.j]]
+        
+        min_knn = np.mean(D_A[knn(D_A, self.k_min)])
+        idx_NA = knn(D_NA, self.k_med)
+        med_knn = np.median(p[idx_NA]*D_NA[idx_NA])
         # med_knn = np.median(knn(self.D[self.NA, self.dests[self.j]]/(p[self.NA] + 1e-8), self.k_med))
         
         

@@ -99,8 +99,8 @@ def NN_routing(
 def _run(env, assignment):
     
     routes = np.zeros((len(env.emissions_KM), env.max_capacity+2), dtype=np.int64)
-    if np.sum(assignment.astype(bool).astype(int)) > env.total_capacity:
-        return 0, False, {}
+    if np.sum(env.quantities[assignment.astype(bool)]) > env.total_capacity:
+        return 0, False, env.info
     
     routes, a, costs, emissions = NN_routing(
         assignment,
