@@ -56,6 +56,34 @@ class TestDynamicQVRPEnv(unittest.TestCase):
                 self.assertTrue(self.env.observation_space.contains(state), "The obs must be in observation space")
                 if done:
                     break
+                
+    def test_quantities_online(self):
+        env = DynamicQVRPEnv(DoD=1, different_quantities=True)
+        for _ in range(len(env.all_dests)):
+            # state, _ = self.env.reset()
+            self.assertTrue(env.reset(), "The obs must be in observation space")
+            qs  = env.quantities.copy()
+            while True:
+                action = env.action_space.sample()
+                state, _, done, *_ = env.step(action)
+                self.assertTrue(env.observation_space.contains(state), "The obs must be in observation space")
+                self.assertTrue((env.quantities == qs).all(), "Quantities should not change")
+                if done:
+                    break
+                
+    def test_quantities(self):
+        env = DynamicQVRPEnv(different_quantities=True)
+        for _ in range(len(env.all_dests)):
+            # state, _ = self.env.reset()
+            self.assertTrue(env.reset(), "The obs must be in observation space")
+            qs  = env.quantities.copy()
+            while True:
+                action = env.action_space.sample()
+                state, _, done, *_ = env.step(action)
+                self.assertTrue(env.observation_space.contains(state), "The obs must be in observation space")
+                self.assertTrue((env.quantities == qs).all(), "Quantities should not change")
+                if done:
+                    break
 
 if __name__ == '__main__':
     unittest.main()

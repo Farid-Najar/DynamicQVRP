@@ -16,6 +16,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
+from torch.distributions import Categorical
 
 import matplotlib.pyplot as plt
 import matplotlib
@@ -80,6 +81,20 @@ def plot_durations(rs, show_result=False):
         else:
             display.display(plt.gcf())
 
+class Memory:
+    def __init__(self):
+        self.actions = []
+        self.states = []
+        self.logprobs = []
+        self.rewards = []
+        self.is_terminals = []
+
+    def clear_memory(self):
+        del self.actions[:]
+        del self.states[:]
+        del self.logprobs[:]
+        del self.rewards[:]
+        del self.is_terminals[:]
 
 class ReplayMemory(object):
 
@@ -346,6 +361,109 @@ def train_DQN(
     np.save(f'results/RL/DQN/rewards_{int(time())}', np.array(epoch_rs))
 
 
+class PPO(nn.Module):
+    def __init__(self, state_dim, action_dim, hidden_dim=256):
+        super(PPO, self).__init__()
+        self.actor = nn.Sequential(
+            nn.Linear(state_dim, hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, action_dim),
+            nn.Softmax(dim=-1)
+        )
+        self.critic = nn.Sequential(
+            nn.Linear(state_dim, hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, 1)
+        )
+
+    def forward(self, x):
+        value = self.critic(x)
+        probs = self.actor(x)
+        dist = Categorical(probs)
+        return dist, value
+
+class PPOAgent:
+    def __init__(self, state_dim, action_dim, hidden_dim=256, lr=3e-4, gamma=0.99, eps_clip=0.2, K_epochs=4):
+        self.policy = PPO(state_dim, action_dim, hidden_dim)
+        self.optimizer = optim.AdamW(self.policy.parameters(), lr=lr, amsgrad=True)
+        self.gamma = gamma
+        self.eps_clip = eps_clip
+        self.K_epochs = K_epochs
+        self.policy_old = PPO(state_dim, action_dim, hidden_dim)
+        self.policy_old.load_state_dict(self.policy.state_dict())
+        self.MseLoss = nn.MSELoss()
+
+    def select_action(self, state):
+        state = torch.FloatTensor(state).unsqueeze(0)
+        dist, _ = self.policy_old(state)
+        action = dist.sample()
+        return action.item(), dist.log_prob(action).item()
+
+    def update(self, memory):
+        rewards = []
+        discounted_reward = 0
+        for reward, is_terminal in zip(reversed(memory.rewards), reversed(memory.is_terminals)):
+            if is_terminal:
+                discounted_reward = 0
+            discounted_reward = reward + (self.gamma * discounted_reward)
+            rewards.insert(0, discounted_reward)
+
+        rewards = torch.tensor(rewards, dtype=torch.float32)
+        old_states = torch.tensor(memory.states, dtype=torch.float32)
+        old_actions = torch.tensor(memory.actions, dtype=torch.float32)
+        old_logprobs = torch.tensor(memory.logprobs, dtype=torch.float32)
+
+        for _ in range(self.K_epochs):
+            dist, state_values = self.policy(old_states)
+            state_values = state_values.squeeze()
+            dist_entropy = dist.entropy()
+            new_logprobs = dist.log_prob(old_actions)
+            ratios = torch.exp(new_logprobs - old_logprobs)
+
+            advantages = rewards - state_values.detach()
+            surr1 = ratios * advantages
+            surr2 = torch.clamp(ratios, 1 - self.eps_clip, 1 + self.eps_clip) * advantages
+
+            loss = -torch.min(surr1, surr2) + 0.5 * self.MseLoss(state_values, rewards) - 0.01 * dist_entropy
+
+            self.optimizer.zero_grad()
+            loss.mean().backward()
+            self.optimizer.step()
+
+        self.policy_old.load_state_dict(self.policy.state_dict())
+    
+    def train(self, env, num_episodes, max_timesteps):
+        
+        for episode in range(num_episodes):
+            memory = Memory()
+            state = env.reset()
+            for t in range(max_timesteps):
+                action, log_prob = self.select_action(state)
+                next_state, reward, done, _ = env.step(action)
+                
+                memory.states.append(state)
+                memory.actions.append(action)
+                memory.logprobs.append(log_prob)
+                memory.rewards.append(reward)
+                memory.is_terminals.append(done)
+                
+                state = next_state
+                
+                if done:
+                    break
+            
+            self.update(memory)
+            memory.clear_memory()
+            print(f"Episode {episode+1}/{num_episodes} completed")
+    
+    # Example usage:
+    # agent = PPOAgent(state_dim, action_dim)
+    # agent.train(env, num_episodes=1000, max_timesteps=200)
+        
 def make_env(envs, rank: int, seed: int = 1917):
     """
     Utility function for multiprocessed env.
