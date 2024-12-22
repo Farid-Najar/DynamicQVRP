@@ -176,7 +176,7 @@ def construct_emergency_solution(env):
     
     assignment = np.zeros_like(env.assignment)
     # best = assignment.copy()
-    best_info = dict()
+    best_info = {}
     remained_cap = [env.max_capacity for _ in range(len(env.costs_KM))]
     for i in range(env.j):
         for v in range(1, len(env.costs_KM) + 1):
