@@ -47,7 +47,7 @@ class TestDynamicQVRPEnv(unittest.TestCase):
         self.assertIsNotNone(self.env.observation_space, "Observation space should not be None")
         
     def test_observations(self):
-        for _ in range(100):
+        for _ in range(len(self.env.all_dests)):
             state, _ = self.env.reset()
             self.assertTrue(self.env.observation_space.contains(state), "The obs must be in observation space")
             while True:
