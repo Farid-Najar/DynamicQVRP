@@ -99,8 +99,11 @@ def NN_routing(
 def _run(env, assignment):
     
     routes = np.zeros((len(env.emissions_KM), env.max_capacity+2), dtype=np.int64)
-    if np.sum(env.quantities[assignment.astype(bool)]) > env.total_capacity:
-        return 0, False, env.info
+    # print([np.sum(env.quantities[assignment == v]) > env.max_capacity for v in range(1, len(env.costs_KM)+1)])
+    if (np.sum(env.quantities[assignment.astype(bool)]) > env.total_capacity
+        or np.any([np.sum(env.quantities[assignment == v]) > env.max_capacity for v in range(1, len(env.costs_KM)+1) ])
+        ):
+        return -env.K*env.omission_cost, False, env.info
     
     routes, a, costs, emissions = NN_routing(
         assignment,
@@ -152,6 +155,44 @@ def insertion(env):
     assignment[env.j] = best
     return assignment, best_routes, best_info
         
+@njit
+def construct_initial_solution(j, q, a, V, max_capacity):
+    # j, assignment, V, max_capacity
+    
+    assignment = np.zeros_like(a)
+    remained_cap = List([float(max_capacity) for _ in range(V)])
+    # remained_cap = [max_capacity for _ in range(V)]
+    for i in range(j):
+        for v in range(1, V + 1):
+            if remained_cap[v-1] - q[i] >= 0:
+                remained_cap[v-1] -= q[i]
+                assignment[i] = v
+                break
+    
+    return assignment
+
+def construct_emergency_solution(env):
+    # j, assignment, V, max_capacity
+    
+    assignment = np.zeros_like(env.assignment)
+    # best = assignment.copy()
+    best_info = {}
+    remained_cap = [env.max_capacity for _ in range(len(env.costs_KM))]
+    for i in range(env.j):
+        for v in range(1, len(env.costs_KM) + 1):
+            if remained_cap[v-1] - env.quantities[i] >= 0:
+                a = assignment.copy()
+                a[i] = v
+                _, d, info = _run(env, a)
+                if d:
+                    remained_cap[v-1] -= env.quantities[i]
+                    assignment[i] = v
+                    best_info = deepcopy(info)
+                    best_routes = env.routes.copy()
+                break
+            
+    
+    return assignment, best_routes, best_info
 
 def SA_routing(env,
                T_init = 5_000, T_limit = 1, lamb = .99, var = False, id = 0, log = False, H = np.inf) :
@@ -169,7 +210,18 @@ def SA_routing(env,
     static_mode = env.H == 0
     is_O_allowed = env.is_O_allowed
     
-    best = env.assignment.copy()
+    
+    if env.h == 0:
+        best = construct_initial_solution(
+            env.j,
+            env.quantities,
+            env.assignment,
+            len(env.costs_KM),
+            env.max_capacity
+        )
+    else:
+        best = env.assignment.copy()
+        
     best[~action_mask & is_O_allowed] = 0
     best[env.j] = 1 if env.h > 0 or static_mode else 0
     solution = best.copy()
@@ -195,6 +247,9 @@ def SA_routing(env,
     
     if not static_mode:
         if full_dyn_flag or not init_flag  and num_actions <= 2:
+            if "remained_quota" not in best_info.keys():
+                return construct_emergency_solution(env)
+                
             return best, best_routes, best_info
     
     # if static_mode:
@@ -246,6 +301,9 @@ def SA_routing(env,
     if log:
         print(f'm = {m}')
         print(eval_best)
+    
+    if "remained_quota" not in best_info.keys():
+        return construct_emergency_solution(env)
     
     return best, best_routes, best_info#, list_best_costs#, infos
 

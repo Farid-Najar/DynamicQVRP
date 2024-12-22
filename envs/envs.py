@@ -64,6 +64,7 @@ class DynamicQVRPEnv(gym.Env):
                  test = False,
                  allow_initial_omission = True,
                  unknown_p = False,
+                 different_quantities = False,
         ):
         
         K = horizon
@@ -80,8 +81,9 @@ class DynamicQVRPEnv(gym.Env):
             else:
                 self.all_dests = np.load(f'data/destinations_K{K}{retain_comment}{scenario_comment}.npy').astype(int)
             
-            if K == 20:
-                qs = np.load(f'data/quantities_K{K}_retain1.0.npy')
+            if different_quantities:
+                qs = np.random.randint(1, vehicle_capacity//4, (len(self.all_dests), K))
+                #np.load(f'data/quantities_K{K}_retain1.0.npy')
             else:
                 qs = np.ones((len(self.all_dests), K))
                 
