@@ -41,7 +41,7 @@ def run_agent(
 def experiment(
         episodes = 200,
         env_configs = {
-            "K" : 50,
+            "horizon" : 50,
             "Q" : 100, 
             "DoD" : 0.5,
             "vehicle_capacity" : 25,
@@ -145,7 +145,7 @@ def experiment_DoD(
         episodes = 500,
         DoDs = [1., .95, .9, .85, .8],#, .75, .7, .65, .6],
         env_configs = {
-            "K" : 50,
+            "horizon" : 50,
             "Q" : 100, 
             # "DoD" : 0.5,
             "vehicle_capacity" : 25,
@@ -237,7 +237,7 @@ if __name__ == "__main__":
     # experiment(
     #     500,
     #     env_configs = {
-    #         "K" : 50,
+    #         "horizon" : 50,
     #         "Q" : 70, 
     #         "DoD" : 0.7,
     #         "vehicle_capacity" : 25,
@@ -252,7 +252,7 @@ if __name__ == "__main__":
     # experiment(
     #     500,
     #     env_configs = {
-    #         "K" : 50,
+    #         "horizon" : 50,
     #         "Q" : 150, 
     #         "DoD" : 0.8,
     #         "vehicle_capacity" : 30,
@@ -267,7 +267,7 @@ if __name__ == "__main__":
     # experiment(
     #     100,
     #     env_configs = {
-    #         "K" : 50,
+    #         "horizon" : 50,
     #         "Q" : 100, 
     #         "DoD" : 1.,
     #         "vehicle_capacity" : 30,
@@ -276,6 +276,7 @@ if __name__ == "__main__":
     #         "emissions_KM" : [.3],
     #         "n_scenarios" : 100 ,
     #         "test"  : True
+            #   "different_quantities" : False,
     #     },
     # )
     
@@ -283,7 +284,7 @@ if __name__ == "__main__":
     experiment(
         100,
         env_configs = {
-            "K" : 50,
+            "horizon" : 50,
             "Q" : 100, 
             "DoD" : 1.,
             "vehicle_capacity" : 30,
@@ -301,7 +302,7 @@ if __name__ == "__main__":
     #     500,
     #     DoDs = [.7, .65, .6],#[1., .95, .9, .85, .8, .75, .7, .65, .6]
     #     env_configs = {
-    #         "K" : 50,
+    #         "horizon" : 50,
     #         "Q" : 100, 
     #         "DoD" : 1.,
     #         "vehicle_capacity" : 20,

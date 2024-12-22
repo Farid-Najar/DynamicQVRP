@@ -47,7 +47,7 @@ class DynamicQVRPEnv(gym.Env):
     
     def __init__(self, 
                 #  env : AssignmentEnv = None,
-                 K = 50,
+                 horizon = 50,
                  Q = 50,
                  DoD = 0.,
                  vehicle_capacity = 15, # We assume it homogeneous for all vehicles
@@ -66,6 +66,7 @@ class DynamicQVRPEnv(gym.Env):
                  unknown_p = False,
         ):
         
+        K = horizon
         self.instance = -1
         
         if use_dataset:
@@ -261,6 +262,7 @@ class DynamicQVRPEnv(gym.Env):
             "remained capacity" : self.remained_capacity,
             "h" : self.h,
             "j" : self.j,
+            "quantity demanded" : self.quantities[self.j],
             "dest" : self.dests[self.j],
         })
         
@@ -311,6 +313,7 @@ class DynamicQVRPEnv(gym.Env):
             "omitted" : self.dests[self.omitted],
             "h" : self.h,
             "j" : self.j,
+            "quantity demanded" : self.quantities[self.j],
             "dest" : self.dests[self.j],
         })
         
@@ -453,7 +456,12 @@ class DynamicQVRPEnv(gym.Env):
         # ax.scatter(self.coordx[self.dests], self.coordy[self.dests], color='lightgray', s = .6*size, label='Unactivated')
         ax.scatter(self.coordx[self.NA], self.coordy[self.NA], color='lightgray', s = 100*p[self.NA]*size, label='Unactivated')
         # print(self.coordx[self.dests[self.j]], self.coordy[self.dests[self.j]])
-        ax.scatter(self.coordx[self.dests[self.j]], self.coordy[self.dests[self.j]], color='blue', s = size, label='Current demand')
+        ax.scatter(
+            self.coordx[self.dests[self.j]], self.coordy[self.dests[self.j]], 
+            s = size*self.quantities[self.j], 
+            color='blue', 
+            label='Current demand'
+        )
         nx.draw_networkx(G, 
                          pos = nx.get_node_attributes(G,'pos'),  
                          ax=ax, 
@@ -487,7 +495,10 @@ class DynamicQVRPEnv(gym.Env):
 
         # reverse the order
         plt.draw()
-        plt.legend(bbox_to_anchor=(1.4, 1.0), loc='upper right')
+        lgnd = plt.legend(bbox_to_anchor=(1.4, 1.0), loc='upper right')
+        # lgnd = plt.legend(loc="lower left", scatterpoints=1, fontsize=10)
+        for handle in lgnd.legend_handles:
+            handle.set_sizes([50])
         mesh = ax.pcolormesh(([], []), cmap = plt.cm.jet)
         if self.j or self.h:
             mesh.set_clim(np.min(weights),np.max(weights))

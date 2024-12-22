@@ -99,7 +99,10 @@ def NN_routing(
 def _run(env, assignment):
     
     routes = np.zeros((len(env.emissions_KM), env.max_capacity+2), dtype=np.int64)
-    if np.sum(env.quantities[assignment.astype(bool)]) > env.total_capacity:
+    # print([np.sum(env.quantities[assignment == v]) > env.max_capacity for v in range(1, len(env.costs_KM)+1)])
+    if (np.sum(env.quantities[assignment.astype(bool)]) > env.total_capacity
+        or np.any([np.sum(env.quantities[assignment == v]) > env.max_capacity for v in range(1, len(env.costs_KM)+1) ])
+        ):
         return 0, False, env.info
     
     routes, a, costs, emissions = NN_routing(
@@ -152,6 +155,17 @@ def insertion(env):
     assignment[env.j] = best
     return assignment, best_routes, best_info
         
+@njit
+def construct_initial_solution(j, assignment, V, max_capacity):
+    # j, assignment, V, max_capacity
+    
+    assignment = np.zeros_like(assignment)
+    remained_cap = List(max_capacity)
+    for i in range(j):
+        for v in range(1, V + 1):
+            pass
+    
+    return assignment
 
 def SA_routing(env,
                T_init = 5_000, T_limit = 1, lamb = .99, var = False, id = 0, log = False, H = np.inf) :
@@ -169,7 +183,17 @@ def SA_routing(env,
     static_mode = env.H == 0
     is_O_allowed = env.is_O_allowed
     
-    best = env.assignment.copy()
+    
+    if env.h == 0:
+        best = construct_initial_solution(
+            env.j,
+            env.assignment,
+            len(env.costs_KM),
+            env.max_capacity
+        )
+    else:
+        best = env.assignment.copy()
+        
     best[~action_mask & is_O_allowed] = 0
     best[env.j] = 1 if env.h > 0 or static_mode else 0
     solution = best.copy()
