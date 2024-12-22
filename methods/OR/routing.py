@@ -211,7 +211,7 @@ def SA_routing(env,
     is_O_allowed = env.is_O_allowed
     
     
-    if env.h == 0:
+    if env.h == 0 and env.j:
         best = construct_initial_solution(
             env.j,
             env.quantities,
