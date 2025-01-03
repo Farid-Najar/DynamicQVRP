@@ -4,6 +4,9 @@ import numpy as np
 from stable_baselines3.common.results_plotter import load_results, ts2xy
 from stable_baselines3.common import results_plotter
 import pandas as pd
+import seaborn as sns
+
+sns.set_theme('paper')
 
 def moving_average(values, window):
     """
@@ -68,55 +71,59 @@ def addlabels(x,y):
 
 def plot_gap_method(data : dict, method : str):
     gap = {
-        k : data[k]["rs"]/data[method]["rs"] -1
-        for k in data.keys() if k != method
+        k : data[k]/data[method] -1
+        for k in data.keys() #if k != method
     }
 
-    plt.boxplot(
-        gap.values(),
-        tick_labels=list(gap.keys()),
+    sns.boxplot(
+        gap
+        # gap.values(),
+        # tick_labels=list(gap.keys()),
     )
-    plt.hlines(0, 0.5, len(gap)+.5, colors='red')
+    plt.hlines(0, -0.5, len(gap), colors='red')
     plt.title(f"methods/{method} gap")
     plt.show()
     
 def plot_gap_offline(data : dict):
     gap = {
-        k : data[k]["rs"]/data["Offline"]["rs"] -1
-        for k in data.keys() if k != "Offline"
+        k : data[k]/data["Offline"] -1
+        for k in data.keys()# if k != "Offline"
     }
 
-    plt.boxplot(
-        gap.values(),
-        tick_labels=list(gap.keys()),
+    sns.boxplot(
+        gap
+        # gap.values(),
+        # tick_labels=list(gap.keys()),
     )
-    plt.hlines(0, 0.5, len(gap)+.5, colors='red')
+    plt.hlines(0, -0.5, len(gap), colors='red')
+    # plt.hlines(0, 0.5, len(gap)+.5, colors='red')
     plt.title("online/offline gap")
     plt.show()
     
-def plot_gap_MSA(data : dict):
-    gap = {
-        k : data[k]["rs"]/data["MSA"]["rs"]
-        for k in data.keys() if k != "MSA"
-    }
+# def plot_gap_MSA(data : dict):
+#     gap = {
+#         k : data[k]/data["MSA"]
+#         for k in data.keys() if k != "MSA"
+#     }
 
-    plt.boxplot(
-        gap.values(),
-        tick_labels=list(gap.keys()),
-    )
-    plt.hlines(1, 0.5, len(gap)+.5, colors='red')
-    plt.title("methods/MSA ratio")
-    plt.show()
+#     sns.boxplot(
+#         gap.values(),
+#         tick_labels=list(gap.keys()),
+#     )
+#     plt.hlines(1, -0.5, len(gap), colors='red')
+#     # plt.hlines(1, 0.5, len(gap)+.5, colors='red')
+#     plt.title("methods/MSA ratio")
+#     plt.show()
     
 def plot_rewards_dist(data : dict):
-    qs = [
-        res["rs"] for res in data.values()
-    ]
+    # qs = [
+    #     res for res in data.values()
+    # ]
 
-    plt.boxplot(
-        qs,
-        tick_labels=list(data.keys()),
-
+    sns.boxplot(
+        data
+        # qs,
+        # tick_labels=list(data.keys()),
     )
     # plt.hlines(1, 0.5, len(qs)+.5, colors='red')
     plt.title("Rewards distribution")
@@ -126,14 +133,18 @@ def plot_rewards_dist(data : dict):
 def plot_mean_rewards(data : dict):
 
     vs = {
-        k : data[k]["rs"].mean()
+        k : data[k].mean()
         for k in data.keys()
     }
 
-    plt.bar(
-        list(vs.keys()),
-        list(vs.values()),
+    # plt.bar(
+    #     list(vs.keys()),
+    #     list(vs.values()),
 
+    # )
+    
+    sns.barplot(
+        data
     )
     
     # calling the function to add value labels
@@ -149,8 +160,8 @@ def plot_mean_rewards(data : dict):
 def plot_improvement(data : dict):
 
     gap = np.array([
-        # res_offline["rs"].mean()/res_greedy["rs"].mean(),
-        data[k]["rs"].mean()/data["Greedy"]["rs"].mean()
+        # res_offline.mean()/res_greedy.mean(),
+        data[k].mean()/data["Greedy"].mean()
         for k in data.keys()
     ])
 
@@ -191,8 +202,8 @@ def plot_improvement(data : dict):
 def plot_improvement2(data : dict):
 
     gap = np.array([
-        # res_offline["rs"].mean()/res_greedy["rs"].mean(),
-        np.mean(data[k]["rs"]/data["Greedy"]["rs"])
+        # res_offline.mean()/res_greedy.mean(),
+        np.mean(data[k]/data["Greedy"])
         for k in data.keys()
     ])
 

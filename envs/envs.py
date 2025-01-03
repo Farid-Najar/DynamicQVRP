@@ -57,7 +57,7 @@ class DynamicQVRPEnv(gym.Env):
                  costs_KM = [1], 
                  emissions_KM = [.3], 
                  CO2_penalty = 10_000,
-                 k_min : int = 2,
+                 k_min : int = 3,
                  k_med : int = 5,
                  n_scenarios = None,
                  hub = 0,
@@ -69,6 +69,7 @@ class DynamicQVRPEnv(gym.Env):
         
         K = horizon
         self.instance = -1
+        self.D, self.coordx, self.coordy, self.p = load_data()
         
         if use_dataset:
             retain_comment = f"_retain{retain_rate}" if retain_rate else ""
@@ -80,26 +81,23 @@ class DynamicQVRPEnv(gym.Env):
                 self.all_dests = np.load(f'data/destinations_K{K}{retain_comment}{scenario_comment}_test.npy').astype(int)
             else:
                 self.all_dests = np.load(f'data/destinations_K{K}{retain_comment}{scenario_comment}.npy').astype(int)
-            
-            if different_quantities:
-                qs = np.random.randint(1, vehicle_capacity//4, (len(self.all_dests), K))
-                #np.load(f'data/quantities_K{K}_retain1.0.npy')
-            else:
-                qs = np.ones((len(self.all_dests), K))
                 
         else:
+            #TODO *** Implement the generation of the destinations
+            self.all_dests = np.random.choice(len(self.D), n_scenarios, True)+1
             raise("not implemented yet")
-            # self._env = GameEnv(AssignmentEnv(
-            #     AssignmentGame(K=K, Q=Q, dynamic=True))
-            # , True
-            # )
         
+        if different_quantities:
+            qs = np.random.randint(1, vehicle_capacity//4, (len(self.all_dests), K))
+            #np.load(f'data/quantities_K{K}_retain1.0.npy')
+        else:
+            qs = np.ones((len(self.all_dests), K))
+            
         self.max_capacity = vehicle_capacity
         self.total_capacity = vehicle_capacity*len(costs_KM)
         DoD = 1-(self.total_capacity-DoD*self.total_capacity)/K
         self.H = int(DoD*K) # ou = self.K
         self.K = K
-        self.D, self.coordx, self.coordy, self.p = load_data()
         
         if unknown_p:
             self.p[:] = 1.
