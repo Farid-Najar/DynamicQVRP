@@ -22,4 +22,4 @@ def create_random_scenarios(
     np.save(f'data/destinations_K{d}_{n_scenarios}', dests)
     
 if __name__ == '__main__':
-    create_random_scenarios()
+    create_random_scenarios(d=100)

@@ -6,7 +6,7 @@ from stable_baselines3.common import results_plotter
 import pandas as pd
 import seaborn as sns
 
-sns.set_theme('paper')
+sns.set_theme('paper', 'whitegrid')
 
 def moving_average(values, window):
     """
@@ -177,15 +177,15 @@ def plot_improvement(data : dict):
 
     x = x[args]
 
-    plt.bar(
-        x[mask_pos],
-        100*gap[mask_pos],
+    sns.barplot(
+        x = x[mask_pos],
+        y = 100*gap[mask_pos],
         color='green'
     )
 
-    plt.bar(
-        x[mask_neg],
-        100*gap[mask_neg],
+    sns.barplot(
+        x = x[mask_neg],
+        y = 100*gap[mask_neg],
         color='red'
     )
     
@@ -219,16 +219,17 @@ def plot_improvement2(data : dict):
 
     x = x[args]
 
-    plt.bar(
-        x[mask_pos],
-        100*gap[mask_pos],
-        color='green'
+    sns.barplot(
+        x = x[mask_pos],
+        y = 100*gap[mask_pos],
+        color='green',
     )
 
-    plt.bar(
-        x[mask_neg],
-        100*gap[mask_neg],
-        color='red'
+    sns.barplot(
+        x = x[mask_neg],
+        y = 100*gap[mask_neg],
+        color='red',
+        # errorbar=('ci', .95)
     )
     
     # calling the function to add value labels
