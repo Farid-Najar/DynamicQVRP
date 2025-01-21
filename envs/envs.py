@@ -6,6 +6,7 @@ from numba import njit
 from numba.typed import List
 
 from methods.OR.routing import SA_routing, insertion
+from utils.generate_scenarios import create_random_scenarios
 # from methods import VA_SA
 
 from typing import Any, Dict, Optional
@@ -83,8 +84,12 @@ class DynamicQVRPEnv(gym.Env):
                 self.all_dests = np.load(f'data/destinations_K{K}{retain_comment}{scenario_comment}.npy').astype(int)
                 
         else:
-            #TODO *** Implement the generation of the destinations
-            self.all_dests = np.random.choice(len(self.D), n_scenarios, True)+1
+            self.all_dests = create_random_scenarios(
+                n_scenarios = n_scenarios,
+                d = K,
+                hub = hub,
+                save = False
+            )#np.random.choice(len(self.D), n_scenarios, True)+1
             raise("not implemented yet")
         
         if different_quantities:
@@ -118,6 +123,7 @@ class DynamicQVRPEnv(gym.Env):
         self.CO2_penalty = CO2_penalty
         self.omission_cost = (2*np.max(self.D) +1)*np.max(self.costs_KM)
         
+        # self.observation_space = gym.spaces.Box(0, 1, (5+len(emissions_KM),), np.float64) #TODO * Change if obs change
         self.observation_space = gym.spaces.Box(0, 1, (6,), np.float64) #TODO * Change if obs change
         self.action_space = gym.spaces.Discrete(2)
         
@@ -233,10 +239,14 @@ class DynamicQVRPEnv(gym.Env):
     def _get_obs(self):
         
         min_knn, med_knn = self._compute_min_med()
-        
+        # cap = np.zeros(len(self.costs_KM))
+        # cap[:self.assignment.max()] = (
+        #     self.max_capacity - np.bincount(self.assignment)[1:self.assignment.max()+1]
+        # )/self.max_capacity
         obs = np.array([
             self.quantities[self.j]/ self.total_capacity, # the quantity rate asked by the current demand
             self.remained_capacity / self.total_capacity, # the percentage of capacity remained
+            # *cap, # the percentage of capacity remained for each vehicle
             (self.H - self.h) / max(1, self.H), # the remaining demands to come
             min_knn/np.max(self.D), # The mean of the k nearest neighbors in admitted dests
             med_knn/(np.max(self.D)), # The mean of the k nearest neighbors in non activated dests

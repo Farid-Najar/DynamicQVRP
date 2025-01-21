@@ -64,50 +64,50 @@ def experiment(
         pickle.dump(env_configs, f)
     
     agents = {
-        "greedy" : dict(
-            agentClass = GreedyAgent,
-            env_configs = env_configs,
-            episodes = episodes,
-            agent_configs = {},
-            save_results = True,
-            title = "res_greedy",
-        ),
-        "random" : dict(
-            agentClass = Agent,
-            env_configs = env_configs,
-            episodes = episodes,
-            agent_configs = {},
-            save_results = True,
-            title = "res_random",
-        ),
-        "SL" : dict(
-            agentClass = SLAgent,
-            env_configs = env_configs,
-            episodes = episodes,
-            agent_configs = dict(),
-            save_results = True,
-            title = "res_SL",
-        ),
-        "RL" : dict(
-            agentClass = RLAgent,
-            env_configs = env_configs,
-            episodes = episodes,
-            agent_configs = dict(
-                algo = 'DQN'    
-            ),
-            save_results = True,
-            title = "res_RL_DQN",
-        ),
-        "RL" : dict(
-            agentClass = RLAgent,
-            env_configs = env_configs,
-            episodes = episodes,
-            agent_configs = dict(
-                algo = 'DQN_equiProb'    
-            ),
-            save_results = True,
-            title = "res_RL_DQN_equiProb",
-        ),
+        # "greedy" : dict(
+        #     agentClass = GreedyAgent,
+        #     env_configs = env_configs,
+        #     episodes = episodes,
+        #     agent_configs = {},
+        #     save_results = True,
+        #     title = "res_greedy",
+        # ),
+        # "random" : dict(
+        #     agentClass = Agent,
+        #     env_configs = env_configs,
+        #     episodes = episodes,
+        #     agent_configs = {},
+        #     save_results = True,
+        #     title = "res_random",
+        # ),
+        # "SL" : dict(
+        #     agentClass = SLAgent,
+        #     env_configs = env_configs,
+        #     episodes = episodes,
+        #     agent_configs = dict(),
+        #     save_results = True,
+        #     title = "res_SL",
+        # ),
+        # "RL" : dict(
+        #     agentClass = RLAgent,
+        #     env_configs = env_configs,
+        #     episodes = episodes,
+        #     agent_configs = dict(
+        #         algo = 'DQN'    
+        #     ),
+        #     save_results = True,
+        #     title = "res_RL_DQN",
+        # ),
+        # "RL" : dict(
+        #     agentClass = RLAgent,
+        #     env_configs = env_configs,
+        #     episodes = episodes,
+        #     agent_configs = dict(
+        #         algo = 'DQN_equiProb'    
+        #     ),
+        #     save_results = True,
+        #     title = "res_RL_DQN_equiProb",
+        # ),
         # "RL" : dict(
         #     agentClass = RLAgent,
         #     env_configs = env_configs,
@@ -118,14 +118,14 @@ def experiment(
         #     save_results = True,
         #     title = "res_RL_PPO",
         # ),
-        # "offline" : dict(
-        #     agentClass = OfflineAgent,
-        #     env_configs = env_configs,
-        #     episodes = episodes,
-        #     agent_configs = {"n_workers": 7},
-        #     save_results = True,
-        #     title = "res_offline",
-        # ),
+        "offline" : dict(
+            agentClass = OfflineAgent,
+            env_configs = env_configs,
+            episodes = episodes,
+            agent_configs = {"n_workers": 7},
+            save_results = True,
+            title = "res_offline",
+        ),
         # "MSA" : dict(
         #     agentClass = MSAAgent,
         #     env_configs = env_configs,
@@ -234,19 +234,19 @@ def experiment_DoD(
        
 if __name__ == "__main__":
     # VRP with 2 vehicles
-    # experiment(
-    #     500,
-    #     env_configs = {
-    #         "horizon" : 50,
-    #         "Q" : 70, 
-    #         "DoD" : 0.7,
-    #         "vehicle_capacity" : 25,
-    #         "re_optimization" : True,
-    #         "costs_KM" : [1, 1],
-    #         "emissions_KM" : [.1, .3],
-    #         "n_scenarios" : 500
-    #     },
-    # )
+    experiment(
+        500,
+        env_configs = {
+            "horizon" : 100,
+            "Q" : 70, 
+            "DoD" : 0.7,
+            "vehicle_capacity" : 20,
+            "re_optimization" : False,
+            "costs_KM" : [1, 1],
+            "emissions_KM" : [.1, .3],
+            "n_scenarios" : 500
+        },
+    )
     
     # TSP
     # experiment(
@@ -281,21 +281,21 @@ if __name__ == "__main__":
     # )
     
     # TSP full dynamic, equi probable
-    experiment(
-        100,
-        env_configs = {
-            "horizon" : 50,
-            "Q" : 100, 
-            "DoD" : 1.,
-            "vehicle_capacity" : 30,
-            "re_optimization" : False,
-            "costs_KM" : [1],
-            "emissions_KM" : [.3],
-            "n_scenarios" : 100 ,
-            "test"  : True,
-            "unknown_p" : True
-        },
-    )
+    # experiment(
+    #     100,
+    #     env_configs = {
+    #         "horizon" : 50,
+    #         "Q" : 100, 
+    #         "DoD" : 1.,
+    #         "vehicle_capacity" : 30,
+    #         "re_optimization" : False,
+    #         "costs_KM" : [1],
+    #         "emissions_KM" : [.3],
+    #         "n_scenarios" : 100 ,
+    #         "test"  : True,
+    #         "unknown_p" : True
+    #     },
+    # )
     
     # TSP different DoDs
     # experiment_DoD(

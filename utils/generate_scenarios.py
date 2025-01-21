@@ -4,7 +4,8 @@ import numpy as np
 def create_random_scenarios(
     n_scenarios = 500,
     d = 50,
-    hub = 0
+    hub = 0,
+    save = True
 ):
     dests = np.zeros((n_scenarios, d), np.int64)
     p = np.load("data/prob_dests.npy")
@@ -18,8 +19,9 @@ def create_random_scenarios(
             replace=False,
             p = p
         )
-    
-    np.save(f'data/destinations_K{d}_{n_scenarios}', dests)
+    if save:
+        np.save(f'data/destinations_K{d}_{n_scenarios}', dests)
+    return dests
     
 if __name__ == '__main__':
     create_random_scenarios(d=100)
