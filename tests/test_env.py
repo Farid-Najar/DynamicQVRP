@@ -96,6 +96,19 @@ class TestDynamicQVRPEnv(unittest.TestCase):
         for _ in range(len(env.all_dests)):
             # state, _ = self.env.reset()
             self.assertTrue(env.reset(), "The obs must be in observation space")
+            
+    def test_vehicle_assignment(self):
+        env = DynamicQVRPEnv(vehicle_assignment=True, costs_KM=[1, 1], emissions_KM=[.1, .3])
+        for _ in range(len(env.all_dests)):
+            # state, _ = self.env.reset()
+            self.assertTrue(env.reset(), "The obs must be in observation space")
+            while True:
+                action = env.action_space.sample()
+                state, _, done, *_ = env.step(action)
+                self.assertTrue(True, 'The environment should not raise an error')
+                self.assertTrue(env.observation_space.contains(state), "The obs must be in observation space")
+                if done:
+                    break
 
 if __name__ == '__main__':
     unittest.main()

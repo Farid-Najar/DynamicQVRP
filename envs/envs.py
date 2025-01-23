@@ -221,11 +221,15 @@ class DynamicQVRPEnv(gym.Env):
         
         # * Change if obs change
         # self.observation_space = gym.spaces.Box(0, 1, (5+len(emissions_KM),), np.float64) 
+        # TODO : change the observation space and observations
+        # it should become in compatible with the vehicle assignment
         self.observation_space = gym.spaces.Box(0, 1, (6,), np.float64)
         
         # * change if actions change
+        self.vehicle_assignment = vehicle_assignment
         dim_actions = 2 if not vehicle_assignment else len(self.emissions_KM) + 1 
-        self.action_space = gym.spaces.Discrete(2)
+        self.action_space = gym.spaces.Discrete(dim_actions)
+        # self.action_space = gym.spaces.Discrete(2)
         
         self.allow_initial_omission = allow_initial_omission
         
@@ -391,8 +395,11 @@ class DynamicQVRPEnv(gym.Env):
         self.NA[self.j] = False
         
         if action:
-            
-            if self.re_optimization:
+            # action = action if self.vehicle_assignment else None
+            if self.vehicle_assignment:
+                self.assignment, self.routes, self.info = insertion(self, action)
+                
+            elif self.re_optimization:
                 self.assignment, self.routes, self.info = insertion(self)
                 self.assignment, self.routes, self.info = SA_routing(self)
             else:

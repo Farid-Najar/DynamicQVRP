@@ -133,7 +133,7 @@ def _run(env, assignment):
     return r, d, info
     
     
-def insertion(env):
+def insertion(env, action = None):
     
     assignment = env.assignment
     best = 0
@@ -141,6 +141,17 @@ def insertion(env):
     eval_best = r*float(d)
     best_info = deepcopy(info)
     best_routes = env.routes.copy()
+    
+    if action is not None:
+        assignment[env.j] = action
+        _, d, info = _run(env, assignment)
+        if d:
+            best_info = deepcopy(info)
+            best_routes = env.routes.copy()
+        else:
+            assignment[env.j] = 0
+        
+        return assignment, best_routes, best_info
     
     for v in range(1, len(env.costs_KM) + 1):
         assignment[env.j] = v
