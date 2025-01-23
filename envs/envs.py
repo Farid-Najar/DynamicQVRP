@@ -45,6 +45,101 @@ def load_data():
 
 
 class DynamicQVRPEnv(gym.Env):
+    """
+    DynamicQVRPEnv is a custom environment for the Dynamic Quadratic Vehicle Routing Problem (QVRP).
+    
+    This environment simulates a dynamic routing problem where vehicles must be routed to meet demands
+    at various destinations while minimizing costs and emissions. The environment supports various 
+    configurations and allows for re-optimization during the routing process.
+
+    Attributes
+    ----------
+    instance : int
+        The current instance of the environment.
+    D : np.ndarray
+        Distance matrix.
+    coordx : np.ndarray
+        X coordinates of the destinations.
+    coordy : np.ndarray
+        Y coordinates of the destinations.
+    p : np.ndarray
+        Probability of destinations.
+    all_dests : np.ndarray
+        All possible destinations in the scenario set.
+    qs : np.ndarray
+        Quantities for each destination.
+    max_capacity : int
+        Maximum capacity of a vehicle.
+    total_capacity : int
+        Total capacity of all vehicles.
+    H : int
+        Number of demands to be met.
+    K : int
+        Horizon length.
+    q : np.ndarray
+        Quantities for each destination.
+    omission_cost : float
+        Cost of omitting a destination.
+    CO2_penalty : float
+        Penalty for CO2 emissions.
+    costs_KM : list
+        Costs per kilometer for each vehicle.
+    emissions_KM : list
+        Emissions per kilometer for each vehicle.
+    num_actions : int
+        Number of possible actions.
+    re_optimization : bool
+        Flag to indicate if re-optimization is allowed.
+    observation_space : gym.spaces.Box
+        Observation space for the environment.
+    action_space : gym.spaces.Discrete
+        Action space for the environment.
+    allow_initial_omission : bool
+        Flag to allow initial omission of destinations.
+    remained_capacity : int
+        Remaining capacity of the vehicles.
+    h : int
+        Current step in the horizon.
+    j : int
+        Current destination index.
+    assignment : np.ndarray
+        Assignment of destinations to vehicles.
+    action_mask : np.ndarray
+        Mask for valid actions.
+    is_O_allowed : np.ndarray
+        Mask for allowed omissions.
+    A : np.ndarray
+        Array indicating activated destinations.
+    NA : np.ndarray
+        Array indicating non-activated destinations.
+    info : dict
+        Dictionary containing information about the current state.
+    routes : np.ndarray
+        Routes for each vehicle.
+    omitted : list
+        List of omitted destinations.
+    episode_reward : float
+        Total reward for the current episode.
+
+    Methods
+    -------
+    _init_instance(instance_id)
+        Initialize a new instance of the environment.
+    _compute_min_med()
+        Compute the minimum and median distances for the current state.
+    _get_obs()
+        Get the current observation.
+    reset(instance_id=-1, *args, **kwargs)
+        Reset the environment to a new state.
+    step(action)
+        Take a step in the environment.
+    sample(H)
+        Sample a future state of the environment.
+    offline_solution(*args, **kwargs)
+        Compute an offline solution for the environment.
+    render(size=100, show_node_num=False)
+        Render the current state of the environment.
+    """
     
     def __init__(self, 
                 #  env : AssignmentEnv = None,
@@ -66,6 +161,7 @@ class DynamicQVRPEnv(gym.Env):
                  allow_initial_omission = True,
                  unknown_p = False,
                  different_quantities = False,
+                 vehicle_assignment = False,
         ):
         
         K = horizon
@@ -99,7 +195,7 @@ class DynamicQVRPEnv(gym.Env):
             qs = np.ones((len(self.all_dests), K))
             
         self.max_capacity = vehicle_capacity
-        self.total_capacity = vehicle_capacity*len(costs_KM)
+        self.total_capacity = vehicle_capacity*len(emissions_KM)
         DoD = 1-(self.total_capacity-DoD*self.total_capacity)/K
         self.H = int(DoD*K) # ou = self.K
         self.K = K
@@ -123,8 +219,12 @@ class DynamicQVRPEnv(gym.Env):
         self.CO2_penalty = CO2_penalty
         self.omission_cost = (2*np.max(self.D) +1)*np.max(self.costs_KM)
         
-        # self.observation_space = gym.spaces.Box(0, 1, (5+len(emissions_KM),), np.float64) #TODO * Change if obs change
-        self.observation_space = gym.spaces.Box(0, 1, (6,), np.float64) #TODO * Change if obs change
+        # * Change if obs change
+        # self.observation_space = gym.spaces.Box(0, 1, (5+len(emissions_KM),), np.float64) 
+        self.observation_space = gym.spaces.Box(0, 1, (6,), np.float64)
+        
+        # * change if actions change
+        dim_actions = 2 if not vehicle_assignment else len(self.emissions_KM) + 1 
         self.action_space = gym.spaces.Discrete(2)
         
         self.allow_initial_omission = allow_initial_omission
@@ -149,7 +249,7 @@ class DynamicQVRPEnv(gym.Env):
         self.distance_matrix = self.D[self.mask]
         self.cost_matrix = np.array([
             (self.costs_KM[v] + self.CO2_penalty*self.emissions_KM[v])*self.distance_matrix
-            for v in range(len(self.costs_KM))
+            for v in range(len(self.emissions_KM))
         ])
         self.omitted = []
         
@@ -252,7 +352,7 @@ class DynamicQVRPEnv(gym.Env):
             med_knn/(np.max(self.D)), # The mean of the k nearest neighbors in non activated dests
             # med_knn/(np.max(self.D)/1e-8), # The mean of the k nearest neighbors in non activated dests
             max(0, self.info["remained_quota"])/self.Q
-            #TODO * Maybe find better observations
+            #TODO : Maybe find better observations
         ])
         
         return obs
@@ -361,7 +461,7 @@ class DynamicQVRPEnv(gym.Env):
             (env.costs_KM[v] + env.CO2_penalty*env.emissions_KM[v])*env.distance_matrix
             for v in range(len(env.costs_KM))
         ])
-        # TODO * implement quantity sampling
+        # TODO : implement quantity sampling
         
         env.action_mask[:self.j+H] = True
         return SA_routing(env)
@@ -402,7 +502,6 @@ class DynamicQVRPEnv(gym.Env):
                 # if self.routes[m, j] == 0:
                 #     gained_on_substitution = 0.
                 # else:
-                #     #TODO *
                 #     gained_on_substitution = self.routes[m, j-1] + self.routes[m, j+1] -(
                 #             self.cost_matrix[m, self.dests[int(self.routes[m, j-2])], self.dests[int(self.routes[m, j+2])]]
                 #         )

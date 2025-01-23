@@ -64,12 +64,86 @@ def plot_results(log_folder,
     return x
     # plt.show()
     
+    
+def add_value_labels(ax, spacing=5):
+    """Add labels to the end of each bar in a bar chart.
 
-def addlabels(x,y):
+    Arguments:
+        ax (matplotlib.axes.Axes): The matplotlib object containing the axes
+            of the plot to annotate.
+        spacing (int): The distance between the labels and the bars.
+    """
+
+    spacing = min(5, spacing)
+    # For each bar: Place a label
+    for rect in ax.patches:
+        # Get X and Y placement of label from rect.
+        y_value = rect.get_height()
+        x_value = rect.get_x() + rect.get_width() / 2
+
+        # Number of points between bar and label. Change to your liking.
+        space = spacing
+        # Vertical alignment for positive values
+        va = 'bottom'
+
+        # If value of bar is negative: Place label below bar
+        if y_value < 0:
+            # Invert space to place label below
+            space *= -1
+            # Vertically align label at top
+            va = 'top'
+
+        # Use Y value as label and format number with one decimal place
+        label = "{:.3f}".format(y_value)
+
+        # Create annotation
+        ax.annotate(
+            label,                      # Use `label` as label
+            (x_value, y_value),         # Place label at end of the bar
+            xytext=(0, space),          # Vertically shift label by `space`
+            textcoords="offset points", # Interpret `xytext` as offset in points
+            ha='center',                # Horizontally center label
+            va=va)                      # Vertically align label differently for
+                                        # positive and negative values.
+
+def addlabels(x, y, add=True):
+    """
+    Add labels to the bars in a bar plot.
+
+    Parameters
+    ----------
+    x : list
+        List of x positions.
+    y : list
+        List of y values.
+    add : bool, optional
+        Whether to add a small offset to the labels, by default True.
+    """
     for i in range(len(x)):
-        plt.text(i, np.sign(y[i])*1.2 + y[i], y[i], ha = 'center')
+        add_val = np.sign(y[i]) * 1.2 if add else 0
+        y_pos = y[i] + add_val
+        if abs(y[i]) < 0.15 * max(y):  # Label inside bar for very small values
+            y_pos = y[i] / 2
+            va = 'center'
+        else:  # Label above bar for larger values
+            va = 'bottom'
+            fontweight = 'normal'
+        
+        # fontweight = 'thick'
+        color = 'black'
+        plt.text(i, y_pos, f'{y[i]:.2f}', ha='center', va=va, color=color, fontweight=fontweight)
 
 def plot_gap_method(data : dict, method : str):
+    """
+    Plot the gap between the specified method and other methods.
+
+    Parameters
+    ----------
+    data : dict
+        Dictionary containing the results for different methods.
+    method : str
+        The method to compare against.
+    """
     gap = {
         k : data[k]/data[method] -1
         for k in data.keys() #if k != method
@@ -85,9 +159,22 @@ def plot_gap_method(data : dict, method : str):
     plt.show()
     
 def plot_gap_offline(data : dict):
+    """
+    Plot the gap between online and offline methods.
+
+    Parameters
+    ----------
+    data : dict
+        Dictionary containing the results for different methods.
+    """
     gap = {
-        k : data[k]/data["Offline"] -1
+        k : 1 - data[k]/data["Offline"]
         for k in data.keys()# if k != "Offline"
+    }
+    
+    mean_gap = {
+        k : 1 - np.mean(data[k]/data["Offline"])
+        for k in data.keys() if k != "Offline"
     }
 
     sns.boxplot(
@@ -100,26 +187,28 @@ def plot_gap_offline(data : dict):
     plt.title("online/offline gap")
     plt.show()
     
-# def plot_gap_MSA(data : dict):
-#     gap = {
-#         k : data[k]/data["MSA"]
-#         for k in data.keys() if k != "MSA"
-#     }
-
-#     sns.boxplot(
-#         gap.values(),
-#         tick_labels=list(gap.keys()),
-#     )
-#     plt.hlines(1, -0.5, len(gap), colors='red')
-#     # plt.hlines(1, 0.5, len(gap)+.5, colors='red')
-#     plt.title("methods/MSA ratio")
-#     plt.show()
+    ax = sns.barplot(
+        mean_gap
+        # gap.values(),
+        # tick_labels=list(gap.keys()),
+    )
+    plt.hlines(0, -0.5, len(mean_gap), colors='red')
+    # addlabels(list(mean_gap.keys()), np.round(list(mean_gap.values()), 2), False)
+    add_value_labels(ax, spacing=max(mean_gap.values())/2)
+    # plt.hlines(0, 0.5, len(gap)+.5, colors='red')
+    plt.title("mean online/offline gap")
+    plt.show()
+    
     
 def plot_rewards_dist(data : dict):
-    # qs = [
-    #     res for res in data.values()
-    # ]
+    """
+    Plot the distribution of rewards for different methods.
 
+    Parameters
+    ----------
+    data : dict
+        Dictionary containing the results for different methods.
+    """
     sns.boxplot(
         data
         # qs,
@@ -131,7 +220,14 @@ def plot_rewards_dist(data : dict):
     
     
 def plot_mean_rewards(data : dict):
+    """
+    Plot the mean rewards for different methods.
 
+    Parameters
+    ----------
+    data : dict
+        Dictionary containing the results for different methods.
+    """
     vs = {
         k : data[k].mean()
         for k in data.keys()
@@ -143,12 +239,14 @@ def plot_mean_rewards(data : dict):
 
     # )
     
-    sns.barplot(
+    ax = sns.barplot(
         data
     )
     
     # calling the function to add value labels
-    addlabels(list(vs.keys()), np.round(list(vs.values()), 2))
+    # addlabels(list(vs.keys()), np.round(list(vs.values()), 2))
+    add_value_labels(ax, spacing=max(vs.values())/2)
+    
     plt.ylim(0, 1.2*max(list(vs.values())))
     
     # plt.hlines(1, 0.5, len(gap)+.5, colors='red')
@@ -158,7 +256,14 @@ def plot_mean_rewards(data : dict):
     
     
 def plot_improvement(data : dict):
+    """
+    Plot the improvement percentage of mean rewards compared to the greedy method.
 
+    Parameters
+    ----------
+    data : dict
+        Dictionary containing the results for different methods.
+    """
     gap = np.array([
         # res_offline.mean()/res_greedy.mean(),
         data[k].mean()/data["Greedy"].mean()
@@ -183,14 +288,15 @@ def plot_improvement(data : dict):
         color='green'
     )
 
-    sns.barplot(
+    ax = sns.barplot(
         x = x[mask_neg],
         y = 100*gap[mask_neg],
         color='red'
     )
     
     # calling the function to add value labels
-    addlabels(x, np.round(100*gap, 2))
+    # addlabels(x, np.round(100*gap, 2))
+    add_value_labels(ax, spacing=max(100*gap)/2)
     
     plt.ylim(1.2*min(100*gap), 1.2*max(100*gap))
 
@@ -200,7 +306,14 @@ def plot_improvement(data : dict):
     plt.show()
    
 def plot_improvement2(data : dict):
+    """
+    Plot the mean improvement percentage compared to the greedy method.
 
+    Parameters
+    ----------
+    data : dict
+        Dictionary containing the results for different methods.
+    """
     gap = np.array([
         # res_offline.mean()/res_greedy.mean(),
         np.mean(data[k]/data["Greedy"])
@@ -225,7 +338,7 @@ def plot_improvement2(data : dict):
         color='green',
     )
 
-    sns.barplot(
+    ax = sns.barplot(
         x = x[mask_neg],
         y = 100*gap[mask_neg],
         color='red',
@@ -233,7 +346,8 @@ def plot_improvement2(data : dict):
     )
     
     # calling the function to add value labels
-    addlabels(x, np.round(100*gap, 2))
+    # addlabels(x, np.round(100*gap, 2))
+    add_value_labels(ax, spacing=max(100*gap)/2)
     
     plt.ylim(1.2*min(100*gap), 1.2*max(100*gap))
 
@@ -243,12 +357,19 @@ def plot_improvement2(data : dict):
     plt.show() 
 
 def plot(data : dict):
+    """
+    Plot various metrics and comparisons for the given data.
+
+    Parameters
+    ----------
+    data : dict
+        Dictionary containing the results for different methods.
+    """
     plot_improvement(data)
     plot_improvement2(data)
     plot_mean_rewards(data)
     plot_rewards_dist(data)
     plot_gap_offline(data)
     plot_gap_method(data, 'Greedy')
-    plot_gap_method(data, 'MSA')
+    # plot_gap_method(data, 'MSA')
     plot_gap_method(data, 'Random')
-    
