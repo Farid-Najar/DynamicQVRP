@@ -32,8 +32,12 @@ def knn(a, k):
     np.ndarray
         k mins of array a
     """
-    idx = np.argpartition(a, min(len(a)-1, k))
-    return idx[:k]
+    k = min(len(a)-1, k)
+    idx = np.argpartition(a, k)
+    # print('knn', idx[1:k+2])
+    # print('a knn', a)
+    # print('a knn', a[idx[0:k+1]].mean())
+    return idx[:k+1]
 
 def load_data(cluster_scenario = False):
     
@@ -340,13 +344,22 @@ class DynamicQVRPEnv(gym.Env):
         #     ))
         #     for mask in masks if len(mask)
         # ])
+        
+        D_V = [
+            self.D[mask, self.dests[self.j]]
+            for mask in masks if len(mask)
+        ]
     
         min_knn = np.array([
-            np.mean(knn(
-                self.D[mask, self.dests[self.j]], self.k_min
-            ))
-            for mask in masks if len(mask)
+            np.mean(D_V[v][knn(
+                D_V[v], self.k_min
+                )]
+            )
+            for v in range(len(D_V))
         ])
+        # print(self.D[masks[0], self.dests[self.j]])
+        # print(self.D[masks[1], self.dests[self.j]])
+        # print(min_knn)
     
         # D_A = self.D[self.A, self.dests[self.j]]
         # min_knn = np.mean(D_A[knn(D_A, self.k_min)])
@@ -364,9 +377,9 @@ class DynamicQVRPEnv(gym.Env):
     def _get_obs(self):
         
         min_knn, med_knn = self._compute_min_med()
-        cap = np.zeros(len(self.costs_KM))
-        cap[:self.assignment.max()] = (
-            self.max_capacity - np.bincount(self.assignment)[1:self.assignment.max()+1]
+        cap = np.full(len(self.costs_KM), 1.)
+        cap[:self.assignment.max()] -= (
+            np.bincount(self.assignment)[1:self.assignment.max()+1]
         )/self.max_capacity
         
         obs = np.array([

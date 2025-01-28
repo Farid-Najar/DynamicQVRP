@@ -72,60 +72,60 @@ def experiment(
             save_results = True,
             title = "res_greedy",
         ),
-        # "random" : dict(
-        #     agentClass = Agent,
+        "random" : dict(
+            agentClass = Agent,
+            env_configs = env_configs,
+            episodes = episodes,
+            agent_configs = {},
+            save_results = True,
+            title = "res_random",
+        ),
+        # "SL" : dict(
+        #     agentClass = SLAgent,
         #     env_configs = env_configs,
         #     episodes = episodes,
-        #     agent_configs = {},
+        #     agent_configs = dict(),
         #     save_results = True,
-        #     title = "res_random",
+        #     title = "res_SL",
         # ),
-        # # "SL" : dict(
-        # #     agentClass = SLAgent,
-        # #     env_configs = env_configs,
-        # #     episodes = episodes,
-        # #     agent_configs = dict(),
-        # #     save_results = True,
-        # #     title = "res_SL",
-        # # ),
-        # # "RL" : dict(
-        # #     agentClass = RLAgent,
-        # #     env_configs = env_configs,
-        # #     episodes = episodes,
-        # #     agent_configs = dict(
-        # #         algo = 'DQN'    
-        # #     ),
-        # #     save_results = True,
-        # #     title = "res_RL_DQN",
-        # # ),
-        # # "RL" : dict(
-        # #     agentClass = RLAgent,
-        # #     env_configs = env_configs,
-        # #     episodes = episodes,
-        # #     agent_configs = dict(
-        # #         algo = 'DQN_equiProb'    
-        # #     ),
-        # #     save_results = True,
-        # #     title = "res_RL_DQN_equiProb",
-        # # ),
-        # # "RL" : dict(
-        # #     agentClass = RLAgent,
-        # #     env_configs = env_configs,
-        # #     episodes = episodes,
-        # #     agent_configs = dict(
-        # #         algo = 'PPO'    
-        # #     ),
-        # #     save_results = True,
-        # #     title = "res_RL_PPO",
-        # # ),
-        # "offline" : dict(
-        #     agentClass = OfflineAgent,
+        # "RL" : dict(
+        #     agentClass = RLAgent,
         #     env_configs = env_configs,
         #     episodes = episodes,
-        #     agent_configs = {"n_workers": 7},
+        #     agent_configs = dict(
+        #         algo = 'DQN'    
+        #     ),
         #     save_results = True,
-        #     title = "res_offline",
+        #     title = "res_RL_DQN",
         # ),
+        # "RL" : dict(
+        #     agentClass = RLAgent,
+        #     env_configs = env_configs,
+        #     episodes = episodes,
+        #     agent_configs = dict(
+        #         algo = 'DQN_equiProb'    
+        #     ),
+        #     save_results = True,
+        #     title = "res_RL_DQN_equiProb",
+        # ),
+        # "RL" : dict(
+        #     agentClass = RLAgent,
+        #     env_configs = env_configs,
+        #     episodes = episodes,
+        #     agent_configs = dict(
+        #         algo = 'PPO'    
+        #     ),
+        #     save_results = True,
+        #     title = "res_RL_PPO",
+        # ),
+        "offline" : dict(
+            agentClass = OfflineAgent,
+            env_configs = env_configs,
+            episodes = episodes,
+            agent_configs = {"n_workers": 7},
+            save_results = True,
+            title = "res_offline",
+        ),
         # "MSA" : dict(
         #     agentClass = MSAAgent,
         #     env_configs = env_configs,
@@ -252,11 +252,11 @@ if __name__ == "__main__":
     experiment(
         500,
         env_configs = {
-            "horizon" : 75,
+            "horizon" : 50,
             "Q" : 15, 
             "DoD" : 1.,
             "vehicle_capacity" : 20,
-            "re_optimization" : True,
+            "re_optimization" : False,
             "costs_KM" : [1, 1],
             "emissions_KM" : [.1, .3],
             "n_scenarios" : 500,
