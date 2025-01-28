@@ -5,10 +5,11 @@ def create_random_scenarios(
     n_scenarios = 500,
     d = 50,
     hub = 0,
-    save = True
+    save = True,
+    p = None,
 ):
     dests = np.zeros((n_scenarios, d), np.int64)
-    p = np.load("data/prob_dests.npy")
+    p = p if p is not None else np.load("data/prob_dests.npy")
     p[hub] = 0
     p /= p.sum()
     

@@ -4,10 +4,8 @@ __pycache__
 # *.zip
 # game*.pkl
 *.log
-brouillon.ipynb
-brouillon.py
+brouillon*
 runs
-brouillon2.ipynb
 PPO_*
 DQN_*
 results copy.ipynb

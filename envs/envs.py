@@ -35,7 +35,14 @@ def knn(a, k):
     idx = np.argpartition(a, min(len(a)-1, k))
     return idx[:k]
 
-def load_data():
+def load_data(cluster_scenario = False):
+    
+    if cluster_scenario:
+        D = np.load('data/clusters/D_cluster.npy')
+        coordx = np.load('data/clusters/coordx_cluster.npy')
+        coordy = np.load('data/clusters/coordy_cluster.npy')
+        return D, coordx, coordy, np.ones(D.shape[0])/D.shape[0]
+    
     coordx = np.load('data/coordsX.npy')
     coordy = np.load('data/coordsY.npy')
     D = np.load('data/distance_matrix.npy')
@@ -162,13 +169,14 @@ class DynamicQVRPEnv(gym.Env):
                  unknown_p = False,
                  different_quantities = False,
                  vehicle_assignment = False,
+                 cluster_scenario = False,
         ):
         
         K = horizon
         self.instance = -1
-        self.D, self.coordx, self.coordy, self.p = load_data()
+        self.D, self.coordx, self.coordy, self.p = load_data(cluster_scenario)
         
-        if use_dataset:
+        if use_dataset and not cluster_scenario:
             retain_comment = f"_retain{retain_rate}" if retain_rate else ""
             scenario_comment = f"_{n_scenarios}" if n_scenarios is not None else ""
             # with open(f'data/game_K{K}{retain_comment}.pkl', 'rb') as f:
@@ -181,12 +189,13 @@ class DynamicQVRPEnv(gym.Env):
                 
         else:
             self.all_dests = create_random_scenarios(
-                n_scenarios = n_scenarios,
+                n_scenarios = n_scenarios if n_scenarios is not None else 500,
                 d = K,
                 hub = hub,
-                save = False
+                save = False,
+                p = self.p
             )#np.random.choice(len(self.D), n_scenarios, True)+1
-            raise("not implemented yet")
+            # raise("not implemented yet")
         
         if different_quantities:
             qs = np.random.randint(1, vehicle_capacity//4, (len(self.all_dests), K))
@@ -221,9 +230,10 @@ class DynamicQVRPEnv(gym.Env):
         
         # * Change if obs change
         # self.observation_space = gym.spaces.Box(0, 1, (5+len(emissions_KM),), np.float64) 
-        # TODO : change the observation space and observations
         # it should become in compatible with the vehicle assignment
-        self.observation_space = gym.spaces.Box(0, 1, (6,), np.float64)
+        dim_obs = 4 + 3*len(emissions_KM)# if not vehicle_assignment else 5 + len(emissions_KM) + len(self.emissions_KM)
+        self.observation_space = gym.spaces.Box(0, 1, (dim_obs,), np.float64)
+        # self.observation_space = gym.spaces.Box(0, 1, (6,), np.float_)
         
         # * change if actions change
         self.vehicle_assignment = vehicle_assignment
@@ -319,20 +329,31 @@ class DynamicQVRPEnv(gym.Env):
         # p[~self.NA] = 0
         p /= p.sum()
         
-        # masks = [
-        #     np.concatenate([[self.hub], self.dests[np.where(self.assignment == v)[0]]])
-        #     for v in range(1, len(self.costs_KM)+1)
-        # ]
+        # * The mean of the k nearest neighbors in admitted dests for every vehicle
+        masks = [
+            np.concatenate([[self.hub], self.dests[np.where(self.assignment == v)[0]]])
+            for v in range(1, len(self.costs_KM)+1)
+        ]
         # min_knn = np.median([
         #     np.mean(knn(
         #         self.D[mask, self.dests[self.j]], self.k_min
         #     ))
         #     for mask in masks if len(mask)
         # ])
-        D_A = self.D[self.A, self.dests[self.j]]
+    
+        min_knn = np.array([
+            np.mean(knn(
+                self.D[mask, self.dests[self.j]], self.k_min
+            ))
+            for mask in masks if len(mask)
+        ])
+    
+        # D_A = self.D[self.A, self.dests[self.j]]
+        # min_knn = np.mean(D_A[knn(D_A, self.k_min)])
+        
+        # * The mean of the k nearest neighbors in non admitted dests
         D_NA = self.D[self.NA, self.dests[self.j]]
         
-        min_knn = np.mean(D_A[knn(D_A, self.k_min)])
         idx_NA = knn(D_NA, self.k_med)
         med_knn = np.median(p[idx_NA]*D_NA[idx_NA])
         # med_knn = np.median(knn(self.D[self.NA, self.dests[self.j]]/(p[self.NA] + 1e-8), self.k_med))
@@ -343,20 +364,22 @@ class DynamicQVRPEnv(gym.Env):
     def _get_obs(self):
         
         min_knn, med_knn = self._compute_min_med()
-        # cap = np.zeros(len(self.costs_KM))
-        # cap[:self.assignment.max()] = (
-        #     self.max_capacity - np.bincount(self.assignment)[1:self.assignment.max()+1]
-        # )/self.max_capacity
+        cap = np.zeros(len(self.costs_KM))
+        cap[:self.assignment.max()] = (
+            self.max_capacity - np.bincount(self.assignment)[1:self.assignment.max()+1]
+        )/self.max_capacity
+        
         obs = np.array([
             self.quantities[self.j]/ self.total_capacity, # the quantity rate asked by the current demand
-            self.remained_capacity / self.total_capacity, # the percentage of capacity remained
-            # *cap, # the percentage of capacity remained for each vehicle
+            # self.remained_capacity / self.total_capacity, # the percentage of capacity remained
+            *cap, # the percentage of capacity remained for each vehicle, dim = len(self.emissions_KM)
             (self.H - self.h) / max(1, self.H), # the remaining demands to come
-            min_knn/np.max(self.D), # The mean of the k nearest neighbors in admitted dests
+            *min_knn/np.max(self.D), # The mean of the k nearest neighbors in admitted dests, dim = len(self.emissions_KM)
             med_knn/(np.max(self.D)), # The mean of the k nearest neighbors in non activated dests
             # med_knn/(np.max(self.D)/1e-8), # The mean of the k nearest neighbors in non activated dests
-            max(0, self.info["remained_quota"])/self.Q
-            #TODO : Maybe find better observations
+            max(0, self.info["remained_quota"])/self.Q, # The remaining quota
+            *self.emissions_KM, # emission of each vehicle, dim = len(self.emissions_KM)
+            # * TODO : Maybe find better observations
         ])
         
         return obs

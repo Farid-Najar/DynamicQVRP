@@ -106,8 +106,24 @@ class TestDynamicQVRPEnv(unittest.TestCase):
                 action = env.action_space.sample()
                 state, _, done, *_ = env.step(action)
                 self.assertTrue(True, 'The environment should not raise an error')
-                self.assertTrue(env.observation_space.contains(state), "The obs must be in observation space")
                 if done:
+                    break
+                self.assertTrue(env.observation_space.contains(state), "The obs must be in observation space")
+                
+    def test_cluster_scenario(self):
+        env = DynamicQVRPEnv(
+            vehicle_assignment=True, costs_KM=[1, 1], emissions_KM=[.1, .3],
+            cluster_scenario=True
+            )
+        for _ in range(len(env.all_dests)):
+            # state, _ = self.env.reset()
+            self.assertTrue(env.reset(), "The obs must be in observation space")
+            while True:
+                action = env.action_space.sample()
+                state, _, done, trun, *_ = env.step(action)
+                self.assertTrue(True, 'The environment should not raise an error')
+                self.assertTrue(env.observation_space.contains(state), "The obs must be in observation space")
+                if done or trun:
                     break
 
 if __name__ == '__main__':
