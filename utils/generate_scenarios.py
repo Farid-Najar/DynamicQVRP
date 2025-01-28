@@ -25,4 +25,4 @@ def create_random_scenarios(
     return dests
     
 if __name__ == '__main__':
-    create_random_scenarios(d=100)
+    create_random_scenarios(d=50, n_scenarios=101, p = np.ones(400))

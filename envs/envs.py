@@ -180,6 +180,8 @@ class DynamicQVRPEnv(gym.Env):
         self.instance = -1
         self.D, self.coordx, self.coordy, self.p = load_data(cluster_scenario)
         
+        use_dataset = test or use_dataset
+        
         if use_dataset and not cluster_scenario:
             retain_comment = f"_retain{retain_rate}" if retain_rate else ""
             scenario_comment = f"_{n_scenarios}" if n_scenarios is not None else ""
@@ -192,14 +194,18 @@ class DynamicQVRPEnv(gym.Env):
                 self.all_dests = np.load(f'data/destinations_K{K}{retain_comment}{scenario_comment}.npy').astype(int)
                 
         else:
-            self.all_dests = create_random_scenarios(
-                n_scenarios = n_scenarios if n_scenarios is not None else 500,
-                d = K,
-                hub = hub,
-                save = False,
-                p = self.p
-            )#np.random.choice(len(self.D), n_scenarios, True)+1
-            # raise("not implemented yet")
+            if test and cluster_scenario:
+                self.all_dests = np.load(f'data/clusters/destinations_K{K}_101_test.npy').astype(int)
+               
+            else: 
+                self.all_dests = create_random_scenarios(
+                    n_scenarios = n_scenarios if n_scenarios is not None else 500,
+                    d = K,
+                    hub = hub,
+                    save = False,
+                    p = self.p
+                )#np.random.choice(len(self.D), n_scenarios, True)+1
+                # raise("not implemented yet")
         
         if different_quantities:
             qs = np.random.randint(1, vehicle_capacity//4, (len(self.all_dests), K))
@@ -652,8 +658,10 @@ class DynamicQVRPEnv(gym.Env):
         for handle in lgnd.legend_handles:
             handle.set_sizes([50])
         mesh = ax.pcolormesh(([], []), cmap = plt.cm.jet)
-        if self.j or self.h:
+        try:
             mesh.set_clim(np.min(weights),np.max(weights))
+        except:
+            pass
         # Visualizing colorbar part -start
         cbar = plt.colorbar(mesh,ax=ax)
         cbar.formatter.set_powerlimits((0, 0))

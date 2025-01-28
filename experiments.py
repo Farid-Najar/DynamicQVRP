@@ -64,22 +64,22 @@ def experiment(
         pickle.dump(env_configs, f)
     
     agents = {
-        "greedy" : dict(
-            agentClass = GreedyAgent,
-            env_configs = env_configs,
-            episodes = episodes,
-            agent_configs = {},
-            save_results = True,
-            title = "res_greedy",
-        ),
-        "random" : dict(
-            agentClass = Agent,
-            env_configs = env_configs,
-            episodes = episodes,
-            agent_configs = {},
-            save_results = True,
-            title = "res_random",
-        ),
+        # "greedy" : dict(
+        #     agentClass = GreedyAgent,
+        #     env_configs = env_configs,
+        #     episodes = episodes,
+        #     agent_configs = {},
+        #     save_results = True,
+        #     title = "res_greedy",
+        # ),
+        # "random" : dict(
+        #     agentClass = Agent,
+        #     env_configs = env_configs,
+        #     episodes = episodes,
+        #     agent_configs = {},
+        #     save_results = True,
+        #     title = "res_random",
+        # ),
         # "SL" : dict(
         #     agentClass = SLAgent,
         #     env_configs = env_configs,
@@ -88,16 +88,17 @@ def experiment(
         #     save_results = True,
         #     title = "res_SL",
         # ),
-        # "RL" : dict(
-        #     agentClass = RLAgent,
-        #     env_configs = env_configs,
-        #     episodes = episodes,
-        #     agent_configs = dict(
-        #         algo = 'DQN'    
-        #     ),
-        #     save_results = True,
-        #     title = "res_RL_DQN",
-        # ),
+        "RL" : dict(
+            agentClass = RLAgent,
+            env_configs = env_configs,
+            episodes = episodes,
+            agent_configs = dict(
+                algo = 'DQN_clusters_VA',
+                hidden_layers = [512, 512, 512], 
+            ),
+            save_results = True,
+            title = "res_RL_DQN_clusters_VA",
+        ),
         # "RL" : dict(
         #     agentClass = RLAgent,
         #     env_configs = env_configs,
@@ -118,14 +119,14 @@ def experiment(
         #     save_results = True,
         #     title = "res_RL_PPO",
         # ),
-        "offline" : dict(
-            agentClass = OfflineAgent,
-            env_configs = env_configs,
-            episodes = episodes,
-            agent_configs = {"n_workers": 7},
-            save_results = True,
-            title = "res_offline",
-        ),
+        # "offline" : dict(
+        #     agentClass = OfflineAgent,
+        #     env_configs = env_configs,
+        #     episodes = episodes,
+        #     agent_configs = {"n_workers": 7},
+        #     save_results = True,
+        #     title = "res_offline",
+        # ),
         # "MSA" : dict(
         #     agentClass = MSAAgent,
         #     env_configs = env_configs,
@@ -250,17 +251,19 @@ if __name__ == "__main__":
     
     # VRP with 2 vehicles on cluster scenarios
     experiment(
-        500,
+        100,
         env_configs = {
             "horizon" : 50,
-            "Q" : 15, 
+            "Q" : 100, 
             "DoD" : 1.,
             "vehicle_capacity" : 20,
-            "re_optimization" : False,
+            "re_optimization" : True,
             "costs_KM" : [1, 1],
             "emissions_KM" : [.1, .3],
             "n_scenarios" : 500,
-            "cluster_scenario" : True
+            "cluster_scenario" : True,
+            "test"  : True,
+            "vehicle_assignment" : True,
         },
     )
     
