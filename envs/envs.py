@@ -189,7 +189,7 @@ class DynamicQVRPEnv(gym.Env):
             #     g = pickle.load(f)
             # routes = np.load(f'data/routes_K{K}{retain_comment}.npy')
             if test:
-                self.all_dests = np.load(f'data/destinations_K{K}{retain_comment}{scenario_comment}_test.npy').astype(int)
+                self.all_dests = np.load(f'data/destinations_K{K}_100_test.npy').astype(int)
             else:
                 self.all_dests = np.load(f'data/destinations_K{K}{retain_comment}{scenario_comment}.npy').astype(int)
                 
@@ -525,7 +525,7 @@ class DynamicQVRPEnv(gym.Env):
         return SA_routing(env, *args, **kwargs)
         
     
-    def render(self, size = 100, show_node_num =False):
+    def render(self, size = 100, show_node_num =False, display_current_node = True):
         # print(self.assignment)
         G = nx.DiGraph()
         G.add_nodes_from(list(range(self.j+1)))
@@ -612,14 +612,20 @@ class DynamicQVRPEnv(gym.Env):
         p /= p.sum()
         
         # ax.scatter(self.coordx[self.dests], self.coordy[self.dests], color='lightgray', s = .6*size, label='Unactivated')
-        ax.scatter(self.coordx[self.NA], self.coordy[self.NA], color='lightgray', s = 100*p[self.NA]*size, label='Unactivated')
-        # print(self.coordx[self.dests[self.j]], self.coordy[self.dests[self.j]])
         ax.scatter(
-            self.coordx[self.dests[self.j]], self.coordy[self.dests[self.j]], 
-            s = size*self.quantities[self.j], 
-            color='blue', 
-            label='Current demand'
+            self.coordx[self.NA], self.coordy[self.NA], 
+            color='lightgray', 
+            s = 100*p[self.NA]*size, 
+            label='Unactivated'
         )
+        # print(self.coordx[self.dests[self.j]], self.coordy[self.dests[self.j]])
+        if display_current_node:
+            ax.scatter(
+                self.coordx[self.dests[self.j]], self.coordy[self.dests[self.j]], 
+                s = size*self.quantities[self.j], 
+                color='blue', 
+                label='Current demand'
+            )
         nx.draw_networkx(G, 
                          pos = nx.get_node_attributes(G,'pos'),  
                          ax=ax, 

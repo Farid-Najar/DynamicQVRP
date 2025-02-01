@@ -93,7 +93,7 @@ def experiment(
             env_configs = env_configs,
             episodes = episodes,
             agent_configs = dict(
-                algo = 'DQN_clusters_VA',
+                algo = 'DQN_VRP_VA',
                 hidden_layers = [512, 512, 512], 
             ),
             save_results = True,
@@ -236,20 +236,21 @@ def experiment_DoD(
 if __name__ == "__main__":
     # VRP with 2 vehicles
     # experiment(
-    #     500,
+    #     100,
     #     env_configs = {
-    #         "horizon" : 100,
+    #         "horizon" : 50,
     #         "Q" : 70, 
     #         "DoD" : 0.7,
-    #         "vehicle_capacity" : 20,
-    #         "re_optimization" : False,
+    #         "vehicle_capacity" : 25,
+    #         "re_optimization" : True,
     #         "costs_KM" : [1, 1],
     #         "emissions_KM" : [.1, .3],
-    #         "n_scenarios" : 500
+    #         "test"  : True,
+    #         # "n_scenarios" : 500
     #     },
     # )
     
-    # VRP with 2 vehicles on cluster scenarios
+    # VRP full dynamic with 2 vehicles
     experiment(
         100,
         env_configs = {
@@ -257,15 +258,32 @@ if __name__ == "__main__":
             "Q" : 100, 
             "DoD" : 1.,
             "vehicle_capacity" : 20,
-            "re_optimization" : True,
+            "re_optimization" : False,
             "costs_KM" : [1, 1],
             "emissions_KM" : [.1, .3],
-            "n_scenarios" : 500,
-            "cluster_scenario" : True,
             "test"  : True,
+            # "n_scenarios" : 500,
             "vehicle_assignment" : True,
         },
     )
+    
+    # VRP with 2 vehicles on cluster scenarios
+    # experiment(
+    #     100,
+    #     env_configs = {
+    #         "horizon" : 50,
+    #         "Q" : 100, 
+    #         "DoD" : 1.,
+    #         "vehicle_capacity" : 20,
+    #         "re_optimization" : True,
+    #         "costs_KM" : [1, 1],
+    #         "emissions_KM" : [.1, .3],
+    #         "n_scenarios" : 500,
+    #         "cluster_scenario" : True,
+    #         "test"  : True,
+    #         "vehicle_assignment" : True,
+    #     },
+    # )
     
     # TSP
     # experiment(
