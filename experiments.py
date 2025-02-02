@@ -88,17 +88,17 @@ def experiment(
         #     save_results = True,
         #     title = "res_SL",
         # ),
-        "RL" : dict(
-            agentClass = RLAgent,
-            env_configs = env_configs,
-            episodes = episodes,
-            agent_configs = dict(
-                algo = 'DQN_VRP_VA',
-                hidden_layers = [512, 512, 512], 
-            ),
-            save_results = True,
-            title = "res_RL_DQN_clusters_VA",
-        ),
+        # "RL" : dict(
+        #     agentClass = RLAgent,
+        #     env_configs = env_configs,
+        #     episodes = episodes,
+        #     agent_configs = dict(
+        #         algo = 'DQN_VRP_VA',
+        #         hidden_layers = [512, 512, 512], 
+        #     ),
+        #     save_results = True,
+        #     title = "res_RL_DQN_clusters_VA",
+        # ),
         # "RL" : dict(
         #     agentClass = RLAgent,
         #     env_configs = env_configs,
@@ -119,22 +119,22 @@ def experiment(
         #     save_results = True,
         #     title = "res_RL_PPO",
         # ),
-        # "offline" : dict(
-        #     agentClass = OfflineAgent,
-        #     env_configs = env_configs,
-        #     episodes = episodes,
-        #     agent_configs = {"n_workers": 7},
-        #     save_results = True,
-        #     title = "res_offline",
-        # ),
-        # "MSA" : dict(
-        #     agentClass = MSAAgent,
-        #     env_configs = env_configs,
-        #     episodes = episodes,
-        #     agent_configs = dict(n_sample=21, parallelize = True),
-        #     save_results = True,
-        #     title = "res_MSA",
-        # ),
+        "offline" : dict(
+            agentClass = OfflineAgent,
+            env_configs = env_configs,
+            episodes = episodes,
+            agent_configs = {"n_workers": 7},
+            save_results = True,
+            title = "res_offline",
+        ),
+        "MSA" : dict(
+            agentClass = MSAAgent,
+            env_configs = env_configs,
+            episodes = episodes,
+            agent_configs = dict(n_sample=21, parallelize = True),
+            save_results = True,
+            title = "res_MSA",
+        ),
     }
     
     for agent_name in agents:
