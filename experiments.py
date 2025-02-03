@@ -62,6 +62,14 @@ def experiment(
     
     with open(f'results/env_configs.pkl', 'wb') as f:
         pickle.dump(env_configs, f)
+        
+    try:
+        va = 'VA' if env_configs['vehicle_assignment'] else 'OA'
+    except:
+        va = 'OA'
+        
+    RL_name = f"res_RL_DQN_{va}"
+    RL_model = f'DQN_{'VRP' if len(env_configs["emissions_KM"])>1 else 'TSP'}_{va}'
     
     agents = {
         # "greedy" : dict(
@@ -88,17 +96,17 @@ def experiment(
         #     save_results = True,
         #     title = "res_SL",
         # ),
-        # "RL" : dict(
-        #     agentClass = RLAgent,
-        #     env_configs = env_configs,
-        #     episodes = episodes,
-        #     agent_configs = dict(
-        #         algo = 'DQN_VRP_VA',
-        #         hidden_layers = [512, 512, 512], 
-        #     ),
-        #     save_results = True,
-        #     title = "res_RL_DQN_clusters_VA",
-        # ),
+        "RL" : dict(
+            agentClass = RLAgent,
+            env_configs = env_configs,
+            episodes = episodes,
+            agent_configs = dict(
+                algo = RL_model,
+                hidden_layers = [512, 512, 512], 
+            ),
+            save_results = True,
+            title = RL_name,
+        ),
         # "RL" : dict(
         #     agentClass = RLAgent,
         #     env_configs = env_configs,
@@ -119,14 +127,6 @@ def experiment(
         #     save_results = True,
         #     title = "res_RL_PPO",
         # ),
-        "offline" : dict(
-            agentClass = OfflineAgent,
-            env_configs = env_configs,
-            episodes = episodes,
-            agent_configs = {"n_workers": 7},
-            save_results = True,
-            title = "res_offline",
-        ),
         "MSA" : dict(
             agentClass = MSAAgent,
             env_configs = env_configs,
@@ -135,6 +135,14 @@ def experiment(
             save_results = True,
             title = "res_MSA",
         ),
+        # "offline" : dict(
+        #     agentClass = OfflineAgent,
+        #     env_configs = env_configs,
+        #     episodes = episodes,
+        #     agent_configs = {"n_workers": 7},
+        #     save_results = True,
+        #     title = "res_offline",
+        # ),
     }
     
     for agent_name in agents:
@@ -258,12 +266,12 @@ if __name__ == "__main__":
             "Q" : 100, 
             "DoD" : 1.,
             "vehicle_capacity" : 20,
-            "re_optimization" : False,
+            "re_optimization" : True,
             "costs_KM" : [1, 1],
             "emissions_KM" : [.1, .3],
             "test"  : True,
             # "n_scenarios" : 500,
-            "vehicle_assignment" : True,
+            # "vehicle_assignment" : True,
         },
     )
     

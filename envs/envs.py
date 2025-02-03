@@ -522,7 +522,7 @@ class DynamicQVRPEnv(gym.Env):
         else:
             env.action_mask = env.is_O_allowed.copy()
         env.H = 0
-        return SA_routing(env, *args, **kwargs)
+        return SA_routing(env, offline_mode=True, *args, **kwargs)
         
     
     def render(self, size = 100, show_node_num =False, display_current_node = True):

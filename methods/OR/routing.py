@@ -206,6 +206,7 @@ def construct_emergency_solution(env):
     return assignment, best_routes, best_info
 
 def SA_routing(env,
+               offline_mode = False, random_start = False,
                T_init = 5_000, T_limit = 1, lamb = .99, var = False, id = 0, log = False, H = np.inf) :
     """
     This function finds a solution for the steiner problem
@@ -221,7 +222,10 @@ def SA_routing(env,
     static_mode = env.H == 0
     is_O_allowed = env.is_O_allowed
     
-    
+    #! problem with the initial solution
+    # when the offline method is called in the full dyn case,
+    # the initial sol is zero but must debute with another one
+    # TODO ** fix the initial solution
     if env.h == 0 and env.j:
         best = construct_initial_solution(
             env.j,
@@ -230,9 +234,19 @@ def SA_routing(env,
             len(env.costs_KM),
             env.max_capacity
         )
+    elif offline_mode:
+        best = construct_initial_solution(
+            len(env.assignment),
+            env.quantities,
+            env.assignment,
+            len(env.costs_KM),
+            env.max_capacity
+        )
+        pass #TODO
     else:
         best = env.assignment.copy()
         
+    # print(best)
     best[~action_mask & is_O_allowed] = 0
     best[env.j] = 1 if env.h > 0 or static_mode else 0
     solution = best.copy()
