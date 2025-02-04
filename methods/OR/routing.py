@@ -354,3 +354,6 @@ def rand_neighbor(solution : np.ndarray, action_mask, allow_0, nb_changes = 1, n
         candidates.remove(0)
     new_solution[i] = rd.choice(candidates, nb_changes, replace=False)
     return new_solution
+
+def VRP_solver(D : np.ndarray) -> list:
+    pass
