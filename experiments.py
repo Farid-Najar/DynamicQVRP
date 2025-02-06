@@ -70,24 +70,27 @@ def experiment(
         
     RL_name = f"res_RL_DQN_{va}"
     RL_model = f'DQN_{'VRP' if len(env_configs["emissions_KM"])>1 else 'TSP'}_{va}'
-    
+    try:
+        RL_model += f'{'_uniforme' if env_configs['noised_p'] and va=='VA' else ''}'
+    except:
+        pass
     agents = {
-        "greedy" : dict(
-            agentClass = GreedyAgent,
-            env_configs = env_configs,
-            episodes = episodes,
-            agent_configs = {},
-            save_results = True,
-            title = "res_greedy",
-        ),
-        "random" : dict(
-            agentClass = Agent,
-            env_configs = env_configs,
-            episodes = episodes,
-            agent_configs = {},
-            save_results = True,
-            title = "res_random",
-        ),
+        # "greedy" : dict(
+        #     agentClass = GreedyAgent,
+        #     env_configs = env_configs,
+        #     episodes = episodes,
+        #     agent_configs = {},
+        #     save_results = True,
+        #     title = "res_greedy",
+        # ),
+        # "random" : dict(
+        #     agentClass = Agent,
+        #     env_configs = env_configs,
+        #     episodes = episodes,
+        #     agent_configs = {},
+        #     save_results = True,
+        #     title = "res_random",
+        # ),
         # "SL" : dict(
         #     agentClass = SLAgent,
         #     env_configs = env_configs,
@@ -135,14 +138,14 @@ def experiment(
         #     save_results = True,
         #     title = "res_MSA",
         # ),
-        "offline" : dict(
-            agentClass = OfflineAgent,
-            env_configs = env_configs,
-            episodes = episodes,
-            agent_configs = {"n_workers": 7},
-            save_results = True,
-            title = "res_offline",
-        ),
+        # "offline" : dict(
+        #     agentClass = OfflineAgent,
+        #     env_configs = env_configs,
+        #     episodes = episodes,
+        #     agent_configs = {"n_workers": 7},
+        #     save_results = True,
+        #     title = "res_offline",
+        # ),
     }
     
     for agent_name in agents:
@@ -289,6 +292,7 @@ if __name__ == "__main__":
             "emissions_KM" : [.1, .3],
             "test"  : True,
             "noised_p" : True,
+            "unknown_p" : True,
             # "n_scenarios" : 500,
             # "vehicle_assignment" : True,
         },

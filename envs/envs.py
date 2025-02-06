@@ -171,6 +171,7 @@ class DynamicQVRPEnv(gym.Env):
                  test = False,
                  allow_initial_omission = True,
                  unknown_p = False,
+                 uniforme_p_test = False,
                  noised_p = False,
                  different_quantities = False,
                  vehicle_assignment = False,
@@ -187,13 +188,14 @@ class DynamicQVRPEnv(gym.Env):
             retain_comment = f"_retain{retain_rate}" if retain_rate else ""
             scenario_comment = f"_{n_scenarios}" if n_scenarios is not None else ""
             noise_comment = f"noised_" if noised_p else ""
+            uniforme = f"_uniforme" if uniforme_p_test else ""
             # with open(f'data/game_K{K}{retain_comment}.pkl', 'rb') as f:
             #     g = pickle.load(f)
             # routes = np.load(f'data/routes_K{K}{retain_comment}.npy')
             if test:
-                self.all_dests = np.load(f'data/{noise_comment}destinations_K{K}_100_test.npy').astype(int)
+                self.all_dests = np.load(f'data/{noise_comment}destinations_K{K}_100{uniforme}_test.npy').astype(int)
             else:
-                self.all_dests = np.load(f'data/destinations_K{K}{retain_comment}{scenario_comment}.npy').astype(int)
+                self.all_dests = np.load(f'data/destinations_K{K}{retain_comment}{scenario_comment}{uniforme}.npy').astype(int)
                 
         else:
             if test and cluster_scenario:
@@ -684,3 +686,10 @@ class DynamicQVRPEnv(gym.Env):
         plt.show()
 
         return nx.to_latex(G, nx.get_node_attributes(G,'pos'), node_options=dict(zip(range(len(G_ncolors)), G_ncolors)))
+    
+    
+class StaticWrapper:
+    # It recreates the conditions of the static case when the demands are known
+    # TODO
+    def __init__(self):
+        pass
