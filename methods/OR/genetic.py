@@ -1,12 +1,13 @@
 import numpy as np
-import numba as nb
 from numba import njit
 from numba.typed import List
 import random
+from copy import deepcopy
+import multiprocess as mp
 
 # Genetic Algorithm Parameters
 POPULATION_SIZE = 500
-GENERATIONS = 2_000
+GENERATIONS = 2_500
 MUTATION_RATE = 0.1
 ELITISM_COUNT = 7
 TOURNAMENT_SIZE = 5
@@ -90,7 +91,7 @@ def calculate_fitness(individual, demands, distance_matrices, vehicle_capacity,
             
             
             current_load = demand
-            if v+1 >= MAX_VEHICLES:
+            if v+1 >= len(distance_matrices):
                 oq += np.sum(demands[individual[i+1:]])
                 # print(individual[i+1:])
                 break
@@ -256,21 +257,21 @@ class MultiVehicleVRPSolver:
             demand = self.demands[customer]
 
             if (total_distance + 
-                distance_matrices[v, current_route[-1], customer] +
-                distance_matrices[v, customer, self.depot] )> self.Q:
+                self.distance_matrices[v, current_route[-1], customer] +
+                self.distance_matrices[v, customer, self.depot] )> self.Q:
                 oq += demand
                 vehicle_assignments[customer] = -1
                 # continue
 
             elif current_load + demand > self.vehicle_capacity:
                 # Finalize current route
-                total_distance += distance_matrices[v, current_route[-1], self.depot]
+                total_distance += self.distance_matrices[v, current_route[-1], self.depot]
                 current_route.append(self.depot)
                 routes.append(np.array(current_route, dtype=np.int64))
                 
                 # route_length = 1
                 current_load = demand
-                if v+1 >= MAX_VEHICLES:
+                if v+1 >= self.max_vehicles:
                     oq += np.sum(self.demands[individual[i+1:]])
                     print(individual[i+1:])
                     break
@@ -278,10 +279,10 @@ class MultiVehicleVRPSolver:
                 v+=1
                 # Start new route
                 current_route = [self.depot, customer]
-                total_distance += distance_matrices[v, self.depot, customer]
+                total_distance += self.distance_matrices[v, self.depot, customer]
                 vehicle_assignments[customer] = v
             else:
-                total_distance += distance_matrices[v, current_route[-1], customer]
+                total_distance += self.distance_matrices[v, current_route[-1], customer]
                 # route_length += 1
                 current_route.append(customer)
                 current_load += demand
@@ -289,7 +290,7 @@ class MultiVehicleVRPSolver:
                 vehicle_assignments[customer] = v
           
         
-        total_distance += distance_matrices[v, current_route[-1], self.depot]
+        total_distance += self.distance_matrices[v, current_route[-1], self.depot]
         current_route.append(self.depot)      
         
         routes.append(np.array(current_route, dtype=np.int64))
@@ -329,13 +330,13 @@ class MultiVehicleVRPSolver:
         return routes, vehicle_assignments, oq
 
 # Example usage
-if __name__ == "__main__":
+def genetic(D, qs, capacity, emissions_KM):
     # Problem parameters
     s_idx = 0
-    NUM_NODES = 51
-    VEHICLE_CAPACITY = 20
-    MAX_VEHICLES = 2
-    NUM_VEHICLES = 2  # Total available vehicle types
+    NUM_NODES = len(D)
+    VEHICLE_CAPACITY = capacity
+    MAX_VEHICLES = len(emissions_KM)
+    NUM_VEHICLES = len(emissions_KM)  # Total available vehicle types
     # Q = 100
     # excess_penalty = 10_000
     
@@ -345,15 +346,15 @@ if __name__ == "__main__":
     #     np.fill_diagonal(distance_matrices[v], 0)
     #     distance_matrices[v] = (distance_matrices[v] + distance_matrices[v].T) / 2
     
-    distance_matrix = np.load('data/distance_matrix.npy').astype(np.float64)#[:100, :100]
-    scenarios = np.load('data/destinations_K50_100_test.npy').astype(np.int64)
-    s = [0] + list(scenarios[s_idx])
-    mask = np.ix_(s, s)
-    distance_matrix = distance_matrix[mask]
+    # distance_matrix = np.load('data/distance_matrix.npy').astype(np.float64)#[:100, :100]
+    # scenarios = np.load('data/destinations_K50_100_test.npy').astype(np.int64)
+    # s = [0] + list(scenarios[s_idx])
+    # mask = np.ix_(s, s)
+    # distance_matrix = distance_matrix[mask]
     
-    em_factors = [.1, .3]
-    distance_matrices = np.array([
-        em_factors[v]*distance_matrix
+    # em_factors = [.1, .3]
+    Ds = np.array([
+        emissions_KM[v]*D
         for v in range(NUM_VEHICLES)
     ]).astype(np.float64)
     
@@ -362,27 +363,77 @@ if __name__ == "__main__":
     # Generate demands
     demands = np.zeros(NUM_NODES, dtype=np.int64)
     # demands[1:] = np.random.randint(0, 2, NUM_NODES-1)
-    demands[1:] = np.ones(NUM_NODES-1)
+    demands[1:] = qs #np.ones(NUM_NODES-1)
     
     # Initialize and run solver
     solver = MultiVehicleVRPSolver(
-        distance_matrices=distance_matrices,
+        distance_matrices=Ds,
         demands=demands,
         vehicle_capacity=VEHICLE_CAPACITY,
         max_vehicles=MAX_VEHICLES
     )
     
     best_solution, best_score = solver.solve()
-    routes, vehicles, oq = solver.decode_solution(best_solution)
+    routes, assignment, oq = solver.decode_solution(best_solution)
     
-    print("\nBest solution:")
-    print(f"Total score: {best_score:.2f}")
-    print(f"Vehicles assignments: {vehicles+1}")
+    # print("\nBest solution:")
+    # print(f"Total score: {best_score:.2f}")
+    # print(f"Vehicles assignments: {assignment+1}")
     lengths = 0
     for i, route in enumerate(routes):
         lengths += len(route) -2 
-        print(f"Route {i+1} (Vehicle {i+1}): {route.tolist()}")
+        # print(f"Route {i+1} (Vehicle {i+1}): {route.tolist()}")
     # print(f"Total omitted: {oq:.2f}")
-    print(f"Total rewards: {NUM_NODES-1 - oq:.2f}")
+    # print(f"Total rewards: {NUM_NODES-1 - oq:.2f}")
     assert lengths == NUM_NODES-1 - oq
     # print(f"lenghts: {lenghts:.2f}")
+    
+    return routes, assignment+1, lengths
+    
+
+def multiple_genetic(D, qs, capacity, emissions_KM, n_sample = 5):
+    
+    
+    def process(i, q):
+        # a = dests[i_id][np.where(a_GTS == 0)].astype(int)
+        
+        np.random.seed(i)
+        res = dict()
+        routes, assignment, r = genetic(D, qs, capacity, emissions_KM)
+        res['a'] = assignment
+        res['routes'] = routes
+        res['r'] = r
+        # res['info'] = [info]
+        q.put((i, res))
+        # print(f'DP {i} done')
+        return
+    
+    episode_rewards = np.zeros(n_sample)
+    actions = [[] for _ in range(n_sample)]
+    routes = [[] for _ in range(n_sample)]
+    
+    q = mp.Manager().Queue()
+    
+    ps = []
+    for i in range(n_sample):
+        ps.append(
+            mp.Process(target = process, args = (i, q, ))
+        )
+        ps[-1].start()
+    # p[4*i+3].start()
+    
+    for p in ps:
+        p.join()
+        
+    while not q.empty():
+        i, d = q.get()
+        episode_rewards[i] = d["r"]
+        actions[i] = d["a"]
+        routes[i] = d["routes"]
+        
+    best_idx = np.argmax(episode_rewards)
+        
+    return routes[best_idx], actions[best_idx], episode_rewards[best_idx]
+
+if __name__ == "__main__":
+    genetic()

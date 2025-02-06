@@ -17,7 +17,7 @@ from gymnasium import Env
 
 class Agent:
     def __init__(self, env : Env,
-                 n_workers = 5,
+                 n_workers = 2,
                  parallelize = False,
                  *args, **kwargs):
         self.env = env
@@ -121,7 +121,7 @@ class OfflineAgent(Agent):
     def run(self, n, initial_instance = 0):
         
         SA_configs = dict(
-            T_init = 50_000, T_limit = 1, lamb = .99999,
+            T_init = 10_000, T_limit = 1, lamb = .9995,
         )
         
         def process(env, i, q):
@@ -194,18 +194,50 @@ class MSAAgent(Agent):
         
     def act(self, x, env = None, *args, **kwargs):
         
+        SA_configs = dict(
+            T_init = 1_000, T_limit = 1, lamb = .99,
+        )
+        
+        env = self.env if env is None else env
+        
+        def process(env, i, q):
+            # a = dests[i_id][np.where(a_GTS == 0)].astype(int)
+            # res = dict()
+            
+            assignment, *_ = env.sample(self.horizon, SA_configs = SA_configs)
+
+            score = float(assignment[env.j] == 0)
+            q.put((i, score))
+            # print(f'DP {i} done')
+            return
+        
+        q = mp.Manager().Queue()
         score = np.zeros(self.env.action_space.n)
         
-        # TODO ** Parallelize the process
-        for _ in range(self.n_sample):
-            if env is None:
-                assignment, *_ = self.env.sample(self.horizon)
+        pool = mp.Pool(processes=6)
+        for i in range(self.n_sample):
+            pool.apply_async(process, args=(deepcopy(env), i, q, ))
+        # ps[4*i+3].start()
+        pool.close()
+        pool.join()
+        while not q.empty():
+            i, s = q.get()
+            score[0] += s
+            # pbar.update(1)
+            
+            
+        
+        
+        # # TODO ** Parallelize the process
+        # for _ in range(self.n_sample):
+        #     if env is None:
+        #         assignment, *_ = self.env.sample(self.horizon, SA_configs = SA_configs)
 
-                score[0] += float(assignment[self.env.j] == 0)
-            else:
-                assignment, *_ = env.sample(self.horizon)
+        #         score[0] += float(assignment[self.env.j] == 0)
+        #     else:
+        #         assignment, *_ = env.sample(self.horizon, SA_configs = SA_configs)
 
-                score[0] += float(assignment[env.j] == 0)
+        #         score[0] += float(assignment[env.j] == 0)
     
         score[1] = self.n_sample - score[0]
         

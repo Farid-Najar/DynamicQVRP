@@ -171,6 +171,7 @@ class DynamicQVRPEnv(gym.Env):
                  test = False,
                  allow_initial_omission = True,
                  unknown_p = False,
+                 noised_p = False,
                  different_quantities = False,
                  vehicle_assignment = False,
                  cluster_scenario = False,
@@ -185,11 +186,12 @@ class DynamicQVRPEnv(gym.Env):
         if use_dataset and not cluster_scenario:
             retain_comment = f"_retain{retain_rate}" if retain_rate else ""
             scenario_comment = f"_{n_scenarios}" if n_scenarios is not None else ""
+            noise_comment = f"noised_" if noised_p else ""
             # with open(f'data/game_K{K}{retain_comment}.pkl', 'rb') as f:
             #     g = pickle.load(f)
             # routes = np.load(f'data/routes_K{K}{retain_comment}.npy')
             if test:
-                self.all_dests = np.load(f'data/destinations_K{K}_100_test.npy').astype(int)
+                self.all_dests = np.load(f'data/{noise_comment}destinations_K{K}_100_test.npy').astype(int)
             else:
                 self.all_dests = np.load(f'data/destinations_K{K}{retain_comment}{scenario_comment}.npy').astype(int)
                 
@@ -484,21 +486,23 @@ class DynamicQVRPEnv(gym.Env):
         
         return obs, r, done, trunc, self.info
     
-    def sample(self, H):
+    def sample(self, H, SA_configs):
         
         env = deepcopy(self)
         p = env.p.copy()
         p[env.dests[:self.j]] = 0
         p[env.hub] = 0
         
+        H = min(H, env.H - env.h - 1)
+        
         if len(self.cost_matrix) > 1:
-            env.action_mask[:] = True
+            env.action_mask[:self.j + H+1] = True
         else:
             env.action_mask = env.is_O_allowed.copy()
+            env.action_mask[H+1:] = False
             
         p /= p.sum()
         
-        H = min(H, env.H - env.h - 1)
         
         future_dests = np.random.choice(len(p), H, False, p)
         env.dests[self.j+1 : self.j+H+1] = future_dests
@@ -512,8 +516,8 @@ class DynamicQVRPEnv(gym.Env):
         ])
         # TODO : implement quantity sampling
         
-        env.action_mask[:self.j+H] = True
-        return SA_routing(env)
+        # env.action_mask[:self.j+H] = True
+        return SA_routing(env, offline_mode=True, **SA_configs)
     
     def offline_solution(self, *args, **kwargs):
         env = deepcopy(self)

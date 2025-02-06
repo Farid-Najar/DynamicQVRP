@@ -72,22 +72,22 @@ def experiment(
     RL_model = f'DQN_{'VRP' if len(env_configs["emissions_KM"])>1 else 'TSP'}_{va}'
     
     agents = {
-        # "greedy" : dict(
-        #     agentClass = GreedyAgent,
-        #     env_configs = env_configs,
-        #     episodes = episodes,
-        #     agent_configs = {},
-        #     save_results = True,
-        #     title = "res_greedy",
-        # ),
-        # "random" : dict(
-        #     agentClass = Agent,
-        #     env_configs = env_configs,
-        #     episodes = episodes,
-        #     agent_configs = {},
-        #     save_results = True,
-        #     title = "res_random",
-        # ),
+        "greedy" : dict(
+            agentClass = GreedyAgent,
+            env_configs = env_configs,
+            episodes = episodes,
+            agent_configs = {},
+            save_results = True,
+            title = "res_greedy",
+        ),
+        "random" : dict(
+            agentClass = Agent,
+            env_configs = env_configs,
+            episodes = episodes,
+            agent_configs = {},
+            save_results = True,
+            title = "res_random",
+        ),
         # "SL" : dict(
         #     agentClass = SLAgent,
         #     env_configs = env_configs,
@@ -127,22 +127,22 @@ def experiment(
         #     save_results = True,
         #     title = "res_RL_PPO",
         # ),
-        "MSA" : dict(
-            agentClass = MSAAgent,
-            env_configs = env_configs,
-            episodes = episodes,
-            agent_configs = dict(n_sample=21, parallelize = True),
-            save_results = True,
-            title = "res_MSA",
-        ),
-        # "offline" : dict(
-        #     agentClass = OfflineAgent,
+        # "MSA" : dict(
+        #     agentClass = MSAAgent,
         #     env_configs = env_configs,
         #     episodes = episodes,
-        #     agent_configs = {"n_workers": 7},
+        #     agent_configs = dict(n_sample=21, parallelize = False),
         #     save_results = True,
-        #     title = "res_offline",
+        #     title = "res_MSA",
         # ),
+        "offline" : dict(
+            agentClass = OfflineAgent,
+            env_configs = env_configs,
+            episodes = episodes,
+            agent_configs = {"n_workers": 7},
+            save_results = True,
+            title = "res_offline",
+        ),
     }
     
     for agent_name in agents:
@@ -259,6 +259,24 @@ if __name__ == "__main__":
     # )
     
     # VRP full dynamic with 2 vehicles
+    # experiment(
+    #     100,
+    #     env_configs = {
+    #         "horizon" : 50,
+    #         "Q" : 100, 
+    #         "DoD" : 1.,
+    #         "vehicle_capacity" : 20,
+    #         "re_optimization" : True,
+    #         "costs_KM" : [1, 1],
+    #         "emissions_KM" : [.1, .3],
+    #         "test"  : True,
+    #         # "n_scenarios" : 500,
+    #         # "vehicle_assignment" : True,
+    #     },
+    # )
+    
+    # VRP full dynamic with 2 vehicles
+    # with noised probabilities
     experiment(
         100,
         env_configs = {
@@ -270,6 +288,7 @@ if __name__ == "__main__":
             "costs_KM" : [1, 1],
             "emissions_KM" : [.1, .3],
             "test"  : True,
+            "noised_p" : True,
             # "n_scenarios" : 500,
             # "vehicle_assignment" : True,
         },
