@@ -691,5 +691,5 @@ class DynamicQVRPEnv(gym.Env):
 class StaticWrapper:
     # It recreates the conditions of the static case when the demands are known
     # TODO
-    def __init__(self):
-        pass
+    def __init__(self, env : DynamicQVRPEnv):
+        self._env = env

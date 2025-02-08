@@ -121,7 +121,7 @@ class OfflineAgent(Agent):
     def run(self, n, initial_instance = 0):
         
         SA_configs = dict(
-            T_init = 10_000, T_limit = 1, lamb = .9995,
+            T_init = 1_000, T_limit = 1, lamb = .9995,
         )
         
         def process(env, i, q):

@@ -182,9 +182,35 @@ def construct_initial_solution(j, q, a, V, max_capacity):
     
     return assignment
 
-def construct_emergency_solution(env):
+def construct_emergency_solution(env, j = None):
     # j, assignment, V, max_capacity
     
+    assignment = np.zeros_like(env.assignment)
+    j = env.j if j is None else j
+    # best = assignment.copy()
+    # best_info = {}
+    remained_cap = [env.max_capacity for _ in range(len(env.costs_KM))]
+    _, d, best_info = _run(env, assignment)
+    best_routes = env.routes.copy()
+    
+    for i in range(j):
+        for v in range(1, len(env.costs_KM) + 1):
+            if remained_cap[v-1] - env.quantities[i] >= 0:
+                a = assignment.copy()
+                a[i] = v
+                _, d, info = _run(env, a)
+                if d:
+                    remained_cap[v-1] -= env.quantities[i]
+                    assignment[i] = v
+                    best_info = deepcopy(info)
+                    best_routes = env.routes.copy()
+                break
+            
+    return assignment, best_routes, best_info
+
+def construct_greedy_solution(env):
+    # j, assignment, V, max_capacity
+    #TODO make a greedy initial solution especially for offline
     assignment = np.zeros_like(env.assignment)
     # best = assignment.copy()
     best_info = {}
@@ -235,20 +261,22 @@ def SA_routing(env,
             env.max_capacity
         )
     elif offline_mode:
-        best = construct_initial_solution(
-            len(env.assignment),
-            env.quantities,
-            env.assignment,
-            len(env.costs_KM),
-            env.max_capacity
-        )
-        pass #TODO
+        # best = construct_initial_solution(
+        #     len(env.assignment),
+        #     env.quantities,
+        #     env.assignment,
+        #     len(env.costs_KM),
+        #     env.max_capacity
+        # )
+        best, best_routes, best_info = construct_emergency_solution(env, len(env.assignment))
+        best = best_info['assignment']
     else:
         best = env.assignment.copy()
         
     # print(best)
     best[~action_mask & is_O_allowed] = 0
-    best[env.j] = 1 if env.h > 0 or static_mode else 0
+    if not offline_mode:
+        best[env.j] = 1 if env.h > 0 or static_mode else 0
     solution = best.copy()
     T = T_init
     best_routes = env.routes.copy()
