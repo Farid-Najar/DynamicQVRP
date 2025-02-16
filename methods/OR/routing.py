@@ -233,7 +233,7 @@ def construct_greedy_solution(env):
 
 def SA_routing(env,
                offline_mode = False, random_start = False,
-               T_init = 5_000, T_limit = 1, lamb = .99, var = False, id = 0, log = False, H = np.inf) :
+               T_init = 1_000, T_limit = 1, lamb = .995, var = False, id = 0, log = False, H = np.inf) :
     """
     This function finds a solution for the steiner problem
         using annealing algorithm

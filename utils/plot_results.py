@@ -254,6 +254,43 @@ def plot_mean_rewards(data : dict):
     plt.show()
     # plt.hlines(np.mean(r_MSA_woRO/r_offline_woRO), 0.5, 2.5, colors='red', linestyles='--')
     
+def plot_mean_occupancy(data : dict, total_cap = None):
+    """
+    Plot the mean rewards for different methods.
+
+    Parameters
+    ----------
+    data : dict
+        Dictionary containing the results for different methods.
+    """
+    if total_cap is None:
+        return
+    
+    vs = {
+        k : 100*data[k]/total_cap
+        for k in data.keys()
+    }
+
+    # plt.bar(
+    #     list(vs.keys()),
+    #     list(vs.values()),
+
+    # )
+    
+    ax = sns.barplot(
+        vs
+    )
+    
+    # calling the function to add value labels
+    # addlabels(list(vs.keys()), np.round(list(vs.values()), 2))
+    add_value_labels(ax, spacing=4)#max(vs.values())/2)
+    
+    plt.ylim(0, 110)
+    
+    # plt.hlines(1, 0.5, len(gap)+.5, colors='red')
+    plt.title("Mean occupancy rate by methods")
+    plt.ylabel("Occupancy in %")
+    plt.show()
     
 def plot_improvement(data : dict):
     """
@@ -356,7 +393,7 @@ def plot_improvement2(data : dict):
     plt.ylabel("Improvement in %")
     plt.show() 
 
-def plot(data : dict):
+def plot(data : dict, total_cap = None):
     """
     Plot various metrics and comparisons for the given data.
 
@@ -373,3 +410,4 @@ def plot(data : dict):
     plot_gap_method(data, 'Greedy')
     # plot_gap_method(data, 'MSA')
     plot_gap_method(data, 'Random')
+    plot_mean_occupancy(data, total_cap)

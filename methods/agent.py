@@ -195,7 +195,7 @@ class MSAAgent(Agent):
     def act(self, x, env = None, *args, **kwargs):
         
         SA_configs = dict(
-            T_init = 1_000, T_limit = 1, lamb = .99,
+            T_init = 1_000, T_limit = 1, lamb = .995,
         )
         
         env = self.env if env is None else env
