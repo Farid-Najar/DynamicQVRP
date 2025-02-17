@@ -5,7 +5,7 @@ import numpy as np
 from numba import njit
 from numba.typed import List
 
-from methods.OR.routing import SA_routing, insertion
+from methods.OR.routing import SA_routing, SA_routing2, insertion
 from utils.generate_scenarios import create_random_scenarios
 # from methods import VA_SA
 
@@ -303,6 +303,7 @@ class DynamicQVRPEnv(gym.Env):
         
         self.info = {
             "omitted" : [],
+            "remained_quota" : self.Q,
             "episode rewards" : self.episode_reward,
             "quantity accepted" : self.total_capacity - self.remained_capacity,
             "remained capacity" : self.remained_capacity,
@@ -314,7 +315,8 @@ class DynamicQVRPEnv(gym.Env):
         
         self.routes = np.zeros((len(self.emissions_KM), self.max_capacity+2), dtype=np.int64)
         
-        self.assignment, self.routes, self.info = SA_routing(self)
+        if self.j:
+            self.assignment, self.routes, self.info = SA_routing2(self)
         
         self.omitted += list(np.where(self.assignment[:self.j]==0)[0])
         
@@ -447,7 +449,7 @@ class DynamicQVRPEnv(gym.Env):
                 
             elif self.re_optimization:
                 self.assignment, self.routes, self.info = insertion(self)
-                self.assignment, self.routes, self.info = SA_routing(self)
+                self.assignment, self.routes, self.info = SA_routing2(self, log=True)
             else:
                 self.assignment, self.routes, self.info = insertion(self)
 
@@ -519,7 +521,7 @@ class DynamicQVRPEnv(gym.Env):
         # TODO : implement quantity sampling
         
         # env.action_mask[:self.j+H] = True
-        return SA_routing(env, offline_mode=True, **SA_configs)
+        return SA_routing2(env, offline_mode=True, **SA_configs)
     
     def offline_solution(self, *args, **kwargs):
         env = deepcopy(self)
@@ -528,7 +530,7 @@ class DynamicQVRPEnv(gym.Env):
         else:
             env.action_mask = env.is_O_allowed.copy()
         env.H = 0
-        return SA_routing(env, offline_mode=True, *args, **kwargs)
+        return SA_routing2(env, offline_mode=True, *args, **kwargs)
         
     
     def render(self, size = 100, show_node_num =False, display_current_node = True):

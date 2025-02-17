@@ -9,6 +9,9 @@ from numpy import exp
 from copy import deepcopy
 from numba import njit
 from numba.typed import List
+from methods.OR.metaheuristics import SA_vrp
+
+# from envs import DynamicQVRPEnv
 
 @njit
 def NN_routing(
@@ -383,5 +386,45 @@ def rand_neighbor(solution : np.ndarray, action_mask, allow_0, nb_changes = 1, n
     new_solution[i] = rd.choice(candidates, nb_changes, replace=False)
     return new_solution
 
-def VRP_solver(D : np.ndarray) -> list:
-    pass
+def SA_routing2(env,# : DynamicQVRPEnv,
+               offline_mode = False,
+               T_init = 1_000, T_limit = 1, lamb = .995, log = False, H = 50_000):
+    
+    
+    distance_matrix = env.distance_matrix
+    qs = env.quantities
+    customers = np.arange(1, env.K + 1)[env.action_mask]
+    
+    initial_solution = env.routes.flatten()
+    initial_solution = initial_solution[initial_solution != 0]
+    # print(initial_solution)
+    # initial_solution = None
+    
+    # We adapt the hyper parameters for faster algorithms
+    max_iter = min(H, len(customers)*((len(env.emissions_KM)+1)//2)*1000)
+    # print(max_iter)
+    T_init = min(T_init, len(customers)*100)
+    
+    total_emissions, oq, routes, assignment = SA_vrp(
+        distance_matrix, env.Q, qs[customers], env.max_capacity, env.emissions_KM, 
+        customers = customers, initial_solution = initial_solution, log = log,
+        SA_configs = dict(
+          initial_temp=T_init,
+          cooling_rate=lamb,
+          max_iter=max_iter, 
+        ),
+    )
+    
+    if oq and env.h: # In the dynamic part, the omission is not allowed
+        assignment = env.assignment
+        routes = env.routes
+        info = env.info
+    else:
+        info = dict()
+        info['assignment'] = assignment
+        info['routes'] = routes
+        # info['costs per vehicle'] = costs
+        info['omitted'] = np.where(assignment==0)[0]
+        info['remained_quota'] = env.Q - total_emissions
+    
+    return assignment, routes, info
