@@ -125,6 +125,24 @@ class TestDynamicQVRPEnv(unittest.TestCase):
                 self.assertTrue(env.observation_space.contains(state), "The obs must be in observation space")
                 if done or trun:
                     break
+                
+    def test_diffrent_DoDs(self):
+        
+        for DoD in [1., .75, .5, .25, 0]:
+            env = DynamicQVRPEnv(
+                DoD=DoD,
+                costs_KM=[1, 1], emissions_KM=[.1, .3],
+                )
+            # state, _ = self.env.reset()
+            s_idx = np.random.randint(len(env.all_dests))
+            self.assertTrue(env.reset(s_idx), "The obs must be in observation space")
+            while True:
+                action = env.action_space.sample()
+                state, _, done, trun, *_ = env.step(action)
+                self.assertTrue(True, 'The environment should not raise an error')
+                self.assertTrue(env.observation_space.contains(state), "The obs must be in observation space")
+                if done or trun:
+                    break
 
 if __name__ == '__main__':
     unittest.main()

@@ -689,7 +689,7 @@ def simulated_annealing_vrp(D, demands, capacity, initial_solution,
     #     best_solution, demands, capacity, dist_mat, max_vehicles
     # )
     
-    print('Final temperature : ', T)
+    # print('Final temperature : ', T)
     
     return best_routes, best_cost, best_oq, assignment
 

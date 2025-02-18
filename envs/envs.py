@@ -156,7 +156,7 @@ class DynamicQVRPEnv(gym.Env):
                 #  env : AssignmentEnv = None,
                  horizon = 50,
                  Q = 50,
-                 DoD = 0.,
+                 DoD = 1.,
                  vehicle_capacity = 15, # We assume it homogeneous for all vehicles
                  retain_rate = 0.,
                  use_dataset = True,

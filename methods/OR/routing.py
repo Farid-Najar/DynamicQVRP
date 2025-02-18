@@ -395,10 +395,12 @@ def SA_routing2(env,# : DynamicQVRPEnv,
     qs = env.quantities
     customers = np.arange(1, env.K + 1)[env.action_mask]
     
-    initial_solution = env.routes.flatten()
-    initial_solution = initial_solution[initial_solution != 0]
+    if env.h:
+        initial_solution = env.routes.flatten()
+        initial_solution = initial_solution[initial_solution != 0]
     # print(initial_solution)
-    # initial_solution = None
+    else:
+        initial_solution = None
     
     # We adapt the hyper parameters for faster algorithms
     max_iter = min(H, len(customers)*((len(env.emissions_KM)+1)//2)*1000)
