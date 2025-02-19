@@ -432,7 +432,10 @@ class DynamicQVRPEnv(gym.Env):
     
     def step(self, action: int) -> tuple[Any, float, bool, bool, dict[str, Any]]:
         
-        if self.h >= self.H-1 or self.remained_capacity <= 0:
+        if (self.h >= self.H-1 or 
+            self.remained_capacity <= 0 or
+            self.info["remained_quota"] <= 1e-4 
+        ):
             print("The episode is done :")
             print(self.info)
             return -1, 0, True, True, self.info
@@ -444,12 +447,14 @@ class DynamicQVRPEnv(gym.Env):
         
         if action:
             # action = action if self.vehicle_assignment else None
-            if self.vehicle_assignment:
-                self.assignment, self.routes, self.info = insertion(self, action)
                 
-            elif self.re_optimization:
+            if self.re_optimization:
                 self.assignment, self.routes, self.info = insertion(self)
-                self.assignment, self.routes, self.info = SA_routing2(self, log=True)
+                self.assignment, self.routes, self.info = SA_routing2(self)
+                
+            elif self.vehicle_assignment:
+                self.assignment, self.routes, self.info = insertion(self, action, run_sa=True)
+                # self.assignment, self.routes, self.info = SA_routing2(self, multiple_tsp=True)
             else:
                 self.assignment, self.routes, self.info = insertion(self)
 

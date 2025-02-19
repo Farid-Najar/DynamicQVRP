@@ -502,6 +502,7 @@ def calculate_cost(permutation, demands, distance_matrices, vehicle_capacity,
             
             # vehicle_assignments[customer] = v
     
+    total_distance += distance_matrices[v, current_route[route_length], depot]
     # current_route[route_length] = depot
     # routes[v, :route_length+2] = current_route[:route_length+2]
     routes[v, :] = current_route[:]
@@ -582,6 +583,10 @@ def calculate_routes_and_assignment(permutation, demands, distance_matrices, veh
             current_load += demand
             
             # vehicle_assignments[customer] = v
+    
+    # * It must calculate the return to the depot even if the capacity is not reached
+    # * This was the source of a bug
+    total_distance += distance_matrices[v, current_route[route_length], depot]
     
     # current_route[route_length] = depot
     # routes[v, :route_length+2] = current_route[:route_length+2]
@@ -693,6 +698,80 @@ def simulated_annealing_vrp(D, demands, capacity, initial_solution,
     
     return best_routes, best_cost, best_oq, assignment
 
+# @njit
+def simulated_annealing_tsp(D, demands, capacity, initial_solution, 
+                            initial_temp=100.0, cooling_rate=0.99,
+                           max_iter=500, seed=1917, depot = 0,
+                           Q = 100):
+    """Numba-optimized SA for multi-vehicle VRP"""
+    # numba.seed(seed)
+    np.random.seed(seed)
+    # Problem setup
+    # customers = np.arange(1, n + 1)
+    dist_mat = D#compute_distance_matrix(coords)
+    
+    omit_penalty = 3*np.amax(D)
+    
+    # Initial solution
+    current_solution = initial_solution
+    # current_cost, current_vehicles, _ = calculate_total_cost(
+    #     current_solution, demands, capacity, dist_mat, max_vehicles
+    # )
+    current_cost, current_oq, _ = calculate_cost(current_solution, demands, dist_mat, capacity, 
+                     depot, 1, Q, omit_penalty)
+    best_solution = current_solution.copy()
+    best_cost = current_cost
+    # best_vehicles = current_vehicles
+    best_oq = current_oq
+    
+    # We shake up the solution for better exploration
+    # current_solution = np.random.permutation(current_solution).astype(np.int64)
+    
+    # SA parameters
+    T = initial_temp
+    
+    for i in range(max_iter):
+        new_solution = generate_neighbor(current_solution)
+        new_cost, oq, _ = calculate_cost(new_solution, demands, dist_mat, capacity, 
+                     depot, 1, Q, omit_penalty)
+        # new_cost, new_vehicles, _ = calculate_total_cost(
+        #     new_solution, demands, capacity, dist_mat, max_vehicles
+        # )
+        
+        # Acceptance criteria with vehicle count consideration
+        if (new_cost < current_cost or 
+            np.exp((current_cost - new_cost)/T) > np.random.rand()):
+            current_solution = new_solution
+            current_cost = new_cost
+            current_oq = oq
+            
+            if oq <= best_oq:
+                if current_cost < best_cost:
+                    best_solution = current_solution.copy()
+                    best_cost = new_cost
+                    best_oq = oq
+        
+        # Adaptive cooling
+        if T > 1e-10:
+            T *= cooling_rate
+            if i % 1000 == 0:
+                T *= 1.2  # Extra heating boost
+    
+    # Get final routes
+    # print(best_solution)
+    # print(best_solution.shape)
+    best_cost, best_oq, best_routes, assignment = calculate_routes_and_assignment(
+        best_solution, demands, dist_mat, capacity, 
+        depot, 1, Q, omit_penalty
+    )
+    # _, _, best_routes = calculate_total_cost(
+    #     best_solution, demands, capacity, dist_mat, max_vehicles
+    # )
+    
+    # print('Final temperature : ', T)
+    
+    return best_routes, best_cost, best_oq, assignment
+
 # Example usage
 def SA_vrp(distance_matrix, Q, qs, capacity, emissions_KM, 
            customers = None, log = False,
@@ -764,7 +843,7 @@ def SA_vrp(distance_matrix, Q, qs, capacity, emissions_KM,
         initial_solution = np.random.permutation(customers).astype(np.int64)
     
     # demands[1:] = np.random.randint(0, 2, NUM_NODES-1)
-    demands[customers] = qs#np.ones(NUM_NODES-1)
+    demands[customers] = qs[customers-1]#np.ones(NUM_NODES-1)
     
     # Run optimized SA
     routes, cost, oq, assignment = simulated_annealing_vrp(
@@ -787,7 +866,71 @@ def SA_vrp(distance_matrix, Q, qs, capacity, emissions_KM,
                 print(f"Vehicle {i+1}: {route}")
     
     return cost, oq, routes, assignment
-            
+    
+def multiple_SA_tsp(distance_matrix, Q, qs, capacity, emissions_KM, 
+           initial_solutions,
+           customers = None, log = False,
+           SA_configs = dict(
+              initial_temp=1_000,
+              cooling_rate=0.995,
+              max_iter=50_000, 
+            ),
+    ):
+    
+    
+    def process(i, q):
+        # a = dests[i_id][np.where(a_GTS == 0)].astype(int)
+        
+        np.random.seed(i)
+        res = dict()
+        cost, oq, routes, assignment = SA_vrp(
+            distance_matrix, Q, qs[customers[i]-1], capacity, [emissions_KM[i]], 
+            customers = customers[i], initial_solution = initial_solutions[i], log = log,
+            SA_configs = SA_configs,
+        )
+        res['a'] = assignment
+        res['routes'] = routes
+        res['cost'] = cost
+        res['oq'] = oq
+        q.put((i, res))
+        # print(f'DP {i} done')
+        return
+    
+    n_vehicles = len(emissions_KM)
+    cost = np.zeros(n_vehicles)
+    oq = np.zeros(n_vehicles)
+    assignment = np.zeros(len(distance_matrix)-1, np.int64)
+    routes = np.zeros((n_vehicles, capacity+2), np.int64)
+    # routes = [None for _ in range(n_vehicles)]
+    # episode_rewards = np.zeros(n_sample)
+    # actions = [[] for _ in range(n_sample)]
+    
+    q = mp.Manager().Queue()
+    
+    ps = []
+    # pool = mp.Pool(processes=7)
+    
+    for i in range(len(customers)):
+        ps.append(
+            mp.Process(target = process, args = (i, q, ))
+        )
+        ps[-1].start()
+    # p[4*i+3].start()
+    
+    for p in ps:
+        p.join()
+        
+    while not q.empty():
+        i, d = q.get()
+        cost[i] = d["cost"]
+        oq[i] = d["oq"]
+        assignment += d["a"]
+        routes[i] = d["routes"]
+        
+    # best_idx = np.argmax(episode_rewards)
+        
+    return cost, oq, routes, assignment
+
 if __name__ == "__main__":
     # genetic()
     s_idx = 1
@@ -808,7 +951,7 @@ if __name__ == "__main__":
     
     customers = np.arange(1, 15 + 1)
     
-    SA_vrp(distance_matrix, Q, qs[customers], capacity, emissions_KM, 
+    SA_vrp(distance_matrix, Q, qs, capacity, emissions_KM, 
            customers = customers, log = True,
            SA_configs = dict(
               initial_temp=1_000,

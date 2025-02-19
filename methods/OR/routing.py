@@ -9,7 +9,7 @@ from numpy import exp
 from copy import deepcopy
 from numba import njit
 from numba.typed import List
-from methods.OR.metaheuristics import SA_vrp
+from methods.OR.metaheuristics import SA_vrp, simulated_annealing_tsp
 
 # from envs import DynamicQVRPEnv
 
@@ -99,14 +99,19 @@ def NN_routing(
 #TODO ** Use a better routing
 # The current routing (NN routing) is not very efficient.
 
-def _run(env, assignment):
+def _run(env, assignment, action = None):
     
-    routes = np.zeros((len(env.emissions_KM), env.max_capacity+2), dtype=np.int64)
+    # routes = np.zeros((len(env.emissions_KM), env.max_capacity+2), dtype=np.int64)
     # print([np.sum(env.quantities[assignment == v]) > env.max_capacity for v in range(1, len(env.costs_KM)+1)])
     if (np.sum(env.quantities[assignment.astype(bool)]) > env.total_capacity
         or np.any([np.sum(env.quantities[assignment == v]) > env.max_capacity for v in range(1, len(env.costs_KM)+1) ])
         ):
         return -env.K*env.omission_cost, False, env.info
+    
+    if action is not None:
+        assignment[assignment!=action] = 0
+    routes = deepcopy(env.routes) #np.zeros((len(env.emissions_KM), env.max_capacity+2), dtype=np.int64)
+    info = deepcopy(env.info)
     
     routes, a, costs, emissions = NN_routing(
         assignment,
@@ -119,12 +124,21 @@ def _run(env, assignment):
         List(env.emissions_KM),
     )
     
-    total_emission = np.sum(emissions)
-    info = dict()
-    info['assignment'] = a
+    if action is not None and 'distance per vehicle' in info.keys() :
+        info['distance per vehicle'][action-1] = costs[action-1]
+        info['emissions per vehicle'][action-1] = emissions[action-1]
+        emissions = info['emissions per vehicle']
+        costs = info['distance per vehicle']
+        # info['omitted'] = np.where(a==0)[0]
+    else:
+        info['distance per vehicle'] = costs
+        info['emissions per vehicle'] = emissions
+        # info['omitted'] = np.where(a==0)[0]
+    
     info['routes'] = routes
-    info['costs per vehicle'] = costs
-    info['omitted'] = np.where(a==0)[0]
+    total_emission = np.sum(emissions)
+    # info = dict()
+    
     info['remained_quota'] = env.Q - total_emission
     
     env.routes = routes
@@ -136,19 +150,74 @@ def _run(env, assignment):
     return r, d, info
     
     
-def insertion(env, action = None):
+def _run_sa_tsp(env, action, info):
+    v = action - 1
+    emissions = info['emissions per vehicle'].copy()
+    # emissions[v] = 0
+    
+    D = env.emissions_KM[v]*env.distance_matrix[None]
+    route = env.routes[v]
+    initial_solution = route[route != 0]
+    # print(initial_solution)
+    demands = np.zeros(D.shape[1], dtype=np.int64)
+    demands[initial_solution] = env.quantities[initial_solution]
+    
+    
+    route, emission, oq, _ = simulated_annealing_tsp(D, demands, env.max_capacity, initial_solution, 
+                    initial_temp=100.0, cooling_rate=0.995,
+                   max_iter=500, seed=1917, depot = env.hub,
+                   Q = env.Q)
+    emissions[v] = emission
+    total_emission = np.sum(emissions)
+    # print(route)
+    
+    env.routes[v] = route
+    d = (not oq) and (total_emission <= env.Q + 1e-5)
+    
+    if d:
+        info['routes'] = env.routes
+        info['distance per vehicle'][v] = emission/env.emissions_KM[v]
+        info['emissions per vehicle'] = emissions
+        info['remained_quota'] = env.Q - total_emission
+    # else:
+        
+
+    return emission, d, info
+    
+    
+def insertion(env, action = None, run_sa = False):
     
     assignment = env.assignment
     best = 0
-    r, d, info = _run(env, assignment)
-    eval_best = r*float(d)
-    best_info = deepcopy(info)
-    best_routes = env.routes.copy()
+    if env.h == 0:
+        r, d, info = _run(env, assignment)
+        eval_best = r*float(d)
+        best_info = deepcopy(info)
+    else:
+        d= True
+        eval_best = 0
+        best_info = deepcopy(env.info)
+    best_routes = deepcopy(env.routes)
     
     if action is not None:
+        if np.sum(best_routes[action-1].astype(bool)) >= env.max_capacity:
+            assignment[env.j] = 0
+            return assignment, best_routes, best_info
+            
         assignment[env.j] = action
-        _, d, info = _run(env, assignment)
+        a = np.zeros_like(assignment)
+        a[assignment==action] = assignment[assignment==action]
+        # print('info run : ', best_info['emissions per vehicle'])
+        _, d, info = _run(env, a, action)
+        # print('info run : ', info['emissions per vehicle'])
+        if run_sa:
+            _, d, info = _run_sa_tsp(env, action, info)
+            # print('info run sa : ', info['emissions per vehicle'])
+            
         if d:
+            info['assignment'] = assignment
+            info['omitted'] = np.where(assignment==0)[0]
+            
             best_info = deepcopy(info)
             best_routes = env.routes.copy()
         else:
@@ -164,7 +233,7 @@ def insertion(env, action = None):
             eval_best = r
             best = v
             best_info = deepcopy(info)
-            best_routes = env.routes.copy()
+            best_routes = deepcopy(env.routes)
             
     assignment[env.j] = best
     return assignment, best_routes, best_info
@@ -387,8 +456,9 @@ def rand_neighbor(solution : np.ndarray, action_mask, allow_0, nb_changes = 1, n
     return new_solution
 
 def SA_routing2(env,# : DynamicQVRPEnv,
-               offline_mode = False,
-               T_init = 1_000, T_limit = 1, lamb = .995, log = False, H = 50_000):
+               T_init = 1_000, lamb = .995, log = False, H = 50_000,
+               **kwargs
+    ):
     
     
     distance_matrix = env.distance_matrix
@@ -408,7 +478,7 @@ def SA_routing2(env,# : DynamicQVRPEnv,
     T_init = min(T_init, len(customers)*100)
     
     total_emissions, oq, routes, assignment = SA_vrp(
-        distance_matrix, env.Q, qs[customers], env.max_capacity, env.emissions_KM, 
+        distance_matrix, env.Q, qs, env.max_capacity, env.emissions_KM, 
         customers = customers, initial_solution = initial_solution, log = log,
         SA_configs = dict(
           initial_temp=T_init,
@@ -428,5 +498,4 @@ def SA_routing2(env,# : DynamicQVRPEnv,
         # info['costs per vehicle'] = costs
         info['omitted'] = np.where(assignment==0)[0]
         info['remained_quota'] = env.Q - total_emissions
-    
     return assignment, routes, info
