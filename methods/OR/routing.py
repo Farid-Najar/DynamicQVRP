@@ -195,7 +195,7 @@ def insertion(env, action = None, run_sa = False):
         best_info = deepcopy(info)
     else:
         d= True
-        eval_best = 0
+        eval_best = -np.inf
         best_info = deepcopy(env.info)
     best_routes = deepcopy(env.routes)
     

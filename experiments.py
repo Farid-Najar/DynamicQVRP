@@ -1,4 +1,6 @@
 from tqdm import tqdm
+from copy import deepcopy
+
 import numpy as np
 from methods import GreedyAgent, MSAAgent, Agent, OfflineAgent, SLAgent, RLAgent
 from envs import DynamicQVRPEnv
@@ -71,30 +73,40 @@ def experiment(
     except:
         va = 'OA'
         
-    RL_name = f"res_RL_DQN_{va}{RL_name_comment}"
-    if RL_model is None:
-        RL_model = f'DQN_{'VRP' if len(env_configs["emissions_KM"])>1 else 'TSP'}_{va}'
+    # if env_configs["re_optimization"] : 
+    env_configs_DQN_VA_as_OA = deepcopy(env_configs)
+    env_configs_DQN_VA_as_OA["vehicle_assignment"] = True
+    
+    env_configs_DQN_VA = deepcopy(env_configs_DQN_VA_as_OA)
+    env_configs_DQN_VA["re_optimization"] = False
+        
+    # RL_name = f"res_RL_DQN_{va}{RL_name_comment}"
+    if "cluster_scenario" in env_configs and env_configs["cluster_scenario"]:
+        RL_model_comment = 'clusters'
+    else:
+        RL_model_comment = 'VRP' if len(env_configs["emissions_KM"])>1 else 'TSP'
+        RL_model_comment += str(len(env_configs["emissions_KM"])) if len(env_configs["emissions_KM"])>1 else ''
         try:
-            RL_model += f'{'_uniforme' if env_configs['noised_p'] and va=='VA' else ''}'
+            RL_model_comment += f'{'_uniforme' if env_configs['noised_p'] and va=='VA' else ''}'
         except:
             pass
     agents = {
-        "greedy" : dict(
-            agentClass = GreedyAgent,
-            env_configs = env_configs,
-            episodes = episodes,
-            agent_configs = {},
-            save_results = True,
-            title = "res_greedy",
-        ),
-        "random" : dict(
-            agentClass = Agent,
-            env_configs = env_configs,
-            episodes = episodes,
-            agent_configs = {},
-            save_results = True,
-            title = "res_random",
-        ),
+        # "greedy" : dict(
+        #     agentClass = GreedyAgent,
+        #     env_configs = env_configs,
+        #     episodes = episodes,
+        #     agent_configs = {},
+        #     save_results = True,
+        #     title = "res_greedy",
+        # ),
+        # "random" : dict(
+        #     agentClass = Agent,
+        #     env_configs = env_configs,
+        #     episodes = episodes,
+        #     agent_configs = {},
+        #     save_results = True,
+        #     title = "res_random",
+        # ),
         # "SL" : dict(
         #     agentClass = SLAgent,
         #     env_configs = env_configs,
@@ -103,16 +115,39 @@ def experiment(
         #     save_results = True,
         #     title = "res_SL",
         # ),
-        "RL" : dict(
+        # "RL_OA" : dict(
+        #     agentClass = RLAgent,
+        #     env_configs = env_configs,
+        #     episodes = episodes,
+        #     agent_configs = dict(
+        #         algo = f'DQN_{RL_model_comment}_OA',
+        #         hidden_layers = RL_hidden_layers, 
+        #     ),
+        #     save_results = True,
+        #     title = "res_RL_DQN_OA",
+        # ),
+        
+        "RL_VA_as_OA" : dict(
             agentClass = RLAgent,
-            env_configs = env_configs,
+            env_configs = env_configs_DQN_VA_as_OA,
             episodes = episodes,
             agent_configs = dict(
-                algo = RL_model,
+                algo = f'DQN_{RL_model_comment}_VA',
                 hidden_layers = RL_hidden_layers, 
             ),
             save_results = True,
-            title = RL_name,
+            title = "res_RL_DQN_VA_as_OA",
+        ),
+        "RL_VA" : dict(
+            agentClass = RLAgent,
+            env_configs = env_configs_DQN_VA,
+            episodes = episodes,
+            agent_configs = dict(
+                algo = f'DQN_{RL_model_comment}_VA',
+                hidden_layers = RL_hidden_layers, 
+            ),
+            save_results = True,
+            title = "res_RL_DQN_VA",
         ),
         # "RL" : dict(
         #     agentClass = RLAgent,
@@ -142,14 +177,14 @@ def experiment(
         #     save_results = True,
         #     title = "res_MSA",
         # ),
-        "offline" : dict(
-            agentClass = OfflineAgent,
-            env_configs = env_configs,
-            episodes = episodes,
-            agent_configs = {"n_workers": 7},
-            save_results = True,
-            title = "res_offline",
-        ),
+        # "offline" : dict(
+        #     agentClass = OfflineAgent,
+        #     env_configs = env_configs,
+        #     episodes = episodes,
+        #     agent_configs = {"n_workers": 7},
+        #     save_results = True,
+        #     title = "res_offline",
+        # ),
     }
     
     for agent_name in agents:
@@ -282,24 +317,43 @@ if __name__ == "__main__":
     #     },
     # )
     
-    # VRP full dynamic with 4 vehicles
-    experiment(
-        100,
-        env_configs = {
-            "horizon" : 100,
-            "Q" : 100, 
-            "DoD" : 1.,
-            "vehicle_capacity" : 20,
-            "re_optimization" : True,
-            "costs_KM" : [1, 1, 1, 1],
-            "emissions_KM" : [.1, .1, .3, .3],
-            "test"  : True,
-            # "n_scenarios" : 500,
-            # "vehicle_assignment" : True,
-        },
-        RL_model='DQN_VRP4_OA',
-        RL_hidden_layers = [1024, 1024, 1024],
-    )
+    # # VRP full dynamic with 4 vehicles
+    # experiment(
+    #     100,
+    #     env_configs = {
+    #         "horizon" : 100,
+    #         "Q" : 100, 
+    #         "DoD" : 1.,
+    #         "vehicle_capacity" : 20,
+    #         "re_optimization" : True,
+    #         "costs_KM" : [1, 1, 1, 1],
+    #         "emissions_KM" : [.1, .1, .3, .3],
+    #         "test"  : True,
+    #         # "n_scenarios" : 500,
+    #         "vehicle_assignment" : True,
+    #     },
+    #     RL_model='DQN_VRP4_VA',
+    #     RL_hidden_layers = [1024, 1024, 1024],
+    # )
+    
+    # VRP full dynamic with 4 vehicles Q = 50
+    # experiment(
+    #     100,
+    #     env_configs = {
+    #         "horizon" : 100,
+    #         "Q" : 50, 
+    #         "DoD" : 1.,
+    #         "vehicle_capacity" : 20,
+    #         # "re_optimization" : True,
+    #         "costs_KM" : [1, 1, 1, 1],
+    #         "emissions_KM" : [.1, .1, .3, .3],
+    #         "test"  : True,
+    #         # "n_scenarios" : 500,
+    #         "vehicle_assignment" : True,
+    #     },
+    #     # RL_model='DQN_VRP4_VA',
+    #     RL_hidden_layers = [1024, 1024, 1024],
+    # )
     
     # VRP full dynamic with 2 vehicles
     # with noised probabilities
@@ -322,22 +376,23 @@ if __name__ == "__main__":
     # )
     
     # VRP with 2 vehicles on cluster scenarios
-    # experiment(
-    #     100,
-    #     env_configs = {
-    #         "horizon" : 50,
-    #         "Q" : 100, 
-    #         "DoD" : 1.,
-    #         "vehicle_capacity" : 20,
-    #         "re_optimization" : True,
-    #         "costs_KM" : [1, 1],
-    #         "emissions_KM" : [.1, .3],
-    #         # "n_scenarios" : 500,
-    #         "cluster_scenario" : True,
-    #         "test"  : True,
-    #         # "vehicle_assignment" : True,
-    #     },
-    # )
+    experiment(
+        100,
+        env_configs = {
+            "horizon" : 50,
+            "Q" : 100, 
+            "DoD" : 1.,
+            "vehicle_capacity" : 20,
+            "re_optimization" : True,
+            "costs_KM" : [1, 1],
+            "emissions_KM" : [.1, .3],
+            # "n_scenarios" : 500,
+            "cluster_scenario" : True,
+            "test"  : True,
+            # "vehicle_assignment" : True,
+        },
+        RL_hidden_layers = [1024, 1024, 1024],
+    )
     
     # TSP
     # experiment(
