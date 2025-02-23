@@ -519,6 +519,8 @@ def calculate_routes_and_assignment(permutation, demands, distance_matrices, veh
     """Numba-accelerated fitness calculation with multiple distance matrices"""
     # num_vehicles = distance_matrices.shape[0]
     total_distance = 0.0
+    distances = np.zeros(len(distance_matrices))
+    
     current_load = 0
     # vehicle_used = np.zeros(num_vehicles, dtype=np.bool)
     
@@ -553,6 +555,7 @@ def calculate_routes_and_assignment(permutation, demands, distance_matrices, veh
         elif current_load + demand > vehicle_capacity:
             # Finalize current route
             total_distance += distance_matrices[v, current_route[route_length], depot]
+            distances[v] += distance_matrices[v, current_route[route_length], depot]
             # current_route[route_length] = depot
             routes[v, :] = current_route[:]
             # routes[v, :route_length+1] = current_route[:route_length+1]
@@ -572,11 +575,13 @@ def calculate_routes_and_assignment(permutation, demands, distance_matrices, veh
             current_route[1] = customer
             assignment[customer] = v+1
             total_distance += distance_matrices[v, depot, customer]
+            distances[v] += distance_matrices[v, depot, customer]
             route_length = 1
                 
             # vehicle_assignments[customer] = v
         else:
             total_distance += distance_matrices[v, current_route[route_length], customer]
+            distances[v] += distance_matrices[v, current_route[route_length], customer]
             route_length += 1
             current_route[route_length] = customer
             assignment[customer] = v+1
@@ -587,6 +592,7 @@ def calculate_routes_and_assignment(permutation, demands, distance_matrices, veh
     # * It must calculate the return to the depot even if the capacity is not reached
     # * This was the source of a bug
     total_distance += distance_matrices[v, current_route[route_length], depot]
+    distances[v] += distance_matrices[v, current_route[route_length], depot]
     
     # current_route[route_length] = depot
     # routes[v, :route_length+2] = current_route[:route_length+2]
@@ -596,7 +602,7 @@ def calculate_routes_and_assignment(permutation, demands, distance_matrices, veh
     # penalty = omit_penalty*oq
 
     # return total_distance + penalty#, oq
-    return total_distance, oq, routes, assignment[1:] # exclude the hub
+    return distances, oq, routes, assignment[1:] # exclude the hub
 
 @njit
 def generate_neighbor(current_solution):
@@ -686,7 +692,7 @@ def simulated_annealing_vrp(D, demands, capacity, initial_solution,
     # Get final routes
     # print(best_solution)
     # print(best_solution.shape)
-    best_cost, best_oq, best_routes, assignment = calculate_routes_and_assignment(
+    best_costs, best_oq, best_routes, assignment = calculate_routes_and_assignment(
         best_solution, demands, dist_mat, capacity, 
         depot, max_vehicles, Q, omit_penalty
     )
@@ -696,7 +702,7 @@ def simulated_annealing_vrp(D, demands, capacity, initial_solution,
     
     # print('Final temperature : ', T)
     
-    return best_routes, best_cost, best_oq, assignment
+    return best_routes, best_costs, best_oq, assignment
 
 # @njit
 def simulated_annealing_tsp(D, demands, capacity, initial_solution, 
@@ -760,7 +766,7 @@ def simulated_annealing_tsp(D, demands, capacity, initial_solution,
     # Get final routes
     # print(best_solution)
     # print(best_solution.shape)
-    best_cost, best_oq, best_routes, assignment = calculate_routes_and_assignment(
+    best_costs, best_oq, best_routes, assignment = calculate_routes_and_assignment(
         best_solution, demands, dist_mat, capacity, 
         depot, 1, Q, omit_penalty
     )
@@ -770,7 +776,7 @@ def simulated_annealing_tsp(D, demands, capacity, initial_solution,
     
     # print('Final temperature : ', T)
     
-    return best_routes, best_cost, best_oq, assignment
+    return best_routes, best_costs, best_oq, assignment
 
 # Example usage
 def SA_vrp(distance_matrix, Q, qs, capacity, emissions_KM, 
@@ -837,7 +843,7 @@ def SA_vrp(distance_matrix, Q, qs, capacity, emissions_KM,
     # Generate demands
     demands = np.zeros(NUM_NODES, dtype=np.int64)
     n = D.shape[1] - 1  # Exclude depot
-    customers = np.arange(1, n + 1) if customers is None else customers
+    customers = np.arange(1, n + 1, dtype=np.int64) if customers is None else customers
     
     if initial_solution is None:
         initial_solution = np.random.permutation(customers).astype(np.int64)
@@ -846,7 +852,7 @@ def SA_vrp(distance_matrix, Q, qs, capacity, emissions_KM,
     demands[customers] = qs[customers-1]#np.ones(NUM_NODES-1)
     
     # Run optimized SA
-    routes, cost, oq, assignment = simulated_annealing_vrp(
+    routes, costs, oq, assignment = simulated_annealing_vrp(
         D, demands, capacity, initial_solution, max_vehicles,
         Q = Q,
         **SA_configs,
@@ -855,7 +861,7 @@ def SA_vrp(distance_matrix, Q, qs, capacity, emissions_KM,
     # print(f"Total cost: {cost:.2f}")
     # print(f"Emissions: {cost - oq*3*np.amax(D):.2f}")
     if log:
-        print(f"Emissions: {cost:.2f}")
+        print(f"Emissions: {costs:.2f}")
         print(f"Best Oq: {oq}")
         print(f"Best r: {NUM_NODES -1 -oq}")
         print(f"Best r (assignment): {np.sum(assignment.astype(bool))}")
@@ -865,7 +871,7 @@ def SA_vrp(distance_matrix, Q, qs, capacity, emissions_KM,
             if route.any():  # Skip empty routes
                 print(f"Vehicle {i+1}: {route}")
     
-    return cost, oq, routes, assignment
+    return costs, oq, routes, assignment
     
 def multiple_SA_tsp(distance_matrix, Q, qs, capacity, emissions_KM, 
            initial_solutions,

@@ -41,6 +41,7 @@ def NN_routing(
         # routes.append([])#List([0]))
         # if v:
         v = vs[i] + 1
+        # print("alphas : ", alphas)
         alpha = alphas[v-1]
         quantity = 0
         # routes[i].append(int(0))
@@ -109,8 +110,12 @@ def _run(env, assignment, action = None):
         return -env.K*env.omission_cost, False, env.info
     
     if action is not None:
+        routes = deepcopy(env.routes) #np.zeros((len(env.emissions_KM), env.max_capacity+2), dtype=np.int64)
         assignment[assignment!=action] = 0
-    routes = deepcopy(env.routes) #np.zeros((len(env.emissions_KM), env.max_capacity+2), dtype=np.int64)
+        routes[action - 1, :] = 0
+    else:
+        routes = np.zeros((len(env.emissions_KM), env.max_capacity+2), dtype=np.int64)
+        
     info = deepcopy(env.info)
     
     routes, a, costs, emissions = NN_routing(
@@ -153,7 +158,7 @@ def _run(env, assignment, action = None):
 def _run_sa_tsp(env, action, info):
     v = action - 1
     emissions = info['emissions per vehicle'].copy()
-    # emissions[v] = 0
+    emissions[v] = 0
     
     D = env.emissions_KM[v]*env.distance_matrix[None]
     route = env.routes[v]
@@ -166,8 +171,8 @@ def _run_sa_tsp(env, action, info):
     route, emission, oq, _ = simulated_annealing_tsp(D, demands, env.max_capacity, initial_solution, 
                     initial_temp=100.0, cooling_rate=0.995,
                    max_iter=500, seed=1917, depot = env.hub,
-                   Q = env.Q)
-    emissions[v] = emission
+                   Q = env.Q-emissions.sum())
+    emissions[v] = emission[0]
     total_emission = np.sum(emissions)
     # print(route)
     
@@ -176,7 +181,7 @@ def _run_sa_tsp(env, action, info):
     
     if d:
         info['routes'] = env.routes
-        info['distance per vehicle'][v] = emission/env.emissions_KM[v]
+        info['distance per vehicle'][v] = emissions[v]/env.emissions_KM[v]
         info['emissions per vehicle'] = emissions
         info['remained_quota'] = env.Q - total_emission
     # else:
@@ -463,7 +468,7 @@ def SA_routing2(env,# : DynamicQVRPEnv,
     
     distance_matrix = env.distance_matrix
     qs = env.quantities
-    customers = np.arange(1, env.K + 1)[env.action_mask]
+    customers = np.arange(1, env.K + 1, dtype = np.int64)[env.action_mask]
     
     if env.h:
         initial_solution = env.routes.flatten()
@@ -477,7 +482,7 @@ def SA_routing2(env,# : DynamicQVRPEnv,
     # print(max_iter)
     T_init = min(T_init, len(customers)*100)
     
-    total_emissions, oq, routes, assignment = SA_vrp(
+    emissions, oq, routes, assignment = SA_vrp(
         distance_matrix, env.Q, qs, env.max_capacity, env.emissions_KM, 
         customers = customers, initial_solution = initial_solution, log = log,
         SA_configs = dict(
@@ -486,6 +491,7 @@ def SA_routing2(env,# : DynamicQVRPEnv,
           max_iter=max_iter, 
         ),
     )
+    total_emissions = emissions.sum()
     
     if oq and env.h: # In the dynamic part, the omission is not allowed
         assignment = env.assignment
@@ -496,6 +502,8 @@ def SA_routing2(env,# : DynamicQVRPEnv,
         info['assignment'] = assignment
         info['routes'] = routes
         # info['costs per vehicle'] = costs
+        info['distance per vehicle'] = emissions/env.emissions_KM
+        info['emissions per vehicle'] = emissions
         info['omitted'] = np.where(assignment==0)[0]
         info['remained_quota'] = env.Q - total_emissions
     return assignment, routes, info

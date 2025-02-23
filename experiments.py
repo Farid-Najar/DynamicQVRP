@@ -337,23 +337,23 @@ if __name__ == "__main__":
     # )
     
     # VRP full dynamic with 4 vehicles Q = 50
-    # experiment(
-    #     100,
-    #     env_configs = {
-    #         "horizon" : 100,
-    #         "Q" : 50, 
-    #         "DoD" : 1.,
-    #         "vehicle_capacity" : 20,
-    #         # "re_optimization" : True,
-    #         "costs_KM" : [1, 1, 1, 1],
-    #         "emissions_KM" : [.1, .1, .3, .3],
-    #         "test"  : True,
-    #         # "n_scenarios" : 500,
-    #         "vehicle_assignment" : True,
-    #     },
-    #     # RL_model='DQN_VRP4_VA',
-    #     RL_hidden_layers = [1024, 1024, 1024],
-    # )
+    experiment(
+        100,
+        env_configs = {
+            "horizon" : 100,
+            "Q" : 50, 
+            "DoD" : 1.,
+            "vehicle_capacity" : 20,
+            "re_optimization" : True,
+            "costs_KM" : [1, 1, 1, 1],
+            "emissions_KM" : [.1, .1, .3, .3],
+            "test"  : True,
+            # "n_scenarios" : 500,
+            "vehicle_assignment" : True,
+        },
+        # RL_model='DQN_VRP4_VA',
+        RL_hidden_layers = [1024, 1024, 1024],
+    )
     
     # VRP full dynamic with 2 vehicles
     # with noised probabilities
@@ -376,23 +376,23 @@ if __name__ == "__main__":
     # )
     
     # VRP with 2 vehicles on cluster scenarios
-    experiment(
-        100,
-        env_configs = {
-            "horizon" : 50,
-            "Q" : 100, 
-            "DoD" : 1.,
-            "vehicle_capacity" : 20,
-            "re_optimization" : True,
-            "costs_KM" : [1, 1],
-            "emissions_KM" : [.1, .3],
-            # "n_scenarios" : 500,
-            "cluster_scenario" : True,
-            "test"  : True,
-            # "vehicle_assignment" : True,
-        },
-        RL_hidden_layers = [1024, 1024, 1024],
-    )
+    # experiment(
+    #     100,
+    #     env_configs = {
+    #         "horizon" : 50,
+    #         "Q" : 100, 
+    #         "DoD" : 1.,
+    #         "vehicle_capacity" : 20,
+    #         "re_optimization" : True,
+    #         "costs_KM" : [1, 1],
+    #         "emissions_KM" : [.1, .3],
+    #         # "n_scenarios" : 500,
+    #         "cluster_scenario" : True,
+    #         "test"  : True,
+    #         # "vehicle_assignment" : True,
+    #     },
+    #     RL_hidden_layers = [1024, 1024, 1024],
+    # )
     
     # TSP
     # experiment(

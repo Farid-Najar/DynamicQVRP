@@ -48,13 +48,21 @@ class TestDynamicQVRPEnv(unittest.TestCase):
         self.assertTrue(hasattr(self.env, 'observation_space'), "Environment should have an observation space")
         self.assertIsNotNone(self.env.observation_space, "Observation space should not be None")
         
-    def check_routes_and_assignment(self, routes, assignment):
+    def check_routes_and_assignment(self, routes, assignment, i = None):
         # checks if all the assigned destinations are in the route and vice versa
         rs = routes.flatten()
         n_dests_routes = len(rs[rs != 0])
         n_dests_assignment = len(assignment[assignment != 0])
         self.assertTrue(n_dests_routes == n_dests_assignment, 
-            "The number of customers in routes and assignment do not match"
+            f"""
+            The number of customers in routes and assignment do not match
+            instance : {i}
+            routes : {routes}
+            customers : {np.sort(rs[rs != 0])}
+            n_dests_routes : {n_dests_routes}
+            assigned dests : {np.where(assignment!=0)[0]+1}
+            n_dests_assignment : {n_dests_assignment}
+            """
         )
         
         # checks if the destinations assignments are correct
@@ -69,9 +77,21 @@ class TestDynamicQVRPEnv(unittest.TestCase):
                 """
             )
             
-    def check_emissions_calculation(self, routes, info):
+    def check_emissions_calculation(self, routes, info, Q):
         # checks if the emissions of all activated vehicles are calculated
+        
         if 'emissions per vehicle' in info.keys():
+            self.assertAlmostEqual(
+                Q - info["remained_quota"],
+                np.sum(info["emissions per vehicle"]), 
+                msg=f"""
+                The total emissions must match the sum of all emissions
+                Q - info["remained_quota"] : {Q - info["remained_quota"]}
+                emissions per vehicle : {info["emissions per vehicle"]}
+
+                """
+            )
+            
             vehicle_activation = np.sum(routes, axis=1).astype(bool)
             emissions_calculated = info['emissions per vehicle'].astype(bool)
 
@@ -93,12 +113,12 @@ class TestDynamicQVRPEnv(unittest.TestCase):
             self.assertTrue(self.env.observation_space.contains(state), "The obs must be in observation space")
             while True:
                 action = self.env.action_space.sample()
-                state, _, done, _, info = self.env.step(action)
+                state, _, done, trun, info = self.env.step(action)
                 self.assertTrue(self.env.observation_space.contains(state), "The obs must be in observation space")
                 self.assertTrue(info["remained_quota"] + 1e-4 >= 0, 'The quota must be respected')
-                self.check_emissions_calculation(self.env.routes, info)
+                self.check_emissions_calculation(self.env.routes, info, self.env.Q)
                 self.check_routes_and_assignment(self.env.routes, self.env.assignment)
-                if done:
+                if done or trun:
                     break
                 
     def test_quantities_online(self):
@@ -109,29 +129,49 @@ class TestDynamicQVRPEnv(unittest.TestCase):
             qs  = env.quantities.copy()
             while True:
                 action = env.action_space.sample()
-                state, _, done, _, info = env.step(action)
+                state, _, done, trun, info = env.step(action)
                 self.assertTrue(env.observation_space.contains(state), "The obs must be in observation space")
                 self.assertTrue(info["remained_quota"] + 1e-4 >= 0, 'The quota must be respected')
-                self.check_emissions_calculation(env.routes, info)
+                self.check_emissions_calculation(env.routes, info, env.Q)
                 self.assertTrue((env.quantities == qs).all(), "Quantities should not change")
-                if done:
+                if done or trun:
                     break
                 
     def test_quantities_online_VRP(self):
-        env = DynamicQVRPEnv(DoD=1, different_quantities=True, costs_KM=[1, 1], emissions_KM=[.1, .3])
-        for _ in range(len(env.all_dests)):
+        env = DynamicQVRPEnv(DoD=1., different_quantities=True, costs_KM=[1, 1], emissions_KM=[.1, .3])
+        for i in range(len(env.all_dests)):
             # state, _ = self.env.reset()
-            self.assertTrue(env.reset(), "The obs must be in observation space")
+            self.assertTrue(env.reset(i), "The obs must be in observation space")
             qs  = env.quantities.copy()
             while True:
                 action = env.action_space.sample()
-                state, _, done, _, info = env.step(action)
+                state, _, done, trun, info = env.step(action)
                 self.assertTrue(env.observation_space.contains(state), "The obs must be in observation space")
                 self.assertTrue(info["remained_quota"] + 1e-4 >= 0, 'The quota must be respected')
-                self.check_emissions_calculation(env.routes, info)
-                self.check_routes_and_assignment(env.routes, env.assignment)
+                # print(env.quantities)
+                self.check_emissions_calculation(env.routes, info, env.Q)
+                self.check_routes_and_assignment(env.routes, env.assignment, i)
                 self.assertTrue((env.quantities == qs).all(), "Quantities should not change")
-                if done:
+                if done or trun:
+                    break
+                
+    def test_quantities_online_VRP_wReOpt(self):
+        env = DynamicQVRPEnv(
+            DoD=1., different_quantities=True, costs_KM=[1, 1], emissions_KM=[.1, .3],
+            re_optimization=True,)
+        for i in range(len(env.all_dests)):
+            # state, _ = self.env.reset()
+            self.assertTrue(env.reset(i), "The obs must be in observation space")
+            qs  = env.quantities.copy()
+            while True:
+                action = env.action_space.sample()
+                state, _, done, trun, info = env.step(action)
+                self.assertTrue(env.observation_space.contains(state), "The obs must be in observation space")
+                self.assertTrue(info["remained_quota"] + 1e-4 >= 0, 'The quota must be respected')
+                self.check_emissions_calculation(env.routes, info, env.Q)
+                self.check_routes_and_assignment(env.routes, env.assignment, i)
+                self.assertTrue((env.quantities == qs).all(), "Quantities should not change")
+                if done or trun:
                     break
                 
     def test_quantities(self):
@@ -153,13 +193,13 @@ class TestDynamicQVRPEnv(unittest.TestCase):
             self.assertTrue(env.reset(), "The obs must be in observation space")
             while True:
                 action = env.action_space.sample()
-                state, _, done, _, info = env.step(action)
+                state, _, done, trun, info = env.step(action)
                 self.assertTrue(True, 'The environment should not raise an error')
                 self.assertTrue(info["remained_quota"] + 1e-4 >= 0, 'The quota must be respected')
-                self.check_emissions_calculation(env.routes, info)
+                self.check_emissions_calculation(env.routes, info, env.Q)
                 self.check_routes_and_assignment(env.routes, env.assignment)
                 
-                if done:
+                if done or trun:
                     break
                 self.assertTrue(env.observation_space.contains(state), "The obs must be in observation space")
                 
@@ -175,9 +215,14 @@ class TestDynamicQVRPEnv(unittest.TestCase):
                 action = env.action_space.sample()
                 state, _, done, trun, info = env.step(action)
                 self.assertTrue(True, 'The environment should not raise an error')
-                self.assertTrue(env.observation_space.contains(state), "The obs must be in observation space")
+                self.assertTrue(
+                    env.observation_space.contains(state), 
+                    f"""The obs must be in observation space
+                    obs : {state}
+                    """
+                )
                 self.assertTrue(info["remained_quota"] + 1e-4 >= 0, 'The quota must be respected')
-                self.check_emissions_calculation(env.routes, info)
+                self.check_emissions_calculation(env.routes, info, env.Q)
                 self.check_routes_and_assignment(env.routes, env.assignment)
                 if done or trun:
                     break

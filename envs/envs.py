@@ -156,7 +156,7 @@ class DynamicQVRPEnv(gym.Env):
                 #  env : AssignmentEnv = None,
                  horizon = 50,
                  Q = 50,
-                 DoD = 1.,
+                 DoD = .5,
                  vehicle_capacity = 15, # We assume it homogeneous for all vehicles
                  retain_rate = 0.,
                  use_dataset = True,
@@ -176,11 +176,14 @@ class DynamicQVRPEnv(gym.Env):
                  different_quantities = False,
                  vehicle_assignment = False,
                  cluster_scenario = False,
+                 seed = 1917,
         ):
         
         K = horizon
         self.instance = -1
         self.D, self.coordx, self.coordy, self.p = load_data(cluster_scenario)
+        
+        np.random.seed(seed)
         
         use_dataset = test or use_dataset
         
@@ -244,8 +247,7 @@ class DynamicQVRPEnv(gym.Env):
         
         # * Change if obs change
         # self.observation_space = gym.spaces.Box(0, 1, (5+len(emissions_KM),), np.float64) 
-        # it should become in compatible with the vehicle assignment
-        dim_obs = 4 + 3*len(emissions_KM)# if not vehicle_assignment else 5 + len(emissions_KM) + len(self.emissions_KM)
+        dim_obs = 4 + 2*len(emissions_KM)# if not vehicle_assignment else 5 + len(emissions_KM) + len(self.emissions_KM)
         self.observation_space = gym.spaces.Box(0, 1, (dim_obs,), np.float64)
         # self.observation_space = gym.spaces.Box(0, 1, (6,), np.float_)
         
@@ -361,11 +363,12 @@ class DynamicQVRPEnv(gym.Env):
             self.D[mask, self.dests[self.j]]
             for mask in masks if len(mask)
         ]
-    
+
         min_knn = np.array([
-            np.mean(D_V[v][knn(
-                D_V[v], self.k_min
-                )]
+            self.emissions_KM[v]*np.mean(
+                D_V[v][knn(
+                    D_V[v], self.k_min
+                    )]
             )
             for v in range(len(D_V))
         ])
@@ -399,11 +402,14 @@ class DynamicQVRPEnv(gym.Env):
             # self.remained_capacity / self.total_capacity, # the percentage of capacity remained
             *cap, # the percentage of capacity remained for each vehicle, dim = len(self.emissions_KM)
             (self.H - self.h) / max(1, self.H), # the remaining demands to come
-            *min_knn/np.max(self.D), # The mean of the k nearest neighbors in admitted dests, dim = len(self.emissions_KM)
-            med_knn/(np.max(self.D)), # The mean of the k nearest neighbors in non activated dests
+            *min_knn/(np.amax(self.D)*max(self.emissions_KM)), # The mean emissions of the k nearest neighbors in admitted dests, dim = len(self.emissions_KM)
+            med_knn/(np.amax(self.D)), # The mean of the k nearest neighbors in non activated dests
             # med_knn/(np.max(self.D)/1e-8), # The mean of the k nearest neighbors in non activated dests
             max(0, self.info["remained_quota"])/self.Q, # The remaining quota
-            *self.emissions_KM, # emission of each vehicle, dim = len(self.emissions_KM)
+            # * the emissions have been removed from the observation
+            # Instead, it has directly been integrated into the distances
+            # See the _compute_min_med method
+            # *self.emissions_KM, # emission of each vehicle, dim = len(self.emissions_KM)
             # * TODO : Maybe find better observations
         ])
         
@@ -457,7 +463,7 @@ class DynamicQVRPEnv(gym.Env):
                 # self.assignment, self.routes, self.info = SA_routing2(self, multiple_tsp=True)
             else:
                 self.assignment, self.routes, self.info = insertion(self)
-
+                
             if not self.assignment[self.j]:
                 action = 0
                 
@@ -582,7 +588,9 @@ class DynamicQVRPEnv(gym.Env):
                     (
                         int(self.routes[m, j-1]),
                         int(self.routes[m, j]),
-                        self.cost_matrix[m, int(self.routes[m, j-1]), int(self.routes[m, j])]
+                        self.emissions_KM[m]*self.distance_matrix[
+                            int(self.routes[m, j-1]), int(self.routes[m, j])
+                        ]
                     )
                 )
                 # vehicle_edges[m].append((int(route[m, j]), int(route[m, j+2])))
@@ -592,7 +600,9 @@ class DynamicQVRPEnv(gym.Env):
                         (
                             int(self.routes[m, j-1]),
                             int(self.routes[m, j]),
-                            self.cost_matrix[m, int(self.routes[m, j-1]), int(self.routes[m, j])]
+                            self.emissions_KM[m]*self.distance_matrix[
+                                int(self.routes[m, j-1]), int(self.routes[m, j])
+                            ]
                         )
                     )
         node_attrs[0] = {
@@ -682,7 +692,7 @@ class DynamicQVRPEnv(gym.Env):
         except:
             pass
         # Visualizing colorbar part -start
-        cbar = plt.colorbar(mesh,ax=ax)
+        cbar = plt.colorbar(mesh,ax=ax, label = 'emissions (in kg CO2)')
         cbar.formatter.set_powerlimits((0, 0))
         # to get 10^3 instead of 1e3
         cbar.formatter.set_useMathText(True)
