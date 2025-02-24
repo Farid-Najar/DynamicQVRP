@@ -90,6 +90,9 @@ def experiment(
             RL_model_comment += f'{'_uniforme' if env_configs['noised_p'] and va=='VA' else ''}'
         except:
             pass
+        
+    if RL_model is None:
+        RL_model = f'DQN_{RL_model_comment}_VA'
     agents = {
         # "greedy" : dict(
         #     agentClass = GreedyAgent,
@@ -127,28 +130,29 @@ def experiment(
         #     title = "res_RL_DQN_OA",
         # ),
         
-        "RL_VA_as_OA" : dict(
-            agentClass = RLAgent,
-            env_configs = env_configs_DQN_VA_as_OA,
-            episodes = episodes,
-            agent_configs = dict(
-                algo = f'DQN_{RL_model_comment}_VA',
-                hidden_layers = RL_hidden_layers, 
-            ),
-            save_results = True,
-            title = "res_RL_DQN_VA_as_OA",
-        ),
         "RL_VA" : dict(
             agentClass = RLAgent,
             env_configs = env_configs_DQN_VA,
             episodes = episodes,
             agent_configs = dict(
-                algo = f'DQN_{RL_model_comment}_VA',
+                algo = RL_model,
                 hidden_layers = RL_hidden_layers, 
             ),
             save_results = True,
             title = "res_RL_DQN_VA",
         ),
+        "RL_VA_as_OA" : dict(
+            agentClass = RLAgent,
+            env_configs = env_configs_DQN_VA_as_OA,
+            episodes = episodes,
+            agent_configs = dict(
+                algo = RL_model,
+                hidden_layers = RL_hidden_layers, 
+            ),
+            save_results = True,
+            title = "res_RL_DQN_VA_as_OA",
+        ),
+        
         # "RL" : dict(
         #     agentClass = RLAgent,
         #     env_configs = env_configs,
@@ -336,24 +340,43 @@ if __name__ == "__main__":
     #     RL_hidden_layers = [1024, 1024, 1024],
     # )
     
+    # # VRP full dynamic with 4 vehicles Q = 75
+    # experiment(
+    #     100,
+    #     env_configs = {
+    #         "horizon" : 100,
+    #         "Q" : 75, 
+    #         "DoD" : 1.,
+    #         "vehicle_capacity" : 20,
+    #         "re_optimization" : True,
+    #         "costs_KM" : [1, 1, 1, 1],
+    #         "emissions_KM" : [.1, .1, .3, .3],
+    #         "test"  : True,
+    #         # "n_scenarios" : 500,
+    #         "vehicle_assignment" : True,
+    #     },
+    #     RL_model='DQN_VRP4Q100_VA',
+    #     RL_hidden_layers = [1024, 1024, 1024],
+    # )
+    
     # VRP full dynamic with 4 vehicles Q = 50
-    experiment(
-        100,
-        env_configs = {
-            "horizon" : 100,
-            "Q" : 50, 
-            "DoD" : 1.,
-            "vehicle_capacity" : 20,
-            "re_optimization" : True,
-            "costs_KM" : [1, 1, 1, 1],
-            "emissions_KM" : [.1, .1, .3, .3],
-            "test"  : True,
-            # "n_scenarios" : 500,
-            "vehicle_assignment" : True,
-        },
-        # RL_model='DQN_VRP4_VA',
-        RL_hidden_layers = [1024, 1024, 1024],
-    )
+    # experiment(
+    #     100,
+    #     env_configs = {
+    #         "horizon" : 100,
+    #         "Q" : 50, 
+    #         "DoD" : 1.,
+    #         "vehicle_capacity" : 20,
+    #         "re_optimization" : True,
+    #         "costs_KM" : [1, 1, 1, 1],
+    #         "emissions_KM" : [.1, .1, .3, .3],
+    #         "test"  : True,
+    #         # "n_scenarios" : 500,
+    #         "vehicle_assignment" : True,
+    #     },
+    #     # RL_model='DQN_VRP4_VA',
+    #     RL_hidden_layers = [1024, 1024, 1024],
+    # )
     
     # VRP full dynamic with 2 vehicles
     # with noised probabilities
@@ -409,22 +432,23 @@ if __name__ == "__main__":
     #     },
     # )
     
-    # # TSP full dynamic
-    # experiment(
-    #     100,
-    #     env_configs = {
-    #         "horizon" : 50,
-    #         "Q" : 100, 
-    #         "DoD" : 1.,
-    #         "vehicle_capacity" : 30,
-    #         "re_optimization" : False,
-    #         "costs_KM" : [1],
-    #         "emissions_KM" : [.3],
-    #         "n_scenarios" : 100 ,
-    #         "test"  : True
-            #   "different_quantities" : False,
-    #     },
-    # )
+    # TSP full dynamic
+    experiment(
+        100,
+        env_configs = {
+            "horizon" : 50,
+            "Q" : 100, 
+            "DoD" : 1.,
+            "vehicle_capacity" : 30,
+            "re_optimization" : True,
+            "costs_KM" : [1],
+            "emissions_KM" : [.3],
+            "n_scenarios" : 100 ,
+            "test"  : True,
+            "different_quantities" : False,
+        },
+        RL_hidden_layers = [1024, 1024, 1024],
+    )
     
     # TSP full dynamic, equi probable
     # experiment(
