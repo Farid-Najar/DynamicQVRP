@@ -401,7 +401,7 @@ class DynamicQVRPEnv(gym.Env):
             self.quantities[self.j]/ self.total_capacity, # the quantity rate asked by the current demand
             # self.remained_capacity / self.total_capacity, # the percentage of capacity remained
             *cap, # the percentage of capacity remained for each vehicle, dim = len(self.emissions_KM)
-            (self.H - self.h) / max(1, self.H), # the remaining demands to come
+            (self.H - self.h) / max(1, self.K), # the remaining demands to come
             *min_knn/(np.amax(self.D)*max(self.emissions_KM)), # The mean emissions of the k nearest neighbors in admitted dests, dim = len(self.emissions_KM)
             med_knn/(np.amax(self.D)), # The mean of the k nearest neighbors in non activated dests
             # med_knn/(np.max(self.D)/1e-8), # The mean of the k nearest neighbors in non activated dests
