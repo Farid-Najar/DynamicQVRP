@@ -39,11 +39,11 @@ class Agent:
             infos.append(info)
             while True:
                 a = self.act(o, env = env)
-                o, r, d, _, info = env.step(a)
+                o, r, d, trun, info = env.step(a)
                 episode_rewards += r
                 actions.append(a)
                 infos.append(info)
-                if d:
+                if d or trun:
                     break
             
 
@@ -97,11 +97,11 @@ class Agent:
             infos[i].append(info)
             while True:
                 a = self.act(o)
-                o, r, d, _, info = self.env.step(a)
+                o, r, d, trun, info = self.env.step(a)
                 episode_rewards[i] += r
                 actions[i].append(a)
                 infos[i].append(info)
-                if d:
+                if d or trun:
                     break
         
         return episode_rewards, actions, infos

@@ -3,17 +3,13 @@ from matplotlib import pyplot as plt
 import networkx as nx
 import numpy as np
 from numba import njit
-from numba.typed import List
 
 from methods.OR.routing import SA_routing, SA_routing2, insertion
 from utils.generate_scenarios import create_random_scenarios
 # from methods import VA_SA
 
 from typing import Any, Dict, Optional
-from time import time
 import gymnasium as gym
-
-import pickle
 
 @njit
 def knn(a, k):

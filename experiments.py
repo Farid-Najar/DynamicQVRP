@@ -209,6 +209,9 @@ def experiment_DoD(
             "emissions_KM" : [.1, .3],
             "n_scenarios" : 500
         },
+        RL_hidden_layers = [512, 512, 512],
+        RL_model = None,
+        RL_name_comment = '',
     ):
     """Compares different methods implemented so far between them on the 
     same environment.
@@ -219,15 +222,42 @@ def experiment_DoD(
         The number of episodes to run for each agent, by default 200
     """
     
+    try:
+        va = 'VA' if env_configs['vehicle_assignment'] else 'OA'
+    except:
+        va = 'OA'
+        
+    # if env_configs["re_optimization"] : 
+    env_configs_DQN_VA_as_OA = deepcopy(env_configs)
+    env_configs_DQN_VA_as_OA["vehicle_assignment"] = True
+    
+    env_configs_DQN_VA = deepcopy(env_configs_DQN_VA_as_OA)
+    env_configs_DQN_VA["re_optimization"] = False
+        
+    # RL_name = f"res_RL_DQN_{va}{RL_name_comment}"
+    if "cluster_scenario" in env_configs and env_configs["cluster_scenario"]:
+        RL_model_comment = 'clusters'
+    else:
+        RL_model_comment = 'VRP' if len(env_configs["emissions_KM"])>1 else 'TSP'
+        RL_model_comment += str(len(env_configs["emissions_KM"])) if len(env_configs["emissions_KM"])>1 else ''
+        try:
+            RL_model_comment += f'{'_uniforme' if env_configs['noised_p'] and va=='VA' else ''}'
+        except:
+            pass
+        
+    if RL_model is None:
+        RL_model = f'DQN_{RL_model_comment}_VA'
+    
     for dod in DoDs:
         
-        path = f'results/DoD{dod}/'
+        path = f'results/DoD{dod:.2f}/'
         try:
             os.mkdir(path)
         except :
             pass
         
         env_configs["DoD"] = dod
+        env_configs_DQN_VA["DoD"] = dod
         with open(f'{path}env_configs.pkl', 'wb') as f:
             pickle.dump(env_configs, f)
 
@@ -264,22 +294,44 @@ def experiment_DoD(
             #     save_results = True,
             #     title = "res_MSA",
             # ),
-            "SL" : dict(
-                agentClass = SLAgent,
-                env_configs = env_configs,
-                episodes = episodes,
-                agent_configs = dict(),
-                save_results = True,
-                title = "res_SL",
-            ),
-            "RL" : dict(
+            # "SL" : dict(
+            #     agentClass = SLAgent,
+            #     env_configs = env_configs,
+            #     episodes = episodes,
+            #     agent_configs = dict(),
+            #     save_results = True,
+            #     title = "res_SL",
+            # ),
+            # "RL" : dict(
+            #     agentClass = RLAgent,
+            #     env_configs = env_configs,
+            #     episodes = episodes,
+            #     agent_configs = dict(),
+            #     save_results = True,
+            #     title = "res_RL",
+            # ),
+            "RL_VA" : dict(
                 agentClass = RLAgent,
-                env_configs = env_configs,
+                env_configs = env_configs_DQN_VA,
                 episodes = episodes,
-                agent_configs = dict(),
+                agent_configs = dict(
+                    algo = RL_model,
+                    hidden_layers = RL_hidden_layers, 
+                ),
                 save_results = True,
-                title = "res_RL",
+                title = "res_RL_DQN_VA",
             ),
+            # "RL_VA_as_OA" : dict(
+            #     agentClass = RLAgent,
+            #     env_configs = env_configs_DQN_VA_as_OA,
+            #     episodes = episodes,
+            #     agent_configs = dict(
+            #         algo = RL_model,
+            #         hidden_layers = RL_hidden_layers, 
+            #     ),
+            #     save_results = True,
+            #     title = "res_RL_DQN_VA_as_OA",
+            # ),
         }
 
         for agent_name in agents:
@@ -433,22 +485,22 @@ if __name__ == "__main__":
     # )
     
     # TSP full dynamic
-    experiment(
-        100,
-        env_configs = {
-            "horizon" : 50,
-            "Q" : 100, 
-            "DoD" : 1.,
-            "vehicle_capacity" : 30,
-            "re_optimization" : True,
-            "costs_KM" : [1],
-            "emissions_KM" : [.3],
-            "n_scenarios" : 100 ,
-            "test"  : True,
-            "different_quantities" : False,
-        },
-        RL_hidden_layers = [1024, 1024, 1024],
-    )
+    # experiment(
+    #     100,
+    #     env_configs = {
+    #         "horizon" : 50,
+    #         "Q" : 100, 
+    #         "DoD" : 1.,
+    #         "vehicle_capacity" : 30,
+    #         "re_optimization" : True,
+    #         "costs_KM" : [1],
+    #         "emissions_KM" : [.3],
+    #         "n_scenarios" : 100 ,
+    #         "test"  : True,
+    #         "different_quantities" : False,
+    #     },
+    #     RL_hidden_layers = [1024, 1024, 1024],
+    # )
     
     # TSP full dynamic, equi probable
     # experiment(
@@ -468,18 +520,20 @@ if __name__ == "__main__":
     # )
     
     # TSP different DoDs
-    # experiment_DoD(
-    #     500,
-    #     DoDs = [.7, .65, .6],#[1., .95, .9, .85, .8, .75, .7, .65, .6]
-    #     env_configs = {
-    #         "horizon" : 50,
-    #         "Q" : 100, 
-    #         "DoD" : 1.,
-    #         "vehicle_capacity" : 20,
-    #         "re_optimization" : False,
-    #         "costs_KM" : [1],
-    #         "emissions_KM" : [.3],
-    #         "n_scenarios" : 500 ,
-    #         # "test"  : True
-    #     },
-    # )
+    experiment_DoD(
+        100,
+        # DoDs = [1., .95, .9, .85, .8, .75, .65, .5],#[1., .95, .9, .85, .8, .75, .7, .65, .6]
+        DoDs = np.arange(.6, 1., .05),
+        env_configs = {
+            "horizon" : 50,
+            "Q" : 100, 
+            "DoD" : 1.,
+            "vehicle_capacity" : 30,
+            "re_optimization" : False,
+            "costs_KM" : [1],
+            "emissions_KM" : [.3],
+            # "n_scenarios" : 500 ,
+            "test"  : True
+        },
+        RL_hidden_layers = [1024, 1024, 1024],
+    )
