@@ -161,7 +161,7 @@ class DynamicQVRPEnv(gym.Env):
                  emissions_KM = [.3], 
                  CO2_penalty = 10_000,
                  k_min : int = 3,
-                 k_med : int = 5,
+                 k_med : int = 7,
                  n_scenarios = None,
                  hub = 0,
                  test = False,
@@ -172,12 +172,19 @@ class DynamicQVRPEnv(gym.Env):
                  different_quantities = False,
                  vehicle_assignment = False,
                  cluster_scenario = False,
+                 static_as_dynamic = False,
                  seed = 1917,
         ):
         
         K = horizon
         self.instance = -1
         self.D, self.coordx, self.coordy, self.p = load_data(cluster_scenario)
+        
+        self.emissions_KM = emissions_KM
+        self.E = np.array([
+            self.emissions_KM[v]*self.D
+            for v in range(len(self.emissions_KM))
+        ])
         
         np.random.seed(seed)
         
@@ -222,8 +229,10 @@ class DynamicQVRPEnv(gym.Env):
         self.H = int(DoD*K) # ou = self.K
         self.K = K
         
-        if unknown_p:
+        if unknown_p or static_as_dynamic:
             self.p[:] = 1.
+            
+        self.static_as_dynamic = static_as_dynamic
         
         self.qs = qs
         # self.omission_cost = self._env.omission_cost
@@ -232,7 +241,6 @@ class DynamicQVRPEnv(gym.Env):
         self.hub = hub
         self.k_min = k_min
         self.k_med = k_med
-        self.emissions_KM = emissions_KM
         self.costs_KM = costs_KM
         # self.is_0_allowed = is_0_allowed
         self.num_actions = len(self.emissions_KM) + 1 #if is_0_allowed else len(self.emissions_KM)
@@ -273,6 +281,7 @@ class DynamicQVRPEnv(gym.Env):
         l = [self.hub] + list(self.dests)
         self.mask = np.ix_(l, l)
         self.distance_matrix = self.D[self.mask]
+        # self.emission_matrices = self.E[self.mask]
         self.cost_matrix = np.array([
             (self.costs_KM[v] + self.CO2_penalty*self.emissions_KM[v])*self.distance_matrix
             for v in range(len(self.emissions_KM))
@@ -296,8 +305,12 @@ class DynamicQVRPEnv(gym.Env):
         self.A = np.zeros(len(self.D), bool)
         self.A[self.dests[:self.j]] = True
         self.A[self.hub] = True
-        self.NA = ~self.A
-        self.NA[self.j] = False
+        if self.static_as_dynamic:
+            self.NA = np.zeros(len(self.D), bool)
+            self.NA[self.dests[self.j+1:]] = True
+        else:
+            self.NA = ~self.A
+            self.NA[self.dests[self.j]] = False
         
         self.info = {
             "omitted" : [],
@@ -339,9 +352,12 @@ class DynamicQVRPEnv(gym.Env):
         
         
     def _compute_min_med(self):
-        p = self.p[self.NA].copy()
-        # p[~self.NA] = 0
-        p /= p.sum()
+        if self.static_as_dynamic:
+            p = np.ones_like(self.p[self.NA])
+        else:
+            p = self.p[self.NA].copy()
+            # p[~self.NA] = 0
+            p /= p.sum()
         
         # * The mean of the k nearest neighbors in admitted dests for every vehicle
         masks = [
@@ -445,7 +461,8 @@ class DynamicQVRPEnv(gym.Env):
         self.h += 1
         assert isinstance(action, (int, np.int_)), f"type : {type(action)}, {action}"
         
-        self.NA[self.j] = False
+        current_dest = self.dests[self.j]
+        self.NA[current_dest] = False
         
         if action:
             # action = action if self.vehicle_assignment else None
@@ -465,7 +482,7 @@ class DynamicQVRPEnv(gym.Env):
                 
         if action:
             self.is_O_allowed[self.j] = False
-            self.A[self.j] = True
+            self.A[current_dest] = True
             r = self.quantities[self.j]
             self.episode_reward += r
             self.remained_capacity -= r
@@ -486,7 +503,7 @@ class DynamicQVRPEnv(gym.Env):
             "h" : self.h,
             "j" : self.j,
             "quantity demanded" : self.quantities[self.j],
-            "dest" : self.dests[self.j],
+            "dest" : current_dest,
         })
         
         obs = self._get_obs()
@@ -540,7 +557,11 @@ class DynamicQVRPEnv(gym.Env):
         return SA_routing2(env, offline_mode=True, *args, **kwargs)
         
     
-    def render(self, size = 100, show_node_num =False, display_current_node = True):
+    def render(self,
+               size = 100, show_node_num =False, display_current_node = True,
+               display_unactivated = True, display_dests = False,
+               color_bar_label = None,
+               ):
         # print(self.assignment)
         G = nx.DiGraph()
         G.add_nodes_from(list(range(self.j+1)))
@@ -621,22 +642,36 @@ class DynamicQVRPEnv(gym.Env):
         colors.append('yellow')
         colors.append('lightcoral')#'red')
         G_ncolors = [colors[m] for m in nx.get_node_attributes(G,'vehicle').values()]
-        G_ncolors[0] = 'gray'
+        G_ncolors[0] = 'black'
 
         _, ax = plt.subplots(figsize=(12, 7))
         weights = list(nx.get_edge_attributes(G,'weight').values())
         
-        p = self.p.copy()
-        p[~self.NA] = 0
-        p /= p.sum()
+        if self.static_as_dynamic:
+            p = np.zeros_like(self.p)
+            p[self.NA] = .01
+        else:
+            p = self.p.copy()
+            p[~self.NA] = 0
+            p /= p.sum()
         
         # ax.scatter(self.coordx[self.dests], self.coordy[self.dests], color='lightgray', s = .6*size, label='Unactivated')
-        ax.scatter(
-            self.coordx[self.NA], self.coordy[self.NA], 
-            color='lightgray', 
-            s = 100*p[self.NA]*size, 
-            label='Unactivated'
-        )
+        if display_unactivated:
+            ax.scatter(
+                self.coordx[self.NA], self.coordy[self.NA], 
+                color='lightgray', 
+                s = 100*p[self.NA]*size, 
+                label='Unactivated'
+            )
+        
+        if display_dests:
+            ax.scatter(
+                self.coordx[self.dests], self.coordy[self.dests], 
+                color='gray', 
+                s = size, 
+                label='Destinations'
+            )
+            
         # print(self.coordx[self.dests[self.j]], self.coordy[self.dests[self.j]])
         if display_current_node:
             ax.scatter(
@@ -674,6 +709,7 @@ class DynamicQVRPEnv(gym.Env):
         ax.scatter([0],[0],color=colors[0],label=f'Omitted', s = size, marker='s')
         for i in range(1, len(self.routes)+1):
             ax.scatter([0],[0],color=colors[i],label=f'Vehicle {i}', s = size, marker='s')
+        ax.scatter([0],[0],color='black', s = size, marker='s', label='Hub')
         ax.scatter([0],[0],color='white', s = size, marker='s')
 
         # reverse the order
@@ -688,7 +724,11 @@ class DynamicQVRPEnv(gym.Env):
         except:
             pass
         # Visualizing colorbar part -start
-        cbar = plt.colorbar(mesh,ax=ax, label = 'emissions (in kg CO2)')
+        cbar = plt.colorbar(
+            mesh,
+            ax=ax, 
+            label = color_bar_label if color_bar_label is not None else 'emissions (in kg CO2)',
+        )
         cbar.formatter.set_powerlimits((0, 0))
         # to get 10^3 instead of 1e3
         cbar.formatter.set_useMathText(True)
@@ -698,7 +738,11 @@ class DynamicQVRPEnv(gym.Env):
         # plt.legend()
         plt.show()
 
-        return nx.to_latex(G, nx.get_node_attributes(G,'pos'), node_options=dict(zip(range(len(G_ncolors)), G_ncolors)))
+        return nx.to_latex(
+            G,
+            nx.get_node_attributes(G,'pos'), 
+            node_options=dict(zip(range(len(G_ncolors)), G_ncolors))
+        )
     
     
 class StaticWrapper:

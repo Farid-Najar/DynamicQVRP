@@ -73,6 +73,7 @@ def experiment(
     except:
         va = 'OA'
         
+    env_configs['k_med'] = 17
     # if env_configs["re_optimization"] : 
     env_configs_DQN_VA_as_OA = deepcopy(env_configs)
     env_configs_DQN_VA_as_OA["vehicle_assignment"] = True
@@ -86,8 +87,9 @@ def experiment(
     else:
         RL_model_comment = 'VRP' if len(env_configs["emissions_KM"])>1 else 'TSP'
         RL_model_comment += str(len(env_configs["emissions_KM"])) if len(env_configs["emissions_KM"])>1 else ''
+        RL_model_comment += f'Q{env_configs["Q"]}'
         try:
-            RL_model_comment += f'{'_uniforme' if env_configs['noised_p'] and va=='VA' else ''}'
+            RL_model_comment += '_uniforme' if env_configs['noised_p'] and va=='VA' else ''
         except:
             pass
         
@@ -227,12 +229,14 @@ def experiment_DoD(
     except:
         va = 'OA'
         
+    env_configs['k_med'] = 17
     # if env_configs["re_optimization"] : 
     env_configs_DQN_VA_as_OA = deepcopy(env_configs)
     env_configs_DQN_VA_as_OA["vehicle_assignment"] = True
     
     env_configs_DQN_VA = deepcopy(env_configs_DQN_VA_as_OA)
     env_configs_DQN_VA["re_optimization"] = False
+    
         
     # RL_name = f"res_RL_DQN_{va}{RL_name_comment}"
     if "cluster_scenario" in env_configs and env_configs["cluster_scenario"]:
@@ -241,7 +245,7 @@ def experiment_DoD(
         RL_model_comment = 'VRP' if len(env_configs["emissions_KM"])>1 else 'TSP'
         RL_model_comment += str(len(env_configs["emissions_KM"])) if len(env_configs["emissions_KM"])>1 else ''
         try:
-            RL_model_comment += f'{'_uniforme' if env_configs['noised_p'] and va=='VA' else ''}'
+            RL_model_comment += '_uniforme' if env_configs['noised_p'] and va=='VA' else ''
         except:
             pass
         
@@ -412,23 +416,23 @@ if __name__ == "__main__":
     # )
     
     # VRP full dynamic with 4 vehicles Q = 50
-    # experiment(
-    #     100,
-    #     env_configs = {
-    #         "horizon" : 100,
-    #         "Q" : 50, 
-    #         "DoD" : 1.,
-    #         "vehicle_capacity" : 20,
-    #         "re_optimization" : True,
-    #         "costs_KM" : [1, 1, 1, 1],
-    #         "emissions_KM" : [.1, .1, .3, .3],
-    #         "test"  : True,
-    #         # "n_scenarios" : 500,
-    #         "vehicle_assignment" : True,
-    #     },
-    #     # RL_model='DQN_VRP4_VA',
-    #     RL_hidden_layers = [1024, 1024, 1024],
-    # )
+    experiment(
+        100,
+        env_configs = {
+            "horizon" : 100,
+            "Q" : 50, 
+            "DoD" : 1.,
+            "vehicle_capacity" : 20,
+            "re_optimization" : True,
+            "costs_KM" : [1, 1, 1, 1],
+            "emissions_KM" : [.1, .1, .3, .3],
+            "test"  : True,
+            # "n_scenarios" : 500,
+            "vehicle_assignment" : True,
+        },
+        # RL_model='DQN_VRP4_VA',
+        RL_hidden_layers = [1024, 1024, 1024],
+    )
     
     # VRP full dynamic with 2 vehicles
     # with noised probabilities
@@ -471,7 +475,7 @@ if __name__ == "__main__":
     
     # TSP
     # experiment(
-    #     500,
+    #     100,
     #     env_configs = {
     #         "horizon" : 50,
     #         "Q" : 150, 
@@ -520,20 +524,20 @@ if __name__ == "__main__":
     # )
     
     # TSP different DoDs
-    experiment_DoD(
-        100,
-        # DoDs = [1., .95, .9, .85, .8, .75, .65, .5],#[1., .95, .9, .85, .8, .75, .7, .65, .6]
-        DoDs = np.arange(.6, 1., .05),
-        env_configs = {
-            "horizon" : 50,
-            "Q" : 100, 
-            "DoD" : 1.,
-            "vehicle_capacity" : 30,
-            "re_optimization" : False,
-            "costs_KM" : [1],
-            "emissions_KM" : [.3],
-            # "n_scenarios" : 500 ,
-            "test"  : True
-        },
-        RL_hidden_layers = [1024, 1024, 1024],
-    )
+    # experiment_DoD(
+    #     100,
+    #     # DoDs = [1., .95, .9, .85, .8, .75, .65, .5],#[1., .95, .9, .85, .8, .75, .7, .65, .6]
+    #     DoDs = np.arange(.6, 1., .05),
+    #     env_configs = {
+    #         "horizon" : 50,
+    #         "Q" : 100, 
+    #         "DoD" : 1.,
+    #         "vehicle_capacity" : 30,
+    #         "re_optimization" : False,
+    #         "costs_KM" : [1],
+    #         "emissions_KM" : [.3],
+    #         # "n_scenarios" : 500 ,
+    #         "test"  : True
+    #     },
+    #     RL_hidden_layers = [1024, 1024, 1024],
+    # )

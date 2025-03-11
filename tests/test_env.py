@@ -10,6 +10,26 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from envs import DynamicQVRPEnv
 from stable_baselines3.common.env_checker import check_env
 
+def calculate_emissions(D, routes, emissions_KM):
+    # calculates the emissions of all activated vehicles
+    # routes : (n_vehicles, n_destinations)
+    # Q : quota
+    # costs_KM : (n_destinations, n_destinations)
+    # emissions_KM : (n_destinations, n_destinations)   
+    E = np.array([
+        emissions_KM[v]*D
+        for v, _ in enumerate(emissions_KM)
+    ])
+    
+    emissions = 0.
+    for v, route in enumerate(routes):
+        for i in range(len(route)):
+            emissions += E[v, route[i], route[i+1]]
+            if route[i+1] == 0:
+                break
+    
+    return emissions
+
 class TestEnv(unittest.TestCase):
 
     def test_sb3(self):
@@ -77,7 +97,7 @@ class TestDynamicQVRPEnv(unittest.TestCase):
                 """
             )
             
-    def check_emissions_calculation(self, routes, info, Q):
+    def check_emissions_calculation(self, distance_matrix, emissions_KM, routes, info, Q):
         # checks if the emissions of all activated vehicles are calculated
         
         if 'emissions per vehicle' in info.keys():
@@ -88,6 +108,21 @@ class TestDynamicQVRPEnv(unittest.TestCase):
                 The total emissions must match the sum of all emissions
                 Q - info["remained_quota"] : {Q - info["remained_quota"]}
                 emissions per vehicle : {info["emissions per vehicle"]}
+
+                """
+            )
+            
+            # checks the emissions calculation
+            recalculated_emissions = calculate_emissions(
+                distance_matrix, routes, emissions_KM
+            )
+            self.assertAlmostEqual(
+                np.sum(recalculated_emissions),
+                np.sum(info["emissions per vehicle"]), 
+                msg=f"""
+                The total emissions are not correctly calculated
+                recalculated emissions : {recalculated_emissions}
+                emissions in info : {info["emissions per vehicle"]}
 
                 """
             )
@@ -116,7 +151,10 @@ class TestDynamicQVRPEnv(unittest.TestCase):
                 state, _, done, trun, info = self.env.step(action)
                 self.assertTrue(self.env.observation_space.contains(state), "The obs must be in observation space")
                 self.assertTrue(info["remained_quota"] + 1e-4 >= 0, 'The quota must be respected')
-                self.check_emissions_calculation(self.env.routes, info, self.env.Q)
+                self.check_emissions_calculation(
+                    self.env.distance_matrix, self.env.emissions_KM,
+                    self.env.routes, info, self.env.Q
+                )
                 self.check_routes_and_assignment(self.env.routes, self.env.assignment)
                 if done or trun:
                     break
@@ -132,7 +170,10 @@ class TestDynamicQVRPEnv(unittest.TestCase):
                 state, _, done, trun, info = env.step(action)
                 self.assertTrue(env.observation_space.contains(state), "The obs must be in observation space")
                 self.assertTrue(info["remained_quota"] + 1e-4 >= 0, 'The quota must be respected')
-                self.check_emissions_calculation(env.routes, info, env.Q)
+                self.check_emissions_calculation(
+                    env.distance_matrix, env.emissions_KM,
+                    env.routes, info, env.Q
+                )
                 self.assertTrue((env.quantities == qs).all(), "Quantities should not change")
                 if done or trun:
                     break
@@ -149,7 +190,10 @@ class TestDynamicQVRPEnv(unittest.TestCase):
                 self.assertTrue(env.observation_space.contains(state), "The obs must be in observation space")
                 self.assertTrue(info["remained_quota"] + 1e-4 >= 0, 'The quota must be respected')
                 # print(env.quantities)
-                self.check_emissions_calculation(env.routes, info, env.Q)
+                self.check_emissions_calculation(
+                    env.distance_matrix, env.emissions_KM,
+                    env.routes, info, env.Q
+                )
                 self.check_routes_and_assignment(env.routes, env.assignment, i)
                 self.assertTrue((env.quantities == qs).all(), "Quantities should not change")
                 if done or trun:
@@ -168,7 +212,10 @@ class TestDynamicQVRPEnv(unittest.TestCase):
                 state, _, done, trun, info = env.step(action)
                 self.assertTrue(env.observation_space.contains(state), "The obs must be in observation space")
                 self.assertTrue(info["remained_quota"] + 1e-4 >= 0, 'The quota must be respected')
-                self.check_emissions_calculation(env.routes, info, env.Q)
+                self.check_emissions_calculation(
+                    env.distance_matrix, env.emissions_KM,
+                    env.routes, info, env.Q
+                )
                 self.check_routes_and_assignment(env.routes, env.assignment, i)
                 self.assertTrue((env.quantities == qs).all(), "Quantities should not change")
                 if done or trun:
@@ -196,7 +243,10 @@ class TestDynamicQVRPEnv(unittest.TestCase):
                 state, _, done, trun, info = env.step(action)
                 self.assertTrue(True, 'The environment should not raise an error')
                 self.assertTrue(info["remained_quota"] + 1e-4 >= 0, 'The quota must be respected')
-                self.check_emissions_calculation(env.routes, info, env.Q)
+                self.check_emissions_calculation(
+                    env.distance_matrix, env.emissions_KM,
+                    env.routes, info, env.Q
+                )
                 self.check_routes_and_assignment(env.routes, env.assignment)
                 
                 if done or trun:
@@ -222,7 +272,10 @@ class TestDynamicQVRPEnv(unittest.TestCase):
                     """
                 )
                 self.assertTrue(info["remained_quota"] + 1e-4 >= 0, 'The quota must be respected')
-                self.check_emissions_calculation(env.routes, info, env.Q)
+                self.check_emissions_calculation(
+                    env.distance_matrix, env.emissions_KM,
+                    env.routes, info, env.Q
+                )
                 self.check_routes_and_assignment(env.routes, env.assignment)
                 if done or trun:
                     break
