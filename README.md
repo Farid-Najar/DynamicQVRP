@@ -112,7 +112,7 @@ agent = RLAgent(
 )
 
 # Run training
-rewards, actions, infos = agent.run(episodes=1000)
+agent.train(episodes=1000)
 ```
 
 ### Using a Pre-trained Model
@@ -130,7 +130,8 @@ env = DynamicQVRPEnv(
 )
 
 agent = RLAgent(
-    env,
+   env,
+   hidden_layers=[1024, 1024, 1024],
    algo="DQN_VRP4Q50_VA"
 )
 

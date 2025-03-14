@@ -298,7 +298,7 @@ class RLAgent(Agent):
     def __init__(
         self,
         env : Env,
-        hidden_layers = [512, 512, 256],#[1024, 1024, 512, 256] [512, 512, 256]
+        hidden_layers = [1024, 1024, 1024],#[1024, 1024, 512, 256] [512, 512, 256]
         algo = 'DQN',
         load_model = True,
         # *args, 
