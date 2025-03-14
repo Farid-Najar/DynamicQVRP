@@ -106,7 +106,7 @@ env = DynamicQVRPEnv(
 # Create and train agent
 agent = RLAgent(
     env,
-    hidden_layers=[512, 512, 512],
+    hidden_layers=[1024, 1024, 1024],
     learning_rate=0.0001,
     model_name="DQN_VRP2Q100_VA"
 )
