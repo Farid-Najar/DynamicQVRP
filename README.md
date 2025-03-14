@@ -82,7 +82,7 @@ env_configs = {
 experiment(
     episodes=200,
     env_configs=env_configs,
-    RL_hidden_layers=[512, 512, 512]
+    RL_hidden_layers=[1024, 1024, 1024]
 )
 ```
 
