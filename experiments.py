@@ -96,13 +96,13 @@ def experiment(
     if RL_model is None:
         RL_model = f'DQN_{RL_model_comment}_VA'
     agents = {
-        # "greedy" : dict(
+        # "fafs" : dict(
         #     agentClass = GreedyAgent,
         #     env_configs = env_configs,
         #     episodes = episodes,
         #     agent_configs = {},
         #     save_results = True,
-        #     title = "res_greedy",
+        #     title = "res_fafs",
         # ),
         # "random" : dict(
         #     agentClass = Agent,

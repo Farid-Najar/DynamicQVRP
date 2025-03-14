@@ -63,7 +63,38 @@ def plot_results(log_folder,
     # plt.legend(bbox_to_anchor=(1.05, 1.0), loc='upper left')
     return x
     # plt.show()
+   
+   
+def plot_curves(res, label, eval_every=200):
+    """
+    Plot learning curves from evaluation results.
+
+    Parameters
+    ----------
+    res : numpy.ndarray
+        Array containing evaluation results, with shape (num_evaluations, num_episodes)
+    label : str
+        Label for the plot legend
+    eval_every : int, optional
+        Number of steps between evaluations, by default 200
+
+    Returns
+    -------
+    None
+        Plots the learning curves with mean and confidence intervals
+    """
+    y = np.mean(res, 1)
     
+    std = np.std(res, 1)/np.sqrt(len(res[0]))
+    plt.plot(eval_every*np.arange(len(y)), y, label=label)
+    plt.fill_between(
+        eval_every*np.arange(len(y)), 
+        y - 2*std, 
+        y + 2*std, 
+        alpha=0.2,
+        # label = "95% ci"
+    )
+     
     
 def add_value_labels(ax, spacing=5):
     """Add labels to the end of each bar in a bar chart.

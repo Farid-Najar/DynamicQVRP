@@ -50,6 +50,53 @@ def load_data(cluster_scenario = False):
     
     return D, coordx, coordy, probs
 
+@njit
+def calculate_marginal_emission(routes, E, d):
+    """Calculate the minimal marginal emission cost of inserting destination d into each route.
+    
+    For each route, this function finds the optimal insertion point that minimizes
+    the additional emission cost using the triangular difference approach.
+    
+    Parameters
+    ----------
+    routes : np.ndarray
+        Array of routes, where each row represents a vehicle's route
+    E : np.ndarray
+        Emission matrices, where E[v] is the emission matrix for vehicle v
+    d : int
+        Destination to insert
+        
+    Returns
+    -------
+    np.ndarray
+        Array of minimal marginal emission costs for each route
+    """
+    num_vehicles = len(routes)
+    marginal_costs = np.full(num_vehicles, np.amax(E))
+    
+    for v in range(num_vehicles):
+        route = routes[v]
+        min_additional_emission = np.inf
+            
+        # Try inserting d at each possible position using triangular difference
+        for j in range(len(route)-1):
+            prev_node = route[j]
+            next_node = route[j+1]
+            
+            if j and prev_node + next_node == 0:
+                break
+            
+            # Calculate triangular difference: d(i,j) + d(j,k) - d(i,k)
+            # where i=prev_node, j=d, k=next_node
+            additional_emission = \
+                E[v][prev_node, d] + E[v][d, next_node] - E[v][prev_node, next_node]
+            
+            min_additional_emission = min(min_additional_emission, additional_emission)
+        
+        marginal_costs[v] = min_additional_emission
+    
+    return marginal_costs
+
 
 class DynamicQVRPEnv(gym.Env):
     """
@@ -173,6 +220,7 @@ class DynamicQVRPEnv(gym.Env):
                  vehicle_assignment = False,
                  cluster_scenario = False,
                  static_as_dynamic = False,
+                 noise_horizon = 0., # Represents the percentage of the noise in horizon. in [0, 1]
                  seed = 1917,
         ):
         
@@ -226,8 +274,10 @@ class DynamicQVRPEnv(gym.Env):
         self.max_capacity = vehicle_capacity
         self.total_capacity = vehicle_capacity*len(emissions_KM)
         DoD = 1-(self.total_capacity-DoD*self.total_capacity)/K
-        self.H = int(DoD*K) # ou = self.K
-        self.K = K
+        self.T = int(DoD*K) # ou = self.H
+        self.H = K
+        
+        self.noise_horizon = noise_horizon
         
         if unknown_p or static_as_dynamic:
             self.p[:] = 1.
@@ -267,12 +317,15 @@ class DynamicQVRPEnv(gym.Env):
     def _init_instance(self, instance_id):
         # self._env.reset(calculate_routes=False)
         
-        self.h = 0 # ou = self.K - int(DoD*K)
+        self.h = 0 # ou = self.H - int(DoD*K)
         if instance_id < 0:
             self.instance = (self.instance+1)%len(self.all_dests)
         else:
             self.instance = instance_id
             
+        np.random.seed(None)
+        self.noised_H = self.H + int(np.random.normal(0, self.noise_horizon*self.H))
+        
         self.dests = self.all_dests[self.instance]
         self.quantities = self.qs[self.instance]
         
@@ -291,26 +344,26 @@ class DynamicQVRPEnv(gym.Env):
         self.episode_reward = 0
         
         # self.dests = self.all_dests[self.instance]
-        self.j = self.K - self.H
-        self.assignment = np.ones(self.K, int)
+        self.t = self.H - self.T
+        self.assignment = np.ones(self.H, int)
         
-        self.action_mask = np.ones(self.K, bool)
-        self.is_O_allowed = np.ones(self.K, bool)
+        self.action_mask = np.ones(self.H, bool)
+        self.is_O_allowed = np.ones(self.H, bool)
         
-        self.action_mask[self.j:] = False
+        self.action_mask[self.t:] = False
         if not self.allow_initial_omission:
-            self.is_O_allowed[:self.j] = False
+            self.is_O_allowed[:self.t] = False
             
-        self.assignment[self.j:] = 0
+        self.assignment[self.t:] = 0
         self.A = np.zeros(len(self.D), bool)
-        self.A[self.dests[:self.j]] = True
+        self.A[self.dests[:self.t]] = True
         self.A[self.hub] = True
         if self.static_as_dynamic:
             self.NA = np.zeros(len(self.D), bool)
-            self.NA[self.dests[self.j+1:]] = True
+            self.NA[self.dests[self.t+1:]] = True
         else:
             self.NA = ~self.A
-            self.NA[self.dests[self.j]] = False
+            self.NA[self.dests[self.t]] = False
         
         self.info = {
             "omitted" : [],
@@ -319,24 +372,24 @@ class DynamicQVRPEnv(gym.Env):
             "quantity accepted" : self.total_capacity - self.remained_capacity,
             "remained capacity" : self.remained_capacity,
             "h" : self.h,
-            "j" : self.j,
-            "dest" : self.dests[self.j],
+            "t" : self.t,
+            "dest" : self.dests[self.t],
         }
         
         
         self.routes = np.zeros((len(self.emissions_KM), self.max_capacity+2), dtype=np.int64)
         
-        if self.j:
+        if self.t:
             self.assignment, self.routes, self.info = SA_routing2(self)
         
-        self.omitted += list(np.where(self.assignment[:self.j]==0)[0])
+        self.omitted += list(np.where(self.assignment[:self.t]==0)[0])
         
-        self.is_O_allowed[:self.j] = False
+        self.is_O_allowed[:self.t] = False
         
         if "remained_quota" not in self.info.keys():
             raise (Exception("The Quota Q might be too low."))
         
-        self.action_mask[self.j] = True
+        self.action_mask[self.t] = True
         
         self.remained_capacity -= np.sum(self.quantities[self.assignment.astype(bool)])
         # self.routing_data = RoutingData(
@@ -366,13 +419,13 @@ class DynamicQVRPEnv(gym.Env):
         ]
         # min_knn = np.median([
         #     np.mean(knn(
-        #         self.D[mask, self.dests[self.j]], self.k_min
+        #         self.D[mask, self.dests[self.t]], self.k_min
         #     ))
         #     for mask in masks if len(mask)
         # ])
         
         D_V = [
-            self.D[mask, self.dests[self.j]]
+            self.D[mask, self.dests[self.t]]
             for mask in masks if len(mask)
         ]
 
@@ -384,19 +437,19 @@ class DynamicQVRPEnv(gym.Env):
             )
             for v in range(len(D_V))
         ])
-        # print(self.D[masks[0], self.dests[self.j]])
-        # print(self.D[masks[1], self.dests[self.j]])
+        # print(self.D[masks[0], self.dests[self.t]])
+        # print(self.D[masks[1], self.dests[self.t]])
         # print(min_knn)
     
-        # D_A = self.D[self.A, self.dests[self.j]]
+        # D_A = self.D[self.A, self.dests[self.t]]
         # min_knn = np.mean(D_A[knn(D_A, self.k_min)])
         
         # * The mean of the k nearest neighbors in non admitted dests
-        D_NA = self.D[self.NA, self.dests[self.j]]
+        D_NA = self.D[self.NA, self.dests[self.t]]
         
         idx_NA = knn(D_NA, self.k_med)
         med_knn = np.median(p[idx_NA]*D_NA[idx_NA])
-        # med_knn = np.median(knn(self.D[self.NA, self.dests[self.j]]/(p[self.NA] + 1e-8), self.k_med))
+        # med_knn = np.median(knn(self.D[self.NA, self.dests[self.t]]/(p[self.NA] + 1e-8), self.k_med))
         
         
         return min_knn, med_knn
@@ -409,11 +462,16 @@ class DynamicQVRPEnv(gym.Env):
             np.bincount(self.assignment)[1:self.assignment.max()+1]
         )/self.max_capacity
         
+        if self.noise_horizon:
+            remaining_demands = (self.noised_H - self.t)/self.noised_H
+        else:
+            remaining_demands = (self.T - self.h) / self.H
+        
         obs = np.array([
-            self.quantities[self.j]/ self.total_capacity, # the quantity rate asked by the current demand
+            self.quantities[self.t]/ self.total_capacity, # the quantity rate asked by the current demand
             # self.remained_capacity / self.total_capacity, # the percentage of capacity remained
             *cap, # the percentage of capacity remained for each vehicle, dim = len(self.emissions_KM)
-            (self.H - self.h) / max(1, self.K), # the remaining demands to come
+            remaining_demands,#, # the remaining demands to come
             *min_knn/(np.amax(self.D)*max(self.emissions_KM)), # The mean emissions of the k nearest neighbors in admitted dests, dim = len(self.emissions_KM)
             med_knn/(np.amax(self.D)), # The mean of the k nearest neighbors in non activated dests
             # med_knn/(np.max(self.D)/1e-8), # The mean of the k nearest neighbors in non activated dests
@@ -441,16 +499,16 @@ class DynamicQVRPEnv(gym.Env):
             "quantity accepted" : self.total_capacity - self.remained_capacity,
             "remained capacity" : self.remained_capacity,
             "h" : self.h,
-            "j" : self.j,
-            "quantity demanded" : self.quantities[self.j],
-            "dest" : self.dests[self.j],
+            "j" : self.t,
+            "quantity demanded" : self.quantities[self.t],
+            "dest" : self.dests[self.t],
         })
         
         return obs, self.info
     
     def step(self, action: int) -> tuple[Any, float, bool, bool, dict[str, Any]]:
         
-        if (self.h >= self.H-1 or 
+        if (self.h >= self.T-1 or 
             self.remained_capacity <= 0 or
             self.info["remained_quota"] <= 1e-4 
         ):
@@ -461,7 +519,7 @@ class DynamicQVRPEnv(gym.Env):
         self.h += 1
         assert isinstance(action, (int, np.int_)), f"type : {type(action)}, {action}"
         
-        current_dest = self.dests[self.j]
+        current_dest = self.dests[self.t]
         self.NA[current_dest] = False
         
         if action:
@@ -477,23 +535,23 @@ class DynamicQVRPEnv(gym.Env):
             else:
                 self.assignment, self.routes, self.info = insertion(self)
                 
-            if not self.assignment[self.j]:
+            if not self.assignment[self.t]:
                 action = 0
                 
         if action:
-            self.is_O_allowed[self.j] = False
+            self.is_O_allowed[self.t] = False
             self.A[current_dest] = True
-            r = self.quantities[self.j]
+            r = self.quantities[self.t]
             self.episode_reward += r
             self.remained_capacity -= r
 
         else:
-            self.action_mask[self.j] = False
+            self.action_mask[self.t] = False
             r = 0
-            self.omitted.append(self.j)
+            self.omitted.append(self.t)
             
-        self.j += 1
-        self.action_mask[self.j] = True
+        self.t += 1
+        self.action_mask[self.t] = True
         self.info.update({
             'assignment' : self.assignment,
             "episode rewards" : self.episode_reward,
@@ -501,14 +559,14 @@ class DynamicQVRPEnv(gym.Env):
             "remained capacity" : self.remained_capacity,
             "omitted" : self.dests[self.omitted],
             "h" : self.h,
-            "j" : self.j,
-            "quantity demanded" : self.quantities[self.j],
+            "t" : self.t,
+            "quantity demanded" : self.quantities[self.t],
             "dest" : current_dest,
         })
         
         obs = self._get_obs()
         
-        trunc = self.h >= self.H-1
+        trunc = self.h >= self.T-1
         done = bool(trunc or self.info["remained_quota"] <= 1e-4 or self.remained_capacity <= 0)
         # info['r'] = np.clip((normalizer_const + info['r'])/normalizer_const, 0, 1)
         
@@ -518,13 +576,13 @@ class DynamicQVRPEnv(gym.Env):
         
         env = deepcopy(self)
         p = env.p.copy()
-        p[env.dests[:self.j]] = 0
+        p[env.dests[:self.t]] = 0
         p[env.hub] = 0
         
         H = min(H, env.H - env.h - 1)
         
         if len(self.cost_matrix) > 1:
-            env.action_mask[:self.j + H+1] = True
+            env.action_mask[:self.t + H+1] = True
         else:
             env.action_mask = env.is_O_allowed.copy()
             env.action_mask[H+1:] = False
@@ -533,7 +591,7 @@ class DynamicQVRPEnv(gym.Env):
         
         
         future_dests = np.random.choice(len(p), H, False, p)
-        env.dests[self.j+1 : self.j+H+1] = future_dests
+        env.dests[self.t+1 : self.t+H+1] = future_dests
         
         l = [env.hub] + list(env.dests)
         env.mask = np.ix_(l, l)
@@ -544,7 +602,7 @@ class DynamicQVRPEnv(gym.Env):
         ])
         # TODO : implement quantity sampling
         
-        # env.action_mask[:self.j+H] = True
+        # env.action_mask[:self.t+H] = True
         return SA_routing2(env, offline_mode=True, **SA_configs)
     
     def offline_solution(self, *args, **kwargs):
@@ -564,7 +622,7 @@ class DynamicQVRPEnv(gym.Env):
                ):
         # print(self.assignment)
         G = nx.DiGraph()
-        G.add_nodes_from(list(range(self.j+1)))
+        G.add_nodes_from(list(range(self.t+1)))
         # Go = nx.DiGraph()
         # Go.add_nodes_from(self.omitted)
         node_attrs = dict()
@@ -672,11 +730,11 @@ class DynamicQVRPEnv(gym.Env):
                 label='Destinations'
             )
             
-        # print(self.coordx[self.dests[self.j]], self.coordy[self.dests[self.j]])
+        # print(self.coordx[self.dests[self.t]], self.coordy[self.dests[self.t]])
         if display_current_node:
             ax.scatter(
-                self.coordx[self.dests[self.j]], self.coordy[self.dests[self.j]], 
-                s = size*self.quantities[self.j], 
+                self.coordx[self.dests[self.t]], self.coordy[self.dests[self.t]], 
+                s = size*self.quantities[self.t], 
                 color='blue', 
                 label='Current demand'
             )

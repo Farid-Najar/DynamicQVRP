@@ -107,7 +107,7 @@ def _run(env, assignment, action = None):
     if (np.sum(env.quantities[assignment.astype(bool)]) > env.total_capacity
         or np.any([np.sum(env.quantities[assignment == v]) > env.max_capacity for v in range(1, len(env.costs_KM)+1) ])
         ):
-        return -env.K*env.omission_cost, False, env.info
+        return -env.H*env.omission_cost, False, env.info
     
     if action is not None:
         routes = deepcopy(env.routes) #np.zeros((len(env.emissions_KM), env.max_capacity+2), dtype=np.int64)
@@ -206,10 +206,10 @@ def insertion(env, action = None, run_sa = False):
     
     if action is not None:
         if np.sum(best_routes[action-1].astype(bool)) >= env.max_capacity:
-            assignment[env.j] = 0
+            assignment[env.t] = 0
             return assignment, best_routes, best_info
             
-        assignment[env.j] = action
+        assignment[env.t] = action
         a = np.zeros_like(assignment)
         a[assignment==action] = assignment[assignment==action]
         # print('info run : ', best_info['emissions per vehicle'])
@@ -226,12 +226,12 @@ def insertion(env, action = None, run_sa = False):
             best_info = deepcopy(info)
             best_routes = env.routes.copy()
         else:
-            assignment[env.j] = 0
+            assignment[env.t] = 0
         
         return assignment, best_routes, best_info
     
     for v in range(1, len(env.costs_KM) + 1):
-        assignment[env.j] = v
+        assignment[env.t] = v
         r, d, info = _run(env, assignment)
         
         if r > eval_best and d:
@@ -240,7 +240,7 @@ def insertion(env, action = None, run_sa = False):
             best_info = deepcopy(info)
             best_routes = deepcopy(env.routes)
             
-    assignment[env.j] = best
+    assignment[env.t] = best
     return assignment, best_routes, best_info
         
 @njit
@@ -263,7 +263,7 @@ def construct_emergency_solution(env, j = None):
     # j, assignment, V, max_capacity
     
     assignment = np.zeros_like(env.assignment)
-    j = env.j if j is None else j
+    j = env.t if j is None else j
     # best = assignment.copy()
     # best_info = {}
     remained_cap = [env.max_capacity for _ in range(len(env.costs_KM))]
@@ -292,7 +292,7 @@ def construct_greedy_solution(env):
     # best = assignment.copy()
     best_info = {}
     remained_cap = [env.max_capacity for _ in range(len(env.costs_KM))]
-    for i in range(env.j):
+    for i in range(env.t):
         for v in range(1, len(env.costs_KM) + 1):
             if remained_cap[v-1] - env.quantities[i] >= 0:
                 a = assignment.copy()
@@ -322,16 +322,16 @@ def SA_routing(env,
     
     action_mask = env.action_mask
     num_actions = len(env.costs_KM) + 1
-    static_mode = env.H == 0
+    static_mode = env.T == 0
     is_O_allowed = env.is_O_allowed
     
     #! problem with the initial solution
     # when the offline method is called in the full dyn case,
     # the initial sol is zero but must debute with another one
     # TODO ** fix the initial solution
-    if env.h == 0 and env.j:
+    if env.h == 0 and env.t:
         best = construct_initial_solution(
-            env.j,
+            env.t,
             env.quantities,
             env.assignment,
             len(env.costs_KM),
@@ -353,14 +353,14 @@ def SA_routing(env,
     # print(best)
     best[~action_mask & is_O_allowed] = 0
     if not offline_mode:
-        best[env.j] = 1 if env.h > 0 or static_mode else 0
+        best[env.t] = 1 if env.h > 0 or static_mode else 0
     solution = best.copy()
     T = T_init
     best_routes = env.routes.copy()
     best_info = dict()
     r, d, info = _run(env, best)
     if not d:
-        best[env.j] = 0
+        best[env.t] = 0
         best_info = deepcopy(env.info)
     else:
         best = info['assignment'].copy()
@@ -373,7 +373,7 @@ def SA_routing(env,
     flag100 = True
     # infos = []
     init_flag = not d and env.h == 0 and env.allow_initial_omission
-    full_dyn_flag = env.h == 0 and env.j==0
+    full_dyn_flag = env.h == 0 and env.t==0
     
     if not static_mode:
         if full_dyn_flag or not init_flag  and num_actions <= 2:
@@ -468,7 +468,7 @@ def SA_routing2(env,# : DynamicQVRPEnv,
     
     distance_matrix = env.distance_matrix
     qs = env.quantities
-    customers = np.arange(1, env.K + 1, dtype = np.int64)[env.action_mask]
+    customers = np.arange(1, env.H + 1, dtype = np.int64)[env.action_mask]
     
     if env.h:
         initial_solution = env.routes.flatten()

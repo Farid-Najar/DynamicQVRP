@@ -10,3 +10,11 @@ PPO_*
 DQN_*
 results copy.ipynb
 .vscode
+
+# DQN results
+!dqn_VRP4_DoD100_Q50_rs_VA_noisedH_0.1_test.npy
+!dqn_VRP4_DoD100_Q50_rs_VA_noisedH_0.2_test.npy
+!dqn_VRP4_DoD100_Q50_rs_VA_noisedH_0.3_test.npy
+!dqn_VRP4_DoD100_Q50_rs_VA_test.npy
+!dqn_VRP4_DoD100_Q50_rs_VA_woGeo_test.npy
+!dqn_VRP4_DoD100_Q50_rs_VA_woH_test.npy

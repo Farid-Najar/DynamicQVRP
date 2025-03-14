@@ -133,7 +133,7 @@ class OfflineAgent(Agent):
             episode_rewards = np.sum(
                 env.quantities[assignment.astype(bool) & env.is_O_allowed]
             )
-            actions = assignment[env.j:]
+            actions = assignment[self.t:]
 
             res['a'] = actions
             res['r'] = episode_rewards
@@ -206,7 +206,7 @@ class MSAAgent(Agent):
             
             assignment, *_ = env.sample(self.horizon, SA_configs = SA_configs)
 
-            score = float(assignment[env.j] == 0)
+            score = float(assignment[self.t] == 0)
             q.put((i, score))
             # print(f'DP {i} done')
             return
@@ -233,11 +233,11 @@ class MSAAgent(Agent):
         #     if env is None:
         #         assignment, *_ = self.env.sample(self.horizon, SA_configs = SA_configs)
 
-        #         score[0] += float(assignment[self.env.j] == 0)
+        #         score[0] += float(assignment[self.self.t] == 0)
         #     else:
         #         assignment, *_ = env.sample(self.horizon, SA_configs = SA_configs)
 
-        #         score[0] += float(assignment[env.j] == 0)
+        #         score[0] += float(assignment[self.t] == 0)
     
         score[1] = self.n_sample - score[0]
         
@@ -382,7 +382,7 @@ class RLAgentSB3(Agent):
     
     def train(self, envs = None, episodes = 20, *args, **kwargs):
         
-        steps = episodes*self.env.K*len(self.env.all_dests)
+        steps = episodes*self.self.H*len(self.env.all_dests)
         
         envs = envs if envs is not None else [self.env]
         # self.model.learn(total_timesteps=steps)
