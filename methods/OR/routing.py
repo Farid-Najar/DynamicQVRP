@@ -285,28 +285,27 @@ def construct_emergency_solution(env, j = None):
             
     return assignment, best_routes, best_info
 
-def construct_greedy_solution(env):
-    # j, assignment, V, max_capacity
-    #TODO make a greedy initial solution especially for offline
-    assignment = np.zeros_like(env.assignment)
-    # best = assignment.copy()
-    best_info = {}
-    remained_cap = [env.max_capacity for _ in range(len(env.costs_KM))]
-    for i in range(env.t):
-        for v in range(1, len(env.costs_KM) + 1):
-            if remained_cap[v-1] - env.quantities[i] >= 0:
-                a = assignment.copy()
-                a[i] = v
-                _, d, info = _run(env, a)
-                if d:
-                    remained_cap[v-1] -= env.quantities[i]
-                    assignment[i] = v
-                    best_info = deepcopy(info)
-                    best_routes = env.routes.copy()
-                break
+# def construct_greedy_solution(env):
+#     # j, assignment, V, max_capacity
+#     assignment = np.zeros_like(env.assignment)
+#     # best = assignment.copy()
+#     best_info = {}
+#     remained_cap = [env.max_capacity for _ in range(len(env.costs_KM))]
+#     for i in range(env.t):
+#         for v in range(1, len(env.costs_KM) + 1):
+#             if remained_cap[v-1] - env.quantities[i] >= 0:
+#                 a = assignment.copy()
+#                 a[i] = v
+#                 _, d, info = _run(env, a)
+#                 if d:
+#                     remained_cap[v-1] -= env.quantities[i]
+#                     assignment[i] = v
+#                     best_info = deepcopy(info)
+#                     best_routes = env.routes.copy()
+#                 break
             
     
-    return assignment, best_routes, best_info
+#     return assignment, best_routes, best_info
 
 def SA_routing(env,
                offline_mode = False, random_start = False,

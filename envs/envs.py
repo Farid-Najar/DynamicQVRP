@@ -36,6 +36,25 @@ def knn(a, k):
     return idx[:k+1]
 
 def load_data(cluster_scenario = False):
+    """Load distance matrix and coordinate data from files.
+    
+    Loads the distance matrix, x and y coordinates, and probability distribution
+    for destinations from either the standard dataset or a cluster-based dataset.
+    
+    Parameters
+    ----------
+    cluster_scenario : bool, default=False
+        Whether to load data from the cluster scenario dataset
+        
+    Returns
+    -------
+    tuple
+        (D, coordx, coordy, probs) where:
+        - D is the distance matrix
+        - coordx is the x-coordinates of all locations
+        - coordy is the y-coordinates of all locations
+        - probs is the probability distribution of destinations
+    """
     
     if cluster_scenario:
         D = np.load('data/clusters/D_cluster.npy')
@@ -100,99 +119,100 @@ def calculate_marginal_emission(routes, E, d):
 
 class DynamicQVRPEnv(gym.Env):
     """
-    DynamicQVRPEnv is a custom environment for the Dynamic Quadratic Vehicle Routing Problem (QVRP).
+    DynamicQVRPEnv is a custom Gymnasium environment for the Dynamic Vehicle Routing Problem 
+    with emissions Quota (QVRP).
     
-    This environment simulates a dynamic routing problem where vehicles must be routed to meet demands
-    at various destinations while minimizing costs and emissions. The environment supports various 
-    configurations and allows for re-optimization during the routing process.
-
+    This environment simulates a dynamic routing problem where vehicles must be routed to meet 
+    demand demands that arrive sequentially over time, while minimizing emissions. 
+    The environment supports various configurations including heterogeneous vehicle fleets with 
+    different emission profiles, capacity constraints, and emission quotas.
+    
+    At each time step, a new request arrives, and the agent must decide whether to accept or reject
+    the request. If accepted, the request must be assigned to a specific vehicle (when vehicle_assignment=True)
+    or automatically inserted into the most suitable route. The environment supports different 
+    routing strategies including nearest neighbor insertion and simulated annealing optimization.
+    
     Attributes
     ----------
     instance : int
-        The current instance of the environment.
+        The current scenario instance being simulated.
     D : np.ndarray
-        Distance matrix.
+        Distance matrix between all locations.
     coordx : np.ndarray
-        X coordinates of the destinations.
+        X coordinates of all locations for visualization.
     coordy : np.ndarray
-        Y coordinates of the destinations.
+        Y coordinates of all locations for visualization.
     p : np.ndarray
-        Probability of destinations.
+        Probability distribution of demand locations.
     all_dests : np.ndarray
-        All possible destinations in the scenario set.
+        All possible destinations across all scenario instances.
     qs : np.ndarray
-        Quantities for each destination.
+        Quantities demanded by each demand in each scenario.
     max_capacity : int
-        Maximum capacity of a vehicle.
+        Maximum capacity of each vehicle.
     total_capacity : int
-        Total capacity of all vehicles.
+        Total capacity of the entire fleet.
+    T : int
+        Number of dynamic requests to be processed (degree of dynamism).
     H : int
-        Number of demands to be met.
-    K : int
-        Horizon length.
-    q : np.ndarray
-        Quantities for each destination.
+        Total horizon length (total number of time steps).
+    Q : float
+        Emission quota limiting the total emissions allowed.
+    hub : int
+        Index of the depot/hub location.
     omission_cost : float
-        Cost of omitting a destination.
+        Penalty for rejecting a demand request.
     CO2_penalty : float
-        Penalty for CO2 emissions.
+        Penalty coefficient for CO2 emissions.
     costs_KM : list
-        Costs per kilometer for each vehicle.
+        Operational costs per kilometer for each vehicle type.
     emissions_KM : list
-        Emissions per kilometer for each vehicle.
-    num_actions : int
-        Number of possible actions.
+        Emissions per kilometer for each vehicle type.
     re_optimization : bool
-        Flag to indicate if re-optimization is allowed.
-    observation_space : gym.spaces.Box
-        Observation space for the environment.
-    action_space : gym.spaces.Discrete
-        Action space for the environment.
-    allow_initial_omission : bool
-        Flag to allow initial omission of destinations.
-    remained_capacity : int
-        Remaining capacity of the vehicles.
-    h : int
-        Current step in the horizon.
-    j : int
-        Current destination index.
+        Whether to re-optimize all routes after each new demand acceptance.
+    vehicle_assignment : bool
+        Whether the agent must explicitly choose which vehicle serves each demand.
+    routes : np.ndarray
+        Current routes for each vehicle, shape (num_vehicles, max_capacity+2).
     assignment : np.ndarray
-        Assignment of destinations to vehicles.
+        Current assignment of customers to vehicles (0 = rejected).
+    t : int
+        Current time step (demand index).
+    h : int
+        Current number of seen dynamic customers.
+    remained_capacity : int
+        Remaining capacity across all vehicles.
     action_mask : np.ndarray
-        Mask for valid actions.
+        Mask indicating which actions are valid at the current step.
     is_O_allowed : np.ndarray
-        Mask for allowed omissions.
+        Mask indicating which customers can be omitted/rejected.
     A : np.ndarray
-        Array indicating activated destinations.
+        Boolean array indicating activated (accepted) destinations.
     NA : np.ndarray
-        Array indicating non-activated destinations.
+        Boolean array indicating non-activated destinations.
     info : dict
         Dictionary containing information about the current state.
-    routes : np.ndarray
-        Routes for each vehicle.
     omitted : list
-        List of omitted destinations.
+        List of indices of rejected demand requests.
     episode_reward : float
-        Total reward for the current episode.
-
+        Cumulative reward for the current episode.
+    
     Methods
     -------
-    _init_instance(instance_id)
-        Initialize a new instance of the environment.
-    _compute_min_med()
-        Compute the minimum and median distances for the current state.
-    _get_obs()
-        Get the current observation.
     reset(instance_id=-1, *args, **kwargs)
-        Reset the environment to a new state.
+        Reset the environment to a new state with a specific scenario instance.
     step(action)
-        Take a step in the environment.
-    sample(H)
-        Sample a future state of the environment.
-    offline_solution(*args, **kwargs)
-        Compute an offline solution for the environment.
-    render(size=100, show_node_num=False)
-        Render the current state of the environment.
+        Process the agent's decision for the current demand request.
+    _init_instance(instance_id)
+        Initialize a new scenario instance.
+    _compute_min_med()
+        Compute minimum and median distances for the current state (for observations).
+    _get_obs()
+        Get the current observation vector.
+    sample(H, SA_configs)
+        Sample a future state by simulating H steps ahead.
+    render(size=100, show_node_num=False, ...)
+        Visualize the current state of the environment.
     """
     
     def __init__(self, 
@@ -204,7 +224,7 @@ class DynamicQVRPEnv(gym.Env):
                  retain_rate = 0.,
                  use_dataset = True,
                  re_optimization  = False,
-                 costs_KM = [1], 
+                 costs_KM = [1], # for the moment, it has no impact since the focus is on emissions
                  emissions_KM = [.3], 
                  CO2_penalty = 10_000,
                  k_min : int = 3,
@@ -297,7 +317,7 @@ class DynamicQVRPEnv(gym.Env):
         self.re_optimization = re_optimization
         
         self.CO2_penalty = CO2_penalty
-        self.omission_cost = (2*np.max(self.D) +1)*np.max(self.costs_KM)
+        self.omission_cost = (2*np.max(self.D) +1)*np.max(self.emissions_KM)
         
         # * Change if obs change
         # self.observation_space = gym.spaces.Box(0, 1, (5+len(emissions_KM),), np.float64) 
@@ -315,8 +335,18 @@ class DynamicQVRPEnv(gym.Env):
         
         
     def _init_instance(self, instance_id):
-        # self._env.reset(calculate_routes=False)
+        """Initialize a new scenario instance for the environment.
         
+        Sets up the environment with a specific scenario instance, initializing
+        routes, assignments, and other state variables.
+        
+        Parameters
+        ----------
+        instance_id : int
+            The ID of the scenario instance to initialize. If negative, 
+            increments the current instance ID.
+        """
+    
         self.h = 0 # ou = self.H - int(DoD*K)
         if instance_id < 0:
             self.instance = (self.instance+1)%len(self.all_dests)
@@ -336,7 +366,8 @@ class DynamicQVRPEnv(gym.Env):
         self.distance_matrix = self.D[self.mask]
         # self.emission_matrices = self.E[self.mask]
         self.cost_matrix = np.array([
-            (self.costs_KM[v] + self.CO2_penalty*self.emissions_KM[v])*self.distance_matrix
+            # (self.costs_KM[v] + self.CO2_penalty*self.emissions_KM[v])*self.distance_matrix
+            self.emissions_KM[v]*self.distance_matrix
             for v in range(len(self.emissions_KM))
         ])
         self.omitted = []
@@ -392,19 +423,25 @@ class DynamicQVRPEnv(gym.Env):
         self.action_mask[self.t] = True
         
         self.remained_capacity -= np.sum(self.quantities[self.assignment.astype(bool)])
-        # self.routing_data = RoutingData(
-        #     self.routes,
-        #     self.cost_matrix,
-        #     self.distance_matrix,
-        #     self.quantities,
-        #     self.max_capacity,
-        #     self.costs_KM,
-        #     self.emissions_KM,
-        #     self.Q
-        # )
         
         
     def _compute_min_med(self):
+        """Compute minimum and median distances for the current state.
+        
+        Calculates two key metrics for the observation space:
+        1. The mean emission cost of the k_min nearest neighbors in the current routes
+           for each vehicle type
+        2. The median distance to the k_med nearest non-activated destinations,
+           weighted by their probabilities
+        
+        Returns
+        -------
+        tuple
+            (min_knn, med_knn) where:
+            - min_knn is an array of mean emission costs to nearest neighbors for each vehicle
+            - med_knn is the median distance to nearest non-activated destinations
+        """
+        
         if self.static_as_dynamic:
             p = np.ones_like(self.p[self.NA])
         else:
@@ -415,7 +452,7 @@ class DynamicQVRPEnv(gym.Env):
         # * The mean of the k nearest neighbors in admitted dests for every vehicle
         masks = [
             np.concatenate([[self.hub], self.dests[np.where(self.assignment == v)[0]]])
-            for v in range(1, len(self.costs_KM)+1)
+            for v in range(1, len(self.emissions_KM)+1)
         ]
         # min_knn = np.median([
         #     np.mean(knn(
@@ -455,9 +492,24 @@ class DynamicQVRPEnv(gym.Env):
         return min_knn, med_knn
     
     def _get_obs(self):
-        
+        """Get the current observation vector.
+
+        Constructs the observation vector for the current state, including:
+        - Quantity demanded by current customer (normalized)
+        - Remaining capacity for each vehicle (normalized)
+        - Proportion of remaining demands to come
+        - Mean emission costs to nearest neighbors for each vehicle (normalized)
+        - Median distance to nearest non-activated destinations (normalized)
+        - Remaining emission quota (normalized)
+
+        Returns
+        -------
+        np.ndarray
+            The observation vector representing the current state
+        """
+    
         min_knn, med_knn = self._compute_min_med()
-        cap = np.full(len(self.costs_KM), 1.)
+        cap = np.full(len(self.emissions_KM), 1.)
         cap[:self.assignment.max()] -= (
             np.bincount(self.assignment)[1:self.assignment.max()+1]
         )/self.max_capacity
@@ -486,7 +538,26 @@ class DynamicQVRPEnv(gym.Env):
         return obs
     
     def reset(self, instance_id = -1, *args, **kwargs):
+        """Reset the environment to a new state.
+    
+        Initializes a new scenario instance and returns the initial observation
+        and information dictionary.
         
+        Parameters
+        ----------
+        instance_id : int, default=-1
+            The ID of the scenario instance to initialize. If negative,
+            increments the current instance ID.
+        *args, **kwargs
+            Additional arguments passed to gym.Env.reset()
+        
+        Returns
+        -------
+        tuple
+            (observation, info) where:
+            - observation is the initial observation vector
+            - info is a dictionary containing information about the initial state
+        """
         
         self._init_instance(instance_id)
         
@@ -507,6 +578,30 @@ class DynamicQVRPEnv(gym.Env):
         return obs, self.info
     
     def step(self, action: int) -> tuple[Any, float, bool, bool, dict[str, Any]]:
+        """Take a step in the environment based on the agent's action.
+    
+        Processes the agent's decision for the current customer request,
+        updates the environment state, and returns the next observation,
+        reward, and other information.
+        
+        Parameters
+        ----------
+        action : int
+            The action to take:
+            - 0: Reject the current customer request
+            - 1+: Accept and assign to a specific vehicle (if vehicle_assignment=True)
+                or just accept (if vehicle_assignment=False)
+        
+        Returns
+        -------
+        tuple
+            (observation, reward, terminated, truncated, info) where:
+            - observation is the next observation vector
+            - reward is the reward for the action
+            - terminated is True if the episode is done
+            - truncated is True if the episode is truncated
+            - info is a dictionary containing information about the current state
+        """
         
         if (self.h >= self.T-1 or 
             self.remained_capacity <= 0 or
@@ -573,7 +668,23 @@ class DynamicQVRPEnv(gym.Env):
         return obs, r, done, trunc, self.info
     
     def sample(self, H, SA_configs):
+        """Sample a future state by simulating H steps ahead.
+    
+        Creates a copy of the current environment and simulates H future
+        customer requests, using the provided SA configurations for routing.
         
+        Parameters
+        ----------
+        H : int
+            Number of steps to simulate ahead
+        SA_configs : dict
+            Configuration parameters for the Simulated Annealing algorithm
+        
+        Returns
+        -------
+        tuple
+            The result of SA_routing2 on the simulated future state
+        """
         env = deepcopy(self)
         p = env.p.copy()
         p[env.dests[:self.t]] = 0
@@ -597,8 +708,9 @@ class DynamicQVRPEnv(gym.Env):
         env.mask = np.ix_(l, l)
         env.distance_matrix = env.D[env.mask]
         env.cost_matrix = np.array([
-            (env.costs_KM[v] + env.CO2_penalty*env.emissions_KM[v])*env.distance_matrix
-            for v in range(len(env.costs_KM))
+            # (env.costs_KM[v] + env.CO2_penalty*env.emissions_KM[v])*env.distance_matrix
+            env.emissions_KM[v]*env.distance_matrix
+            for v in range(len(env.emissions_KM))
         ])
         # TODO : implement quantity sampling
         
@@ -606,6 +718,23 @@ class DynamicQVRPEnv(gym.Env):
         return SA_routing2(env, offline_mode=True, **SA_configs)
     
     def offline_solution(self, *args, **kwargs):
+        """Compute an offline solution for the environment.
+    
+        Creates a copy of the current environment with all customer requests
+        known in advance, and computes an optimal routing solution using
+        Simulated Annealing.
+        
+        Parameters
+        ----------
+        *args, **kwargs
+            Additional arguments passed to SA_routing2
+        
+        Returns
+        -------
+        tuple
+            The result of SA_routing2 on the offline problem
+        """
+    
         env = deepcopy(self)
         if len(self.cost_matrix) > 1:
             env.action_mask[:] = True
@@ -620,6 +749,31 @@ class DynamicQVRPEnv(gym.Env):
                display_unactivated = True, display_dests = False,
                color_bar_label = None,
                ):
+        """Visualize the current state of the environment.
+    
+        Creates a graphical representation of the current routes, destinations,
+        and other elements of the environment state.
+        
+        Parameters
+        ----------
+        size : int, default=100
+            Base size for nodes in the visualization
+        show_node_num : bool, default=False
+            Whether to display node numbers
+        display_current_node : bool, default=True
+            Whether to highlight the current customer request
+        display_unactivated : bool, default=True
+            Whether to display non-activated destinations
+        display_dests : bool, default=False
+            Whether to display all destinations
+        color_bar_label : str, default=None
+            Label for the color bar (defaults to 'emissions (in kg CO2)')
+        
+        Returns
+        -------
+        str
+            LaTeX representation of the graph
+        """
         # print(self.assignment)
         G = nx.DiGraph()
         G.add_nodes_from(list(range(self.t+1)))
@@ -802,9 +956,3 @@ class DynamicQVRPEnv(gym.Env):
             node_options=dict(zip(range(len(G_ncolors)), G_ncolors))
         )
     
-    
-class StaticWrapper:
-    # It recreates the conditions of the static case when the demands are known
-    # TODO
-    def __init__(self, env : DynamicQVRPEnv):
-        self._env = env
