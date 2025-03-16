@@ -1,12 +1,12 @@
 import numpy as np
-from tqdm import tqdm
-import multiprocess as mp
+# from tqdm import tqdm
+# import multiprocess as mp
 from copy import deepcopy
 
-from gymnasium import Env
+# from gymnasium import Env
 # from methods import Agent
 
-import gymnasium as gym
+# import gymnasium as gym
 import math
 import random
 from collections import namedtuple, deque
@@ -22,12 +22,12 @@ import matplotlib.pyplot as plt
 import matplotlib
 
 from stable_baselines3 import PPO, DQN
-from stable_baselines3.common.env_util import make_vec_env
+# from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.evaluation import evaluate_policy
 from stable_baselines3.common.vec_env import SubprocVecEnv, VecMonitor
 from stable_baselines3.common.utils import set_random_seed
 from stable_baselines3.common.callbacks import EvalCallback
-from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
+# from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
 
 from methods.ML.supervised import NN
 
@@ -49,6 +49,19 @@ if is_ipython:
 Transition = namedtuple('Transition',
                         ('state', 'action', 'next_state', 'reward'))
 
+
+def mask_geography(observation, n_vehicles):
+    observation[n_vehicles+2:n_vehicles+2+(n_vehicles+1)] = 0.
+    return observation
+
+def mask_horizon(observation, n_vehicles):
+    observation[n_vehicles+1] = 0.
+    return observation
+
+def noisy_horizon(observation, n_vehicles, noise = 0.1):
+    observation[n_vehicles+1] += np.random.normal(0, noise)
+    observation[n_vehicles+1] = np.clip(observation[n_vehicles+1], 0, 1)
+    return observation
 
 def plot_durations(rs, show_result=False):
     plt.figure(1)
@@ -120,9 +133,7 @@ class DQN(nn.Module):
                  n_actions: int = 2):
         # super().__init__(observation_space, n_actions)
         super().__init__()
-        # We assume CxHxW images (channels first)
-        # Re-ordering will be done by pre-preprocessing or wrapper
-        # n_inputs = observation_space.shape[0]
+        
         hidden_layers.insert(0, n_observation)
         layers = []
         for l in range(len(hidden_layers)-1):
@@ -143,18 +154,7 @@ class DQN(nn.Module):
 
     def forward(self, observations: torch.Tensor) -> torch.Tensor:
         return self.linear(observations)
-    # def __init__(self, n_observations, n_actions):
-    #     super(DQN, self).__init__()
-    #     self.layer1 = nn.Linear(n_observations, 128)
-    #     self.layer2 = nn.Linear(128, 128)
-    #     self.layer3 = nn.Linear(128, n_actions)
-
-    # # Called with either one element to determine next action, or a batch
-    # # during optimization. Returns tensor([[left0exp,right0exp]...]).
-    # def forward(self, x):
-    #     x = F.relu(self.layer1(x))
-    #     x = F.relu(self.layer2(x))
-    #     return self.layer3(x)
+    
     
 class LinearDQN(nn.Module):
 
@@ -180,16 +180,22 @@ class LinearDQN(nn.Module):
         
 def train_DQN(
     env,
-    hidden_layers = [512, 512, 256],
-    EPOCHS = 20,
+    test_env = None,
+    hidden_layers = [1024, 1024, 1024],
+    EPISODES = 20,
     BATCH_SIZE = 128,
     GAMMA = 0.99,
-    EPS_START = 0.9,
+    EPS_START = 1.,
     EPS_END = 0.05,
-    EPS_DECAY = 1000,
-    TAU = 0.05,
+    EPS_DECAY = 1000, # in episodes
+    TAU = 0.01,
+    update_target_every = 100,
     LR = 1e-4,
-    save = True
+    model_path = 'model_DQN',
+    eval_every = 200,
+    save = True,
+    mask_geography_flag = False,
+    mask_horizon_flag = False,
 ):
     # BATCH_SIZE is the number of transitions sampled from the replay buffer
     # GAMMA is the discount factor as mentioned in the previous section
@@ -201,11 +207,15 @@ def train_DQN(
     
     # if GPU is to be used
     device = torch.device(
-        "cuda" if torch.cuda.is_available() else
-        "mps" if torch.backends.mps.is_available() else
+        # "cuda" if torch.cuda.is_available() else
+        # "mps" if torch.backends.mps.is_available() else
         "cpu"
     )
-
+    
+    EPS_DECAY = EPS_DECAY*env.H # for adaptive : *(env.action_space.n-1)#num_episodes*env.H//2
+    
+    if test_env is None:
+        test_env = deepcopy(env)
     # Get number of actions from gym action space
     n_actions = env.action_space.n
     # Get the number of state observations
@@ -219,17 +229,16 @@ def train_DQN(
     optimizer = optim.AdamW(policy_net.parameters(), lr=LR, amsgrad=True)
     memory = ReplayMemory(10000)
 
-
-    # steps_done = 0
-    epoch_rs = []
-
-    def select_action(state):
+    global steps_done
+    steps_done = 0
+    
+    def select_action(state, deterministic = False):
         global steps_done
         sample = random.random()
         eps_threshold = EPS_END + (EPS_START - EPS_END) * \
             math.exp(-1. * steps_done / EPS_DECAY)
         steps_done += 1
-        if sample > eps_threshold:
+        if sample > eps_threshold or deterministic:
             with torch.no_grad():
                 # t.max(1) will return the largest column value of each row.
                 # second column on max result is index of where max element was
@@ -238,6 +247,7 @@ def train_DQN(
         else:
             return torch.tensor([[env.action_space.sample()]], device=device, dtype=torch.long)
         
+    
     def optimize_model():
         if len(memory) < BATCH_SIZE:
             return
@@ -287,32 +297,69 @@ def train_DQN(
         torch.nn.utils.clip_grad_value_(policy_net.parameters(), 100)
         optimizer.step()
         
-    # if torch.cuda.is_available() or torch.backends.mps.is_available():
-    #     num_episodes = 6000
-    # else:
-    #     num_episodes = 50
+    
+    def eval():
         
+        rs = np.zeros(len(test_env.all_dests))
+        for i_episode in range(len(test_env.all_dests)):
+            # Initialize the environment and get its state
+            state, info = test_env.reset(i_episode)
+            state = torch.tensor(state, dtype=torch.float32, device=device).unsqueeze(0)
+            episode_r = 0.
+            
+            while True:
+                action = select_action(state, deterministic=True)
+                state, reward, terminated, truncated, _ = test_env.step(action.item())
+                # reward = np.array(reward, np.float32)
+                # print(reward[None])
+                # reward = torch.tensor(reward[None], device=device)
+                state = torch.tensor(state, dtype=torch.float32, device=device).unsqueeze(0)
+                
+                done = terminated or truncated
+                episode_r += reward
+                if done:
+                    break
+                
+            rs[i_episode] = episode_r
+            
+        return rs
+
     best_r = 0.
     n_scenarios = len(env.all_dests)
-    num_episodes = n_scenarios*EPOCHS
-    
+    num_episodes = EPISODES#n_scenarios*EPOCHS
     epoch_r = np.zeros(n_scenarios)
-    # episode_rs = []
+    
+    test_rs = []
+    test_r = eval()
+    test_rs.append(test_r)
+    mean_r = test_r.mean()
+    print(f"0 : {mean_r:.3f}")
+    
     for i_episode in range(num_episodes):
         # Initialize the environment and get its state
-        state, info = env.reset()
+        state, _ = env.reset()
+        if mask_geography_flag:
+            state = mask_geography(state, env.E.shape[0])
+        if mask_horizon_flag:
+            state = mask_horizon(state, env.E.shape[0])
+            
         state = torch.tensor(state, dtype=torch.float32, device=device).unsqueeze(0)
         episode_r = 0.
         for t in count():
             action = select_action(state)
             observation, reward, terminated, truncated, _ = env.step(action.item())
+            if mask_geography_flag:
+                observation = mask_geography(observation, env.E.shape[0])
+            if mask_horizon_flag:
+                observation = mask_horizon(observation, env.E.shape[0])
+                
             reward = np.array(reward, np.float32)
             # print(reward[None])
             reward = torch.tensor(reward[None], device=device)
             done = terminated or truncated
             episode_r += reward
 
-            if terminated:
+            if done:
                 next_state = None
             else:
                 next_state = torch.tensor(observation, dtype=torch.float32, device=device).unsqueeze(0)
@@ -325,40 +372,53 @@ def train_DQN(
 
             # Perform one step of the optimization (on the policy network)
             optimize_model()
-
-            # Soft update of the target network's weights
-            # θ′ ← τ θ + (1 −τ )θ′
+            
             target_net_state_dict = target_net.state_dict()
             policy_net_state_dict = policy_net.state_dict()
-            for key in policy_net_state_dict:
-                target_net_state_dict[key] = policy_net_state_dict[key]*TAU + target_net_state_dict[key]*(1-TAU)
-            target_net.load_state_dict(target_net_state_dict)
+                
+            if i_episode%update_target_every == 0:
+                # Periodic hard update of the target network's weights
+                
+                for key in policy_net_state_dict:
+                    target_net_state_dict[key] = policy_net_state_dict[key]
+                target_net.load_state_dict(target_net_state_dict)
+            else:
+                # Soft update of the target network's weights
+                # θ′ ← τ θ + (1 −τ )θ′
+                for key in policy_net_state_dict:
+                    target_net_state_dict[key] = policy_net_state_dict[key]*TAU + target_net_state_dict[key]*(1-TAU)
+                target_net.load_state_dict(target_net_state_dict)
 
             if done:
                 epoch_r[i_episode%n_scenarios] = episode_r#/(res_greedy["rs"][i_episode%200]+1e-8)
-                # episode_rs.append(episode_r)
                 
                 # offline.append(res_offline["rs"][i_episode%200])
                 # greedy.append(res_greedy["rs"][i_episode%200])
                 # print(i_episode, episode_r)
-                if (i_episode+1)%n_scenarios == 0:
-                    epoch_rs.append(epoch_r)
-                    mean_r = epoch_rs[-1].mean()
-                    print(mean_r)
-                    # Track best performance, and save the model's state
-                if best_r < mean_r:
-                    best_r = mean_r
-                    print('best ! mean rewards :', best_r)
-                    if save :
-                        # model_path = 'model_{}_{}'.format(timestamp, epoch)
-                        model_path = 'model_DQN'+str(int(time()))
-                        torch.save(policy_net.state_dict(), model_path)
+                if (i_episode+1)%eval_every == 0:
+                    test_r = eval()
+                    test_rs.append(test_r)
+                    mean_r = test_r.mean()
+                    print(i_episode+1, f" : {mean_r:.3f}")
                     
+                    if best_r < mean_r:
+                        best_r = mean_r
+                        print(f'best ! mean rewards : {best_r:.3f}')
+                        if save :
+                            # model_path = 'model_{}_{}'.format(timestamp, epoch)
+                            # model_path = 'model_DQN'
+                            torch.save(policy_net.state_dict(), model_path)
+                # if (i_episode+1)%n_scenarios == 0:
+                #     episode_durations.append(epoch_r.copy())
+                    # Track best performance, and save the model's state
+                    
+
                     # plot_durations()
                 break
-            
-    epoch_rs.append(epoch_r)       
-    np.save(f'results/RL/DQN/rewards_{int(time())}', np.array(epoch_rs))
+
+    print('Complete')       
+    np.save(f'results/rewards_{model_path}', np.array(test_rs))
+    return test_rs
 
 
 class PPO(nn.Module):

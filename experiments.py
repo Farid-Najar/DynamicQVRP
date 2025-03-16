@@ -21,7 +21,7 @@ def run_agent(
     ):
     
     env = DynamicQVRPEnv(**env_configs)
-    agent = agentClass(env, **agent_configs)
+    agent = agentClass(env, env_configs = env_configs, **agent_configs)
     
     rs, actions, infos = agent.run(episodes)
     

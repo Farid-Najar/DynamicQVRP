@@ -334,7 +334,7 @@ def plot_improvement(data : dict):
     """
     gap = np.array([
         # res_offline.mean()/res_greedy.mean(),
-        data[k].mean()/data["Greedy"].mean()
+        data[k].mean()/data["FAFS"].mean()
         for k in data.keys()
     ])
 
@@ -384,7 +384,7 @@ def plot_improvement2(data : dict):
     """
     gap = np.array([
         # res_offline.mean()/res_greedy.mean(),
-        np.mean(data[k]/data["Greedy"])
+        np.mean(data[k]/data["FAFS"])
         for k in data.keys()
     ])
 
@@ -438,7 +438,7 @@ def plot(data : dict, total_cap = None):
     plot_mean_rewards(data)
     plot_rewards_dist(data)
     plot_gap_offline(data)
-    plot_gap_method(data, 'Greedy')
+    plot_gap_method(data, 'FAFS')
     # plot_gap_method(data, 'MSA')
     plot_gap_method(data, 'Random')
     plot_mean_occupancy(data, total_cap)
