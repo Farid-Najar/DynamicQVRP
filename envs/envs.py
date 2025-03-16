@@ -798,7 +798,7 @@ class DynamicQVRPEnv(gym.Env):
             env.action_mask[:] = True
         else:
             env.action_mask = env.is_O_allowed.copy()
-        env.H = 0
+        env.T = 0
         return SA_routing2(env, offline_mode=True, *args, **kwargs)
         
     

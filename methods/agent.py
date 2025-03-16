@@ -293,7 +293,7 @@ class SLAgent(Agent):
         # return super().train(episodes)
  
  
-class RLAgent(Agent):
+class DQNAgent(Agent):
     """The reinforcement learning agent
     This agent is trained with trial and error.
     """
@@ -331,7 +331,9 @@ class RLAgent(Agent):
             return self.model(torch.Tensor(x)).max(0).indices.item()
     
     def train(self, episodes = 20, **kwargs):
-            
+        
+        # if self.algo.upper() == 'DQN':
+
         test_rs = train_DQN(
             self.env,
             self.test_env,
@@ -342,6 +344,8 @@ class RLAgent(Agent):
         )
         self.model.load_state_dict(torch.load(f'{self.algo}', weights_only=True))
         return test_rs
+        # else:
+        #     raise NotImplementedError
          
       
 class RLAgentSB3(Agent):

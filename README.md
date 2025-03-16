@@ -88,7 +88,7 @@ experiment(
 ### Training a Reinforcement Learning Agent
 
 ```python
-from methods import RLAgent
+from methods.agent import DQNAgent
 from envs import DynamicQVRPEnv
 
 # Create environment
@@ -103,7 +103,7 @@ env = DynamicQVRPEnv(
 )
 
 # Create and train agent
-agent = RLAgent(
+agent = DQNAgent(
     env,
     hidden_layers=[1024, 1024, 1024],
     learning_rate=0.0001,
@@ -118,7 +118,7 @@ agent.train(episodes=1000)
 ### Using a Pre-trained Model
 
 ```python
-from methods import RLAgent
+from methods.agent import DQNAgent
 from envs import DynamicQVRPEnv
 
 env = DynamicQVRPEnv(
@@ -128,7 +128,7 @@ env = DynamicQVRPEnv(
     emissions_KM=[0.1, 0.1, 0.3, 0.3]
 )
 
-agent = RLAgent(
+agent = DQNAgent(
    env,
    hidden_layers=[1024, 1024, 1024],
    algo="DQN_VRP4Q50_VA"
