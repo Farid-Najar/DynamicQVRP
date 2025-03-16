@@ -1,6 +1,6 @@
 # DynamicQVRP
 
-This repository implements methods to solve the Dynamic Vehicle Routing Problem with emission Quota (QVRP), a variant of the classic Vehicle Routing Problem that incorporates emissions considerations and dynamic customer requests.
+This repository implements methods to solve the Dynamic Vehicle Routing Problem with emission Quota (DQVRP), a variant of the classic Vehicle Routing Problem that incorporates emissions considerations and dynamic customer requests.
 
 ## Overview
 
@@ -73,7 +73,6 @@ env_configs = {
     "DoD": 0.5,  # Degree of Dynamism
     "vehicle_capacity": 25,
     "re_optimization": False,
-    "costs_KM": [1, 1],  # Cost per km for each vehicle type
     "emissions_KM": [0.1, 0.3],  # Emissions per km for each vehicle type
     "n_scenarios": 500
 }
@@ -108,7 +107,8 @@ agent = RLAgent(
     env,
     hidden_layers=[1024, 1024, 1024],
     learning_rate=0.0001,
-    model_name="DQN_VRP2Q100_VA"
+    algo="custom_model",
+    load_model = False,
 )
 
 # Run training
@@ -125,7 +125,6 @@ env = DynamicQVRPEnv(
     horizon=100,
     Q=50,
     vehicle_capacity=20,
-    costs_KM=[1, 1, 1, 1],
     emissions_KM=[0.1, 0.1, 0.3, 0.3]
 )
 
@@ -149,9 +148,7 @@ The `DynamicQVRPEnv` class supports various configuration parameters:
 | `Q`                  | Emission quota                    | 50      |
 | `DoD`                | Degree of Dynamism                | 0.5     |
 | `vehicle_capacity`   | Capacity per vehicle              | 15      |
-| `costs_KM`           | Cost per km for each vehicle      | [1]     |
 | `emissions_KM`       | Emissions per km for each vehicle | [0.3]   |
-| `CO2_penalty`        | Penalty for CO2 emissions         | 10,000  |
 | `re_optimization`    | Allow route re-optimization       | False   |
 | `vehicle_assignment` | Allow vehicle selection           | False   |
 
@@ -183,7 +180,6 @@ env_configs = {
     "Q": 100,
     "DoD": 0.5,
     "vehicle_capacity": 25,
-    "costs_KM": [1, 1],
     "emissions_KM": [0.1, 0.3]
 }
 
@@ -203,7 +199,6 @@ env = DynamicQVRPEnv(
     horizon=50,
     Q=100,
     vehicle_capacity=20,
-    costs_KM=[1, 1],
     emissions_KM=[0.1, 0.3]
 )
 
@@ -215,6 +210,7 @@ for _ in range(10):
 
 # Render the current routes
 env.render()
+info
 ```
 
 ## Contributing

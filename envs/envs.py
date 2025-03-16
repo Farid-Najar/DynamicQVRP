@@ -221,14 +221,14 @@ class DynamicQVRPEnv(gym.Env):
                  Q = 50,
                  DoD = .5,
                  vehicle_capacity = 15, # We assume it homogeneous for all vehicles
-                 retain_rate = 0.,
                  use_dataset = True,
                  re_optimization  = False,
-                 costs_KM = [1], # for the moment, it has no impact since the focus is on emissions
                  emissions_KM = [.3], 
-                 CO2_penalty = 10_000,
                  k_min : int = 3,
                  k_med : int = 7,
+                 vehicle_assignment = False,
+                 costs_KM = None, # for the moment, it has no impact since the focus is on emissions
+                 CO2_penalty = 10_000,
                  n_scenarios = None,
                  hub = 0,
                  test = False,
@@ -237,18 +237,76 @@ class DynamicQVRPEnv(gym.Env):
                  uniforme_p_test = False,
                  noised_p = False,
                  different_quantities = False,
-                 vehicle_assignment = False,
                  cluster_scenario = False,
                  static_as_dynamic = False,
                  noise_horizon = 0., # Represents the percentage of the noise in horizon. in [0, 1]
+                 retain_rate = 0.,
                  seed = 1917,
         ):
+        """Initialize the Dynamic QVRP environment.
+
+        Parameters
+        ----------
+        horizon : int, default=50
+            Number of total demands
+        Q : float, default=50
+            Total emission quota allowed
+        DoD : float, default=0.5
+            Degree of dynamism - proportion of dynamic requests
+        vehicle_capacity : int, default=15
+            Capacity of each vehicle (assumed homogeneous)
+        retain_rate : float, default=0.0
+            Ignore this argument
+        use_dataset : bool, default=True
+            Whether to use pre-generated dataset
+        re_optimization : bool, default=False
+            Whether to re-optimize routes after each acceptance
+        costs_KM : list, optional
+            Cost per km for each vehicle type
+        emissions_KM : list, default=[0.3]
+            Emissions per km for each vehicle type
+        CO2_penalty : float, default=10000
+            Penalty coefficient for CO2 emissions (ignore this argument)
+        k_min : int, default=3
+            Number of nearest neighbors for average distance calculation
+        k_med : int, default=7
+            Number of nearest neighbors for median distance calculation
+        n_scenarios : int, optional
+            Number of scenarios to generate
+        hub : int, default=0
+            Index of depot/hub location
+        test : bool, default=False
+            Whether in test mode
+        allow_initial_omission : bool, default=True
+            Whether initial requests can be rejected
+        unknown_p : bool, default=False
+            Whether destination probabilities are unknown
+        uniforme_p_test : bool, default=False
+            Whether to use uniform probabilities in test
+        noised_p : bool, default=False
+            Whether to add noise to probabilities
+        different_quantities : bool, default=False
+            Whether demands have different quantities
+        vehicle_assignment : bool, default=False
+            Whether agent must assign vehicles explicitly
+        cluster_scenario : bool, default=False
+            Whether to use clustered scenarios
+        static_as_dynamic : bool, default=False
+            Whether to treat static requests as dynamic
+        noise_horizon : float, default=0.0
+            Noise level for horizon length (0-1)
+        seed : int, default=1917
+            Random seed
+        """
         
         K = horizon
         self.instance = -1
         self.D, self.coordx, self.coordy, self.p = load_data(cluster_scenario)
         
         self.emissions_KM = emissions_KM
+        if costs_KM is None:
+            costs_KM =  np.ones(len(emissions_KM), int).tolist()
+            
         self.E = np.array([
             self.emissions_KM[v]*self.D
             for v in range(len(self.emissions_KM))
