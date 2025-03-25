@@ -407,7 +407,7 @@ def train_DQN(
                         if save :
                             # model_path = 'model_{}_{}'.format(timestamp, epoch)
                             # model_path = 'model_DQN'
-                            torch.save(policy_net.state_dict(), model_path)
+                            torch.save(policy_net.state_dict(), f'model_{model_path}')
                 # if (i_episode+1)%n_scenarios == 0:
                 #     episode_durations.append(epoch_r.copy())
                     # Track best performance, and save the model's state

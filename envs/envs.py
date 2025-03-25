@@ -205,8 +205,9 @@ class DynamicQVRPEnv(gym.Env):
         Process the agent's decision for the current demand request.
     _init_instance(instance_id)
         Initialize a new scenario instance.
-    _compute_min_med()
-        Compute minimum and median distances for the current state (for observations).
+    _compute_min_med_cap()
+        Compute minimum, median distances and remaining capacity 
+        for the current state (for observations).
     _get_obs()
         Get the current observation vector.
     sample(H, SA_configs)
@@ -379,7 +380,10 @@ class DynamicQVRPEnv(gym.Env):
         
         # * Change if obs change
         # self.observation_space = gym.spaces.Box(0, 1, (5+len(emissions_KM),), np.float64) 
-        dim_obs = 4 + 2*len(emissions_KM)# if not vehicle_assignment else 5 + len(emissions_KM) + len(self.emissions_KM)
+        if vehicle_assignment:
+            dim_obs = 4 + 2*len(emissions_KM)# if not vehicle_assignment else 5 + len(emissions_KM) + len(self.emissions_KM)
+        else:
+            dim_obs = 6
         self.observation_space = gym.spaces.Box(0, 1, (dim_obs,), np.float64)
         # self.observation_space = gym.spaces.Box(0, 1, (6,), np.float_)
         
@@ -483,21 +487,26 @@ class DynamicQVRPEnv(gym.Env):
         self.remained_capacity -= np.sum(self.quantities[self.assignment.astype(bool)])
         
         
-    def _compute_min_med(self):
-        """Compute minimum and median distances for the current state.
+    def _compute_min_med_cap(self):
+        """Compute minimum, median distances and the remaining capacity(ies) 
+        for the current state.
         
         Calculates two key metrics for the observation space:
         1. The mean emission cost of the k_min nearest neighbors in the current routes
            for each vehicle type
         2. The median distance to the k_med nearest non-activated destinations,
            weighted by their probabilities
+        3. The remaining capacity for each vehicle if the vehicle_assignment is True
+        otherwise, it returns the remaining capacity for the whole fleet
         
         Returns
         -------
         tuple
-            (min_knn, med_knn) where:
+            (min_knn, med_knn, cap) where:
             - min_knn is an array of mean emission costs to nearest neighbors for each vehicle
             - med_knn is the median distance to nearest non-activated destinations
+            - cap is the remaining capacity for each vehicle if vehicle_assignment=True
+            otherwise, it returns the remaining capacity for the whole fleet
         """
         
         if self.static_as_dynamic:
@@ -507,37 +516,56 @@ class DynamicQVRPEnv(gym.Env):
             # p[~self.NA] = 0
             p /= p.sum()
         
-        # * The mean of the k nearest neighbors in admitted dests for every vehicle
-        masks = [
-            np.concatenate([[self.hub], self.dests[np.where(self.assignment == v)[0]]])
-            for v in range(1, len(self.emissions_KM)+1)
-        ]
-        # min_knn = np.median([
-        #     np.mean(knn(
-        #         self.D[mask, self.dests[self.t]], self.k_min
-        #     ))
-        #     for mask in masks if len(mask)
-        # ])
-        
-        D_V = [
-            self.D[mask, self.dests[self.t]]
-            for mask in masks if len(mask)
-        ]
+        if self.vehicle_assignment:
+            # * The mean of the k nearest neighbors in admitted dests for every vehicle
+            alpha = [
+                np.where(self.assignment == v)[0]
+                for v in range(1, len(self.emissions_KM)+1)
+            ]
+            masks = [
+                np.concatenate([[self.hub], self.dests[alpha[v]]])
+                for v in range(len(alpha))
+            ]
+            # min_knn = np.median([
+            #     np.mean(knn(
+            #         self.D[mask, self.dests[self.t]], self.k_min
+            #     ))
+            #     for mask in masks if len(mask)
+            # ])
+            
+            D_V = [
+                self.D[mask, self.dests[self.t]]
+                for mask in masks if len(mask)
+            ]
 
-        min_knn = np.array([
-            self.emissions_KM[v]*np.mean(
-                D_V[v][knn(
-                    D_V[v], self.k_min
-                    )]
-            )
-            for v in range(len(D_V))
-        ])
-        # print(self.D[masks[0], self.dests[self.t]])
-        # print(self.D[masks[1], self.dests[self.t]])
-        # print(min_knn)
-    
-        # D_A = self.D[self.A, self.dests[self.t]]
-        # min_knn = np.mean(D_A[knn(D_A, self.k_min)])
+            min_knn = np.array([
+                self.emissions_KM[v]*np.mean(
+                    D_V[v][knn(
+                        D_V[v], self.k_min
+                        )]
+                )
+                for v in range(len(D_V))
+            ])
+            
+            # cap = np.full(len(self.emissions_KM), 1.)
+            # cap[:self.assignment.max()] -= (
+            #     np.bincount(self.assignment)[1:self.assignment.max()+1]
+            # )/self.max_capacity
+            cap = np.array([
+                1. - self.quantities[alpha[v]].sum()/self.max_capacity
+                for v in range(len(alpha))
+            ])
+            
+            # print(self.D[masks[0], self.dests[self.t]])
+            # print(self.D[masks[1], self.dests[self.t]])
+            # print(min_knn)
+        else:
+            D_A = self.D[self.A, self.dests[self.t]]
+            min_knn = np.array([
+                max(self.emissions_KM)*np.mean(D_A[knn(D_A, self.k_min)])
+                ], np.float64)
+            
+            cap = np.array([1. - self.remained_capacity/self.total_capacity], np.float64)
         
         # * The mean of the k nearest neighbors in non admitted dests
         D_NA = self.D[self.NA, self.dests[self.t]]
@@ -547,7 +575,7 @@ class DynamicQVRPEnv(gym.Env):
         # med_knn = np.median(knn(self.D[self.NA, self.dests[self.t]]/(p[self.NA] + 1e-8), self.k_med))
         
         
-        return min_knn, med_knn
+        return min_knn, med_knn, cap
     
     def _get_obs(self):
         """Get the current observation vector.
@@ -566,11 +594,7 @@ class DynamicQVRPEnv(gym.Env):
             The observation vector representing the current state
         """
     
-        min_knn, med_knn = self._compute_min_med()
-        cap = np.full(len(self.emissions_KM), 1.)
-        cap[:self.assignment.max()] -= (
-            np.bincount(self.assignment)[1:self.assignment.max()+1]
-        )/self.max_capacity
+        min_knn, med_knn, cap = self._compute_min_med_cap()
         
         if self.noise_horizon:
             remaining_demands = (self.noised_H - self.t)/self.noised_H
@@ -588,7 +612,7 @@ class DynamicQVRPEnv(gym.Env):
             max(0, self.info["remained_quota"])/self.Q, # The remaining quota
             # * the emissions have been removed from the observation
             # Instead, it has directly been integrated into the distances
-            # See the _compute_min_med method
+            # See the _compute_min_med_cap method
             # *self.emissions_KM, # emission of each vehicle, dim = len(self.emissions_KM)
             # * TODO : Maybe find better observations
         ])
@@ -670,7 +694,7 @@ class DynamicQVRPEnv(gym.Env):
             return -1, 0, True, True, self.info
             
         self.h += 1
-        assert isinstance(action, (int, np.int_)), f"type : {type(action)}, {action}"
+        assert isinstance(action, (int, np.int_)), f"type : {type(action)}, {action}" # type: ignore
         
         current_dest = self.dests[self.t]
         self.NA[current_dest] = False
@@ -958,7 +982,7 @@ class DynamicQVRPEnv(gym.Env):
                          node_size=list(nx.get_node_attributes(G,'q').values()), 
                          node_color=G_ncolors,
                          edge_color = weights,
-                         edge_cmap=plt.cm.jet,
+                         edge_cmap=plt.cm.jet, #type:ignore
                          node_shape='s',
                          arrows=True
         )
@@ -987,7 +1011,7 @@ class DynamicQVRPEnv(gym.Env):
         lgnd = plt.legend(bbox_to_anchor=(1.4, 1.0), loc='upper right')
         # lgnd = plt.legend(loc="lower left", scatterpoints=1, fontsize=10)
         for handle in lgnd.legend_handles:
-            handle.set_sizes([50])
+            handle.set_sizes([50]) #type:ignore
         mesh = ax.pcolormesh(([], []), cmap = plt.cm.jet)
         try:
             mesh.set_clim(np.min(weights),np.max(weights))

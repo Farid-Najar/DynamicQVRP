@@ -7,7 +7,7 @@ import torch
 
 from methods.ML.supervised import train, NN
 from methods.ML.RL import train_RL, train_DQN
-
+import methods.ML.RL as RL
 from envs import DynamicQVRPEnv
 
 from stable_baselines3.common.env_util import make_vec_env
@@ -311,7 +311,7 @@ class DQNAgent(Agent):
         self.test_configs = deepcopy(env_configs)
         self.test_configs["test"] = True
         self.test_env = DynamicQVRPEnv(**self.test_configs)
-        self.model = NN(
+        self.model = RL.DQN(
             env.observation_space.shape[0],
             hidden_layers,
             env.action_space.n
@@ -342,7 +342,7 @@ class DQNAgent(Agent):
             model_path=self.algo,
             **kwargs
         )
-        self.model.load_state_dict(torch.load(f'{self.algo}', weights_only=True))
+        self.model.load_state_dict(torch.load(f'model_{self.algo}', weights_only=True))
         return test_rs
         # else:
         #     raise NotImplementedError

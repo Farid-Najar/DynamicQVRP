@@ -181,12 +181,19 @@ def plot_gap_method(data : dict, method : str):
     }
 
     sns.boxplot(
-        gap
+        gap,
         # gap.values(),
         # tick_labels=list(gap.keys()),
+        showmeans=True,
+        meanprops={
+            'marker':'o',
+            'markerfacecolor':'black',
+            'markeredgecolor':'black',
+            'markersize':'7'
+        },
     )
     plt.hlines(0, -0.5, len(gap), colors='red')
-    plt.title(f"methods/{method} gap")
+    plt.title(f"methods/{method} ratio")
     plt.show()
     
 def plot_gap_offline(data : dict):
@@ -209,9 +216,16 @@ def plot_gap_offline(data : dict):
     }
 
     sns.boxplot(
-        gap
+        gap,
         # gap.values(),
         # tick_labels=list(gap.keys()),
+        showmeans=True,
+        meanprops={
+            'marker':'o',
+            'markerfacecolor':'black',
+            'markeredgecolor':'black',
+            'markersize':'7'
+        },
     )
     plt.hlines(0, -0.5, len(gap), colors='red')
     # plt.hlines(0, 0.5, len(gap)+.5, colors='red')
@@ -241,9 +255,16 @@ def plot_rewards_dist(data : dict):
         Dictionary containing the results for different methods.
     """
     sns.boxplot(
-        data
+        data,
         # qs,
         # tick_labels=list(data.keys()),
+        showmeans=True,
+        meanprops={
+            'marker':'o',
+            'markerfacecolor':'black',
+            'markeredgecolor':'black',
+            'markersize':'7'
+        },
     )
     # plt.hlines(1, 0.5, len(qs)+.5, colors='red')
     plt.title("Rewards distribution")
@@ -285,9 +306,49 @@ def plot_mean_rewards(data : dict):
     plt.show()
     # plt.hlines(np.mean(r_MSA_woRO/r_offline_woRO), 0.5, 2.5, colors='red', linestyles='--')
     
-def plot_mean_occupancy(data : dict, total_cap = None):
+def plot_mean_occupancy(data : dict, H = None):
     """
-    Plot the mean rewards for different methods.
+    Plot the mean service rate for different methods.
+
+    Parameters
+    ----------
+    data : dict
+        Dictionary containing the results for different methods.
+    """
+    if H is None:
+        return
+    
+    vs = {
+        k : 100*data[k]/H
+        for k in data.keys()
+    }
+
+    # plt.bar(
+    #     list(vs.keys()),
+    #     list(vs.values()),
+
+    # )
+    
+    ax = sns.barplot(
+        vs
+    )
+    
+    # calling the function to add value labels
+    # addlabels(list(vs.keys()), np.round(list(vs.values()), 2))
+    add_value_labels(ax, spacing=4)#max(vs.values())/2)
+    
+    # plt.ylim(0, 110)
+    plt.ylim(0, 1.1*np.amax(list(vs.values())))
+    
+    # plt.hlines(1, 0.5, len(gap)+.5, colors='red')
+    plt.title("Service/acceptance rate by methods")
+    plt.ylabel("Service/acceptance rate in %")
+    plt.show()
+    
+    
+def plot_dist_occupancy(data : dict, total_cap = None):
+    """
+    Plot the distribution of service rate for different methods.
 
     Parameters
     ----------
@@ -308,19 +369,32 @@ def plot_mean_occupancy(data : dict, total_cap = None):
 
     # )
     
-    ax = sns.barplot(
-        vs
+    # ax = sns.barplot(
+    #     vs
+    # )
+    
+    ax = sns.boxplot(
+        vs,
+        # qs,
+        # tick_labels=list(data.keys()),
+        showmeans=True,
+        meanprops={
+            'marker':'o',
+            'markerfacecolor':'black',
+            'markeredgecolor':'black',
+            'markersize':'7'
+        },
     )
     
     # calling the function to add value labels
     # addlabels(list(vs.keys()), np.round(list(vs.values()), 2))
-    add_value_labels(ax, spacing=4)#max(vs.values())/2)
+    # add_value_labels(ax, spacing=4)#max(vs.values())/2)
     
     plt.ylim(0, 110)
     
     # plt.hlines(1, 0.5, len(gap)+.5, colors='red')
-    plt.title("Mean occupancy rate by methods")
-    plt.ylabel("Occupancy in %")
+    plt.title("Service rate by methods")
+    plt.ylabel("Service rate in %")
     plt.show()
     
 def plot_improvement(data : dict):
@@ -366,10 +440,13 @@ def plot_improvement(data : dict):
     # addlabels(x, np.round(100*gap, 2))
     add_value_labels(ax, spacing=max(100*gap)/2)
     
-    plt.ylim(1.2*min(100*gap), 1.2*max(100*gap))
+    diffmM = max(100*gap) - min(100*gap)
+    scale = 1.2*diffmM
+    plt.ylim(min(100*gap) - 0.1*scale, max(100*gap) + 0.1*scale)
+    # plt.ylim(1.2*min(100*gap), 1.2*max(100*gap))
 
     # plt.hlines(1, 0.5, len(gap)+.5, colors='red')
-    plt.title("Improvement % of mean rewards compared to greedy")
+    plt.title("Improvement % of mean rewards compared to FAFS")
     plt.ylabel("Improvement in %")
     plt.show()
    
@@ -417,14 +494,17 @@ def plot_improvement2(data : dict):
     # addlabels(x, np.round(100*gap, 2))
     add_value_labels(ax, spacing=max(100*gap)/2)
     
-    plt.ylim(1.2*min(100*gap), 1.2*max(100*gap))
+    diffmM = max(100*gap) - min(100*gap)
+    scale = 1.2*diffmM
+    plt.ylim(min(100*gap) - 0.1*scale, max(100*gap) + 0.1*scale)
+    # plt.ylim(1.2*min(100*gap), 1.2*max(100*gap))
 
     # plt.hlines(1, 0.5, len(gap)+.5, colors='red')
-    plt.title("Mean % improvement compared to greedy")
+    plt.title("Mean % improvement compared to FAFS")
     plt.ylabel("Improvement in %")
     plt.show() 
 
-def plot(data : dict, total_cap = None):
+def plot(data : dict, total_cap = None, H = None):
     """
     Plot various metrics and comparisons for the given data.
 
@@ -436,9 +516,10 @@ def plot(data : dict, total_cap = None):
     plot_improvement(data)
     plot_improvement2(data)
     plot_mean_rewards(data)
+    plot_mean_occupancy(data, H)
     plot_rewards_dist(data)
     plot_gap_offline(data)
     plot_gap_method(data, 'FAFS')
     # plot_gap_method(data, 'MSA')
     plot_gap_method(data, 'Random')
-    plot_mean_occupancy(data, total_cap)
+    plot_dist_occupancy(data, H)

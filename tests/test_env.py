@@ -145,11 +145,12 @@ class TestDynamicQVRPEnv(unittest.TestCase):
     def test_observations(self):
         for _ in range(len(self.env.all_dests)):
             state, _ = self.env.reset()
-            self.assertTrue(self.env.observation_space.contains(state), "The obs must be in observation space")
+            self.assertTrue(self.env.observation_space.contains(state), 
+                            f"The obs must be in observation space, obs : {state}")
             while True:
                 action = self.env.action_space.sample()
                 state, _, done, trun, info = self.env.step(action)
-                self.assertTrue(self.env.observation_space.contains(state), "The obs must be in observation space")
+                self.assertTrue(self.env.observation_space.contains(state), f"The obs must be in observation space, obs : {state}")
                 self.assertTrue(info["remained_quota"] + 1e-4 >= 0, 'The quota must be respected')
                 self.check_emissions_calculation(
                     self.env.distance_matrix, self.env.emissions_KM,
@@ -162,13 +163,15 @@ class TestDynamicQVRPEnv(unittest.TestCase):
     def test_quantities_online(self):
         env = DynamicQVRPEnv(DoD=1, different_quantities=True)
         for _ in range(len(env.all_dests)):
-            # state, _ = self.env.reset()
-            self.assertTrue(env.reset(), "The obs must be in observation space")
+            state, _ = env.reset()
+            self.assertTrue(env.observation_space.contains(state), 
+                            f"The obs must be in observation space, obs : {state}")
+            # self.assertTrue(env.reset(), f"The obs must be in observation space, obs : {state}")
             qs  = env.quantities.copy()
             while True:
                 action = env.action_space.sample()
                 state, _, done, trun, info = env.step(action)
-                self.assertTrue(env.observation_space.contains(state), "The obs must be in observation space")
+                self.assertTrue(env.observation_space.contains(state), f"The obs must be in observation space, obs : {state}")
                 self.assertTrue(info["remained_quota"] + 1e-4 >= 0, 'The quota must be respected')
                 self.check_emissions_calculation(
                     env.distance_matrix, env.emissions_KM,
@@ -181,13 +184,15 @@ class TestDynamicQVRPEnv(unittest.TestCase):
     def test_quantities_online_VRP(self):
         env = DynamicQVRPEnv(DoD=1., different_quantities=True, costs_KM=[1, 1], emissions_KM=[.1, .3])
         for i in range(len(env.all_dests)):
-            # state, _ = self.env.reset()
-            self.assertTrue(env.reset(i), "The obs must be in observation space")
+            state, _ = env.reset(i)
+            self.assertTrue(env.observation_space.contains(state), 
+                            f"The obs must be in observation space, obs : {state}")
+            # self.assertTrue(env.reset(i), f"The obs must be in observation space, obs : {state}")
             qs  = env.quantities.copy()
             while True:
                 action = env.action_space.sample()
                 state, _, done, trun, info = env.step(action)
-                self.assertTrue(env.observation_space.contains(state), "The obs must be in observation space")
+                self.assertTrue(env.observation_space.contains(state), f"The obs must be in observation space, obs : {state}")
                 self.assertTrue(info["remained_quota"] + 1e-4 >= 0, 'The quota must be respected')
                 # print(env.quantities)
                 self.check_emissions_calculation(
@@ -204,13 +209,14 @@ class TestDynamicQVRPEnv(unittest.TestCase):
             DoD=1., different_quantities=True, costs_KM=[1, 1], emissions_KM=[.1, .3],
             re_optimization=True,)
         for i in range(len(env.all_dests)):
-            # state, _ = self.env.reset()
-            self.assertTrue(env.reset(i), "The obs must be in observation space")
+            state, _ = env.reset(i)
+            self.assertTrue(env.observation_space.contains(state), 
+                            f"The obs must be in observation space, obs : {state}")
             qs  = env.quantities.copy()
             while True:
                 action = env.action_space.sample()
                 state, _, done, trun, info = env.step(action)
-                self.assertTrue(env.observation_space.contains(state), "The obs must be in observation space")
+                self.assertTrue(env.observation_space.contains(state), f"The obs must be in observation space, obs : {state}")
                 self.assertTrue(info["remained_quota"] + 1e-4 >= 0, 'The quota must be respected')
                 self.check_emissions_calculation(
                     env.distance_matrix, env.emissions_KM,
@@ -224,20 +230,23 @@ class TestDynamicQVRPEnv(unittest.TestCase):
     def test_quantities(self):
         env = DynamicQVRPEnv(different_quantities=True)
         for _ in range(len(env.all_dests)):
-            # state, _ = self.env.reset()
-            self.assertTrue(env.reset(), "The obs must be in observation space")
+            state, _ = env.reset()
+            self.assertTrue(env.observation_space.contains(state), 
+                            f"The obs must be in observation space, obs : {state}")
             
     def test_quantities_VRP(self):
         env = DynamicQVRPEnv(different_quantities=True, costs_KM=[1, 1], emissions_KM=[.1, .3])
         for _ in range(len(env.all_dests)):
-            # state, _ = self.env.reset()
-            self.assertTrue(env.reset(), "The obs must be in observation space")
+            state, _ = env.reset()
+            self.assertTrue(env.observation_space.contains(state), 
+                            f"The obs must be in observation space, obs : {state}")
             
     def test_vehicle_assignment(self):
         env = DynamicQVRPEnv(vehicle_assignment=True, costs_KM=[1, 1], emissions_KM=[.1, .3])
         for _ in range(len(env.all_dests)):
-            # state, _ = self.env.reset()
-            self.assertTrue(env.reset(), "The obs must be in observation space")
+            state, _ = env.reset()
+            self.assertTrue(env.observation_space.contains(state), 
+                            f"The obs must be in observation space, obs : {state}")
             while True:
                 action = env.action_space.sample()
                 state, _, done, trun, info = env.step(action)
@@ -251,7 +260,7 @@ class TestDynamicQVRPEnv(unittest.TestCase):
                 
                 if done or trun:
                     break
-                self.assertTrue(env.observation_space.contains(state), "The obs must be in observation space")
+                self.assertTrue(env.observation_space.contains(state), f"The obs must be in observation space, obs : {state}")
                 
     def test_cluster_scenario(self):
         env = DynamicQVRPEnv(
@@ -259,8 +268,9 @@ class TestDynamicQVRPEnv(unittest.TestCase):
             cluster_scenario=True
             )
         for _ in range(len(env.all_dests)):
-            # state, _ = self.env.reset()
-            self.assertTrue(env.reset(), "The obs must be in observation space")
+            state, _ = env.reset()
+            self.assertTrue(env.observation_space.contains(state), 
+                            f"The obs must be in observation space, obs : {state}")
             while True:
                 action = env.action_space.sample()
                 state, _, done, trun, info = env.step(action)
@@ -289,12 +299,15 @@ class TestDynamicQVRPEnv(unittest.TestCase):
                 )
             # state, _ = self.env.reset()
             s_idx = np.random.randint(len(env.all_dests))
-            self.assertTrue(env.reset(s_idx), "The obs must be in observation space")
+            state, _ = env.reset(s_idx)
+            self.assertTrue(env.observation_space.contains(state), 
+                            f"The obs must be in observation space, obs : {state}")
+            # self.assertTrue(env.reset(s_idx), f"The obs must be in observation space, obs : {state}")
             while True:
                 action = env.action_space.sample()
                 state, _, done, trun, *_ = env.step(action)
                 self.assertTrue(True, 'The environment should not raise an error')
-                self.assertTrue(env.observation_space.contains(state), "The obs must be in observation space")
+                self.assertTrue(env.observation_space.contains(state), f"The obs must be in observation space, obs : {state}")
                 if done or trun:
                     break
 
