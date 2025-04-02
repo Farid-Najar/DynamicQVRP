@@ -772,7 +772,7 @@ class DynamicQVRPEnv(gym.Env):
         p[env.dests[:self.t]] = 0
         p[env.hub] = 0
         
-        H = min(H, env.H - env.h - 1)
+        H = min(H, env.H - env.t - 1)
         
         if len(self.cost_matrix) > 1:
             env.action_mask[:self.t + H+1] = True
