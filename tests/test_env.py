@@ -260,7 +260,10 @@ class TestDynamicQVRPEnv(unittest.TestCase):
                 
                 if done or trun:
                     break
-                self.assertTrue(env.observation_space.contains(state), f"The obs must be in observation space, obs : {state}")
+                self.assertTrue(
+                    env.observation_space.contains(state), 
+                    f"The obs must be in observation space, obs : {state}"
+                )
                 
     def test_cluster_scenario(self):
         env = DynamicQVRPEnv(
@@ -274,6 +277,8 @@ class TestDynamicQVRPEnv(unittest.TestCase):
             while True:
                 action = env.action_space.sample()
                 state, _, done, trun, info = env.step(action)
+                if done or trun:
+                    break
                 self.assertTrue(True, 'The environment should not raise an error')
                 self.assertTrue(
                     env.observation_space.contains(state), 
@@ -287,8 +292,36 @@ class TestDynamicQVRPEnv(unittest.TestCase):
                     env.routes, info, env.Q
                 )
                 self.check_routes_and_assignment(env.routes, env.assignment)
+                
+                
+    def test_uniform_scenario(self):
+        env = DynamicQVRPEnv(
+            horizon=100,
+            vehicle_assignment=True, costs_KM=[1, 1], emissions_KM=[.1, .3],
+            uniform_scenario=True
+            )
+        for _ in range(len(env.all_dests)):
+            state, _ = env.reset()
+            self.assertTrue(env.observation_space.contains(state), 
+                            f"The obs must be in observation space, obs : {state}")
+            while True:
+                action = env.action_space.sample()
+                state, _, done, trun, info = env.step(action)
                 if done or trun:
                     break
+                self.assertTrue(True, 'The environment should not raise an error')
+                self.assertTrue(
+                    env.observation_space.contains(state), 
+                    f"""The obs must be in observation space
+                    obs : {state}
+                    """
+                )
+                self.assertTrue(info["remained_quota"] + 1e-4 >= 0, 'The quota must be respected')
+                self.check_emissions_calculation(
+                    env.distance_matrix, env.emissions_KM,
+                    env.routes, info, env.Q
+                )
+                self.check_routes_and_assignment(env.routes, env.assignment)
                 
     def test_diffrent_DoDs(self):
         

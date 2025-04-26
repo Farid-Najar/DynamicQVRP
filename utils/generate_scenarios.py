@@ -54,17 +54,27 @@ def create_noised_random_scenarios(
     
 if __name__ == '__main__':
     
-    create_random_scenarios(
-        d=100, n_scenarios=100,
-        comment='_test'
-    )
+    # create_random_scenarios(
+    #     d=100, n_scenarios=100,
+    #     comment='_test'
+    # )
     
     # create_random_scenarios(
-    #     d=50, n_scenarios=500, p = np.ones(500),
-    #     comment='_uniforme'
+    #     d=100, n_scenarios=500,
     # )
     # create_random_scenarios(
     #     d=50, n_scenarios=100, p = np.ones(500),
     #     comment='_uniforme_test'
     # )
     # create_noised_random_scenarios(d=50, n_scenarios=100)
+    
+    # Uniform data set
+    create_random_scenarios(
+        d=100, n_scenarios=100, p = np.ones(500),
+        comment='_uniform_test'
+    )
+    
+    create_random_scenarios(
+        d=100, n_scenarios=500, p = np.ones(500),
+        comment='_uniform'
+    )

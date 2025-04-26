@@ -35,7 +35,36 @@ def knn(a, k):
     # print('a knn', a[idx[0:k+1]].mean())
     return idx[:k+1]
 
-def load_data(cluster_scenario = False):
+@njit(parallel = True)
+def generate_D(n, grid_size):
+    """Generate a distance matrix D for n locations with uniform random coordinates.
+    Parameters
+    ----------
+    n : int
+        Number of locations
+    grid_size : float
+        Size of the grid
+    Returns
+    -------
+    tuple
+        (D, coordx, coordy) where:
+        - D is the distance matrix
+        - coordx is the x-coordinates of all locations  
+        - coordy is the y-coordinates of all locations
+    """
+    coordy = grid_size *  np.random.random_sample((n,)) # generate random y
+    coordx = grid_size *  np.random.random_sample((n,)) # generate random x
+
+    D = np.zeros((n, n), dtype=np.int64)
+    for i in range(n):
+        for j in range(i+1, n):
+            d1 = np.array([coordx[i],coordy[i]])
+            d2 = np.array([coordx[j],coordy[j]])
+            D[i, j] = np.linalg.norm(d1 - d2) + 1
+            D[j, i] = D[i, j]
+    return D, coordx, coordy
+
+def load_data(cluster_scenario = False, uniform_scenario=False):
     """Load distance matrix and coordinate data from files.
     
     Loads the distance matrix, x and y coordinates, and probability distribution
@@ -60,6 +89,11 @@ def load_data(cluster_scenario = False):
         D = np.load('data/clusters/D_cluster.npy')
         coordx = np.load('data/clusters/coordx_cluster.npy')
         coordy = np.load('data/clusters/coordy_cluster.npy')
+        return D, coordx, coordy, np.ones(D.shape[0])/D.shape[0]
+    elif uniform_scenario:
+        D = np.load('data/uniform/distance_matrix.npy')
+        coordx = np.load('data/uniform/coordx.npy')
+        coordy = np.load('data/uniform/coordy.npy')
         return D, coordx, coordy, np.ones(D.shape[0])/D.shape[0]
     
     coordx = np.load('data/coordsX.npy')
@@ -239,6 +273,7 @@ class DynamicQVRPEnv(gym.Env):
                  noised_p = False,
                  different_quantities = False,
                  cluster_scenario = False,
+                 uniform_scenario = False,
                  static_as_dynamic = False,
                  noise_horizon = 0., # Represents the percentage of the noise in horizon. in [0, 1]
                  retain_rate = 0.,
@@ -302,7 +337,7 @@ class DynamicQVRPEnv(gym.Env):
         
         K = horizon
         self.instance = -1
-        self.D, self.coordx, self.coordy, self.p = load_data(cluster_scenario)
+        self.D, self.coordx, self.coordy, self.p = load_data(cluster_scenario, uniform_scenario)
         
         self.emissions_KM = emissions_KM
         if costs_KM is None:
@@ -315,7 +350,7 @@ class DynamicQVRPEnv(gym.Env):
         
         np.random.seed(seed)
         
-        use_dataset = test or use_dataset
+        use_dataset = (test or use_dataset) and not uniform_scenario
         
         if use_dataset and not cluster_scenario:
             retain_comment = f"_retain{retain_rate}" if retain_rate else ""
@@ -326,14 +361,28 @@ class DynamicQVRPEnv(gym.Env):
             #     g = pickle.load(f)
             # routes = np.load(f'data/routes_K{K}{retain_comment}.npy')
             if test:
-                self.all_dests = np.load(f'data/{noise_comment}destinations_K{K}_100{uniforme}_test.npy').astype(int)
+                self.all_dests = np.load(
+                    f'data/{noise_comment}destinations_K{K}_100{uniforme}_test.npy'
+                ).astype(int)
             else:
-                self.all_dests = np.load(f'data/destinations_K{K}{retain_comment}{scenario_comment}{uniforme}.npy').astype(int)
+                self.all_dests = np.load(
+                    f'data/destinations_K{K}{retain_comment}{scenario_comment}{uniforme}.npy'
+                ).astype(int)
                 
         else:
-            if test and cluster_scenario:
+            if uniform_scenario:
+                if test:
+                    self.all_dests = np.load(
+                        f'data/uniform/destinations_K{K}_100_uniform_test.npy'
+                    ).astype(int)
+                else:
+                    self.all_dests = np.load(
+                        f'data/uniform/destinations_K{K}_500_uniform.npy'
+                    ).astype(int)
+                    
+            elif test and cluster_scenario:
                 self.all_dests = np.load(f'data/clusters/destinations_K{K}_101_test.npy').astype(int)
-               
+                    
             else: 
                 self.all_dests = create_random_scenarios(
                     n_scenarios = n_scenarios if n_scenarios is not None else 500,
@@ -774,7 +823,7 @@ class DynamicQVRPEnv(gym.Env):
         
         H = min(H, env.H - env.t - 1)
         
-        if len(self.cost_matrix) > 1:
+        if len(self.emissions_KM) > 1:
             env.action_mask[:self.t + H+1] = True
         else:
             env.action_mask = env.is_O_allowed.copy()
@@ -797,7 +846,7 @@ class DynamicQVRPEnv(gym.Env):
         # TODO : implement quantity sampling
         
         # env.action_mask[:self.t+H] = True
-        return SA_routing2(env, offline_mode=True, **SA_configs)
+        return SA_routing(env, offline_mode=True, **SA_configs)
     
     def offline_solution(self, *args, **kwargs):
         """Compute an offline solution for the environment.

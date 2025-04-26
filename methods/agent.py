@@ -135,7 +135,7 @@ class OfflineAgent(Agent):
             episode_rewards = np.sum(
                 env.quantities[assignment.astype(bool) & env.is_O_allowed]
             )
-            actions = assignment[self.t:]
+            actions = assignment[env.t:]
 
             res['a'] = actions
             res['r'] = episode_rewards
@@ -208,7 +208,7 @@ class MSAAgent(Agent):
             
             assignment, *_ = env.sample(self.horizon, SA_configs = SA_configs)
 
-            score = float(assignment[self.t] == 0)
+            score = float(assignment[env.t] == 0)
             q.put((i, score))
             # print(f'DP {i} done')
             return
@@ -227,19 +227,6 @@ class MSAAgent(Agent):
             score[0] += s
             # pbar.update(1)
             
-            
-        
-        
-        # # TODO ** Parallelize the process
-        # for _ in range(self.n_sample):
-        #     if env is None:
-        #         assignment, *_ = self.env.sample(self.horizon, SA_configs = SA_configs)
-
-        #         score[0] += float(assignment[self.self.t] == 0)
-        #     else:
-        #         assignment, *_ = env.sample(self.horizon, SA_configs = SA_configs)
-
-        #         score[0] += float(assignment[self.t] == 0)
     
         score[1] = self.n_sample - score[0]
         

@@ -313,7 +313,6 @@ def SA_routing(env,
     """
     This function finds a solution for the steiner problem
         using annealing algorithm
-    :param game: the assignment game
     :param T_init: the initial temperature
     :param T_limit: the lowest temperature allowed
     :return: the solution found and the evolution of the best evaluations
@@ -337,15 +336,15 @@ def SA_routing(env,
             env.max_capacity
         )
     elif offline_mode:
-        # best = construct_initial_solution(
-        #     len(env.assignment),
-        #     env.quantities,
-        #     env.assignment,
-        #     len(env.costs_KM),
-        #     env.max_capacity
-        # )
-        best, best_routes, best_info = construct_emergency_solution(env, len(env.assignment))
-        best = best_info['assignment']
+        best = construct_initial_solution(
+            len(env.assignment),
+            env.quantities,
+            env.assignment,
+            len(env.costs_KM),
+            env.max_capacity
+        )
+        # best, best_routes, best_info = construct_emergency_solution(env, len(env.assignment))
+        # best = best_info['assignment']
     else:
         best = env.assignment.copy()
         
