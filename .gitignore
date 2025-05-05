@@ -10,6 +10,7 @@ PPO_*
 DQN_*
 results copy.ipynb
 .vscode
+pyrightconfig.json
 
 # DQN results
 !dqn_VRP4_DoD100_Q50_rs_VA_noisedH_0.1_test.npy
