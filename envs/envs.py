@@ -818,22 +818,26 @@ class DynamicQVRPEnv(gym.Env):
         """
         env = deepcopy(self)
         p = env.p.copy()
-        p[env.dests[:self.t]] = 0
+        p[env.dests[:self.t+1]] = 0
         p[env.hub] = 0
         
         H = min(H, env.H - env.t - 1)
         
         if len(self.emissions_KM) > 1:
-            env.action_mask[:self.t + H+1] = True
+            env.action_mask[env.t : env.t + H+1] = True
+            # print(env.t, env.action_mask)
         else:
             env.action_mask = env.is_O_allowed.copy()
             env.action_mask[H+1:] = False
             
         p /= p.sum()
         
-        
+        # print(env.is_O_allowed)
+        # assert False
+        np.random.seed(None)
         future_dests = np.random.choice(len(p), H, False, p)
-        env.dests[self.t+1 : self.t+H+1] = future_dests
+        # print(env.t, future_dests)
+        env.dests[env.t+1 : env.t+H+1] = future_dests
         
         l = [env.hub] + list(env.dests)
         env.mask = np.ix_(l, l)
@@ -846,7 +850,7 @@ class DynamicQVRPEnv(gym.Env):
         # TODO : implement quantity sampling
         
         # env.action_mask[:self.t+H] = True
-        return SA_routing(env, offline_mode=True, **SA_configs)
+        return SA_routing2(env, offline_mode=True, **SA_configs)
     
     def offline_solution(self, *args, **kwargs):
         """Compute an offline solution for the environment.

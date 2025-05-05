@@ -1,3 +1,4 @@
+from torch import softmax
 from tqdm import tqdm
 from copy import deepcopy
 
@@ -187,10 +188,23 @@ def experiment(
             agentClass = MSAAgent,
             env_configs = env_configs,
             episodes = episodes,
-            agent_configs = dict(n_sample=11, parallelize = False),
+            agent_configs = dict(
+                horizon = env_configs["horizon"], 
+                n_sample=101, parallelize = False, 
+                accept_bonus = 0),
             save_results = True,
             title = "res_MSA",
         ),
+        # "MSA_softmax" : dict(
+        #     agentClass = MSAAgent,
+        #     env_configs = env_configs,
+        #     episodes = episodes,
+        #     agent_configs = dict(
+        #         horizon = env_configs["horizon"],
+        #         n_sample=51, parallelize = False, softmax = True),
+        #     save_results = True,
+        #     title = "res_MSA_softmax",
+        # ),
     }
     
     for agent_name in agents:
@@ -410,24 +424,6 @@ if __name__ == "__main__":
     #     RL_hidden_layers = [1024, 1024, 1024],
     # )
     
-    # VRP full dynamic with 4 vehicles Q = 50
-    experiment(
-        100,
-        env_configs = {
-            "horizon" : 100,
-            "Q" : 50, 
-            "DoD" : 1.,
-            "vehicle_capacity" : 20,
-            "re_optimization" : True,
-            "emissions_KM" : [.1, .1, .3, .3],
-            "test"  : True,
-            # "n_scenarios" : 500,
-            "vehicle_assignment" : True,
-        },
-        # RL_model='DQN_VRP4_VA',
-        RL_hidden_layers = [1024, 1024, 1024],
-    )
-    
     # VRP full dynamic with 2 vehicles
     # with noised probabilities
     # experiment(
@@ -447,23 +443,41 @@ if __name__ == "__main__":
     #     },
     # )
     
-    # VRP with 2 vehicles on cluster scenarios
+    # VRP full dynamic with 4 vehicles Q = 50
     # experiment(
     #     100,
     #     env_configs = {
-    #         "horizon" : 50,
-    #         "Q" : 100, 
+    #         "horizon" : 100,
+    #         "Q" : 50, 
     #         "DoD" : 1.,
     #         "vehicle_capacity" : 20,
     #         "re_optimization" : True,
-    #         "emissions_KM" : [.1, .3],
-    #         # "n_scenarios" : 500,
-    #         "cluster_scenario" : True,
+    #         "emissions_KM" : [.1, .1, .3, .3],
     #         "test"  : True,
+    #         # "n_scenarios" : 500,
     #         # "vehicle_assignment" : True,
     #     },
+    #     # RL_model='DQN_VRP4_VA',
     #     RL_hidden_layers = [1024, 1024, 1024],
     # )
+    
+    # VRP with 2 vehicles on cluster scenarios
+    experiment(
+        100,
+        env_configs = {
+            "horizon" : 50,
+            "Q" : 100, 
+            "DoD" : 1.,
+            "vehicle_capacity" : 20,
+            "re_optimization" : True,
+            "emissions_KM" : [.1, .3],
+            # "n_scenarios" : 500,
+            "cluster_scenario" : True,
+            "test"  : True,
+            # "vehicle_assignment" : True,
+        },
+        RL_hidden_layers = [1024, 1024, 1024],
+    )
     
     # VRP with 2 vehicles on uniform scenarios
     # experiment(

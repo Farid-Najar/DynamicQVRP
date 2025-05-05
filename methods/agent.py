@@ -187,17 +187,20 @@ class MSAAgent(Agent):
                  horizon = 15,
                  n_sample = 7,
                  softmax = False, # if false a majority vote is applied
+                 accept_bonus = 0,
                  **kwargs):
         
         super().__init__(env, **kwargs)
         self.n_sample = n_sample
         self.softmax = softmax
         self.horizon = horizon
+        self.accept_bonus = accept_bonus
         
     def act(self, x, env = None, *args, **kwargs):
         
         SA_configs = dict(
-            T_init = 1_000, T_limit = 1, lamb = .995,
+            T_init = 500, T_limit = 1, lamb = .995,
+            H = 10_000,
         )
         
         env = self.env if env is None else env
@@ -205,10 +208,14 @@ class MSAAgent(Agent):
         def process(env, i, q):
             # a = dests[i_id][np.where(a_GTS == 0)].astype(int)
             # res = dict()
-            
+            env.h = 0
             assignment, *_ = env.sample(self.horizon, SA_configs = SA_configs)
-
-            score = float(assignment[env.t] == 0)
+            # print(assignment)
+            if (assignment[~env.is_O_allowed] == 0).any():
+                score = 1
+            else:
+                score = float(assignment[env.t] == 0)
+                
             q.put((i, score))
             # print(f'DP {i} done')
             return
@@ -217,6 +224,7 @@ class MSAAgent(Agent):
         score = np.zeros(self.env.action_space.n)
         
         pool = mp.Pool(processes=6)
+        # with mp.Pool(processes=6) as pool:
         for i in range(self.n_sample):
             pool.apply_async(process, args=(deepcopy(env), i, q, ))
         # ps[4*i+3].start()
@@ -225,13 +233,15 @@ class MSAAgent(Agent):
         while not q.empty():
             i, s = q.get()
             score[0] += s
+            # print(s)
             # pbar.update(1)
             
     
-        score[1] = self.n_sample - score[0]
+        score[1] = self.n_sample - score[0] + self.accept_bonus
+        # print(score)
         
         if self.softmax:
-            exp_score = np.exp(score)
+            exp_score = np.exp(score-score.max())
             return np.random.choice(
                 2,
                 p=exp_score/exp_score.sum(),
