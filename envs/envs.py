@@ -1053,11 +1053,12 @@ class DynamicQVRPEnv(gym.Env):
         plt.ylim(min(self.coordy[self.dests]) - 1, max(self.coordy[self.dests])+1)
         # handles, labels = ax.get_legend_handles_labels()
         # labels = list(range(len(colors)))
-        ax.scatter([0],[0],color=colors[0],label=f'Omitted', s = size, marker='s')
+        point = -5
+        ax.scatter([point],[point],color=colors[0],label=f'Omitted', s = size, marker='s')
         for i in range(1, len(self.routes)+1):
-            ax.scatter([0],[0],color=colors[i],label=f'Vehicle {i}', s = size, marker='s')
-        ax.scatter([0],[0],color='black', s = size, marker='s', label='Hub')
-        ax.scatter([0],[0],color='white', s = size, marker='s')
+            ax.scatter([point],[point],color=colors[i],label=f'Vehicle {i}', s = size, marker='s')
+        ax.scatter([point],[point],color='black', s = size, marker='s', label='Hub')
+        ax.scatter([point],[point],color='white', s = size, marker='s')
 
         # reverse the order
         plt.draw()

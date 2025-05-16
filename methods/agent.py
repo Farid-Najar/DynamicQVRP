@@ -299,7 +299,7 @@ class DQNAgent(Agent):
         env : Env,
         env_configs = dict(),
         hidden_layers = [1024, 1024, 1024],#[1024, 1024, 512, 256] [512, 512, 256]
-        algo = 'DQN',
+        algo = 'DQN', # Algo name
         load_model = True,
         # *args, 
         **kwargs
@@ -308,7 +308,13 @@ class DQNAgent(Agent):
         self.test_configs = deepcopy(env_configs)
         self.test_configs["test"] = True
         self.test_env = DynamicQVRPEnv(**self.test_configs)
-        self.model = RL.DQN(
+        
+        # print(
+        #     env.observation_space.shape[0],
+        #     hidden_layers,
+        #     env.action_space.n
+        # )
+        self.model = NN(
             env.observation_space.shape[0],
             hidden_layers,
             env.action_space.n

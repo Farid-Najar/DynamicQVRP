@@ -224,6 +224,9 @@ def train_DQN(
 
     policy_net = NN(n_observations, deepcopy(hidden_layers), n_actions).to(device)
     target_net = NN(n_observations, deepcopy(hidden_layers), n_actions).to(device)
+    # print(policy_net)
+    # print(target_net)
+    # assert False
     target_net.load_state_dict(policy_net.state_dict())
 
     optimizer = optim.AdamW(policy_net.parameters(), lr=LR, amsgrad=True)
