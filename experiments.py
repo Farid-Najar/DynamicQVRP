@@ -99,22 +99,22 @@ def experiment(
     if RL_model is None:
         RL_model = f'DQN_{RL_model_comment}_VA'
     agents = {
-        # "fafs" : dict(
-        #     agentClass = GreedyAgent,
-        #     env_configs = env_configs,
-        #     episodes = episodes,
-        #     agent_configs = {},
-        #     save_results = True,
-        #     title = "res_fafs",
-        # ),
-        # "random" : dict(
-        #     agentClass = Agent,
-        #     env_configs = env_configs,
-        #     episodes = episodes,
-        #     agent_configs = {},
-        #     save_results = True,
-        #     title = "res_random",
-        # ),
+        "fafs" : dict(
+            agentClass = GreedyAgent,
+            env_configs = env_configs,
+            episodes = episodes,
+            agent_configs = {},
+            save_results = True,
+            title = "res_fafs",
+        ),
+        "random" : dict(
+            agentClass = Agent,
+            env_configs = env_configs,
+            episodes = episodes,
+            agent_configs = {},
+            save_results = True,
+            title = "res_random",
+        ),
         # "SL" : dict(
         #     agentClass = SLAgent,
         #     env_configs = env_configs,
@@ -178,14 +178,14 @@ def experiment(
         #     save_results = True,
         #     title = "res_RL_PPO",
         # ),
-        # "offline" : dict(
-        #     agentClass = OfflineAgent,
-        #     env_configs = env_configs,
-        #     episodes = episodes,
-        #     agent_configs = {"n_workers": 7},
-        #     save_results = True,
-        #     title = "res_offline",
-        # ),
+        "offline" : dict(
+            agentClass = OfflineAgent,
+            env_configs = env_configs,
+            episodes = episodes,
+            agent_configs = {"n_workers": 7},
+            save_results = True,
+            title = "res_offline",
+        ),
         # "MSA" : dict(
         #     agentClass = MSAAgent,
         #     env_configs = env_configs,
@@ -399,7 +399,25 @@ if __name__ == "__main__":
     #     RL_hidden_layers = [1024, 1024, 1024],
     # )
     
-    # VRP with 2 vehicles on uniform scenarios
+    # VRP with 4 vehicles on uniform scenarios
+    # experiment(
+    #     100,
+    #     env_configs = {
+    #         "horizon" : 100,
+    #         "Q" : 50, 
+    #         "DoD" : 1.,
+    #         "vehicle_capacity" : 20,
+    #         "re_optimization" : True,
+    #         "emissions_KM" : [.1, .1, .3, .3],
+    #         # "n_scenarios" : 500,
+    #         "uniform_scenario" : True,
+    #         "test"  : True,
+    #         # "vehicle_assignment" : True,
+    #     },
+    #     RL_hidden_layers = [1024, 1024, 1024],
+    # )
+    
+    # VRP with 4 vehicles on real scenarios different quantities
     experiment(
         100,
         env_configs = {
@@ -410,7 +428,7 @@ if __name__ == "__main__":
             "re_optimization" : True,
             "emissions_KM" : [.1, .1, .3, .3],
             # "n_scenarios" : 500,
-            "uniform_scenario" : True,
+            "different_quantities" : True,
             "test"  : True,
             # "vehicle_assignment" : True,
         },

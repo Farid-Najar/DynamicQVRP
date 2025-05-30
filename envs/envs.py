@@ -394,8 +394,11 @@ class DynamicQVRPEnv(gym.Env):
                 # raise("not implemented yet")
         
         if different_quantities:
-            qs = np.random.randint(1, vehicle_capacity//4, (len(self.all_dests), K))
-            #np.load(f'data/quantities_K{K}_retain1.0.npy')
+            if test:
+                qs = np.load(f'data/quantities_K{K}.npy')
+            else:
+                qs = np.random.randint(1, vehicle_capacity//4, (len(self.all_dests), K))
+            # np.save(f'data/quantities_K{K}.npy', qs)
         else:
             qs = np.ones((len(self.all_dests), K))
             
