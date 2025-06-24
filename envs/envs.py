@@ -885,7 +885,7 @@ class DynamicQVRPEnv(gym.Env):
     def render(self,
                size = 100, show_node_num =False, display_current_node = True,
                display_unactivated = True, display_dests = False,
-               color_bar_label = None,
+               color_bar_label = None, show_legend = True,
                ):
         """Visualize the current state of the environment.
     
@@ -1053,10 +1053,11 @@ class DynamicQVRPEnv(gym.Env):
         #                  node_shape='x',
         # )
 
-        plt.ylim(min(self.coordy[self.dests]) - 1, max(self.coordy[self.dests])+1)
+        # plt.ylim(min(self.coordy[self.dests]) - 1, max(self.coordy[self.dests])+1)
+        plt.ylim(min(self.coordy) - 1, max(self.coordy)+1)
         # handles, labels = ax.get_legend_handles_labels()
         # labels = list(range(len(colors)))
-        point = -5
+        point = -1
         ax.scatter([point],[point],color=colors[0],label=f'Omitted', s = size, marker='s')
         for i in range(1, len(self.routes)+1):
             ax.scatter([point],[point],color=colors[i],label=f'Vehicle {i}', s = size, marker='s')
@@ -1065,24 +1066,25 @@ class DynamicQVRPEnv(gym.Env):
 
         # reverse the order
         plt.draw()
-        lgnd = plt.legend(bbox_to_anchor=(1.4, 1.0), loc='upper right')
-        # lgnd = plt.legend(loc="lower left", scatterpoints=1, fontsize=10)
-        for handle in lgnd.legend_handles:
-            handle.set_sizes([50]) #type:ignore
-        mesh = ax.pcolormesh(([], []), cmap = plt.cm.jet)
-        try:
-            mesh.set_clim(np.min(weights),np.max(weights))
-        except:
-            pass
-        # Visualizing colorbar part -start
-        cbar = plt.colorbar(
-            mesh,
-            ax=ax, 
-            label = color_bar_label if color_bar_label is not None else 'emissions (in kg CO2)',
-        )
-        cbar.formatter.set_powerlimits((0, 0))
-        # to get 10^3 instead of 1e3
-        cbar.formatter.set_useMathText(True)
+        if show_legend:
+            lgnd = plt.legend(bbox_to_anchor=(1.4, 1.0), loc='upper right')
+            # lgnd = plt.legend(loc="lower left", scatterpoints=1, fontsize=10)
+            for handle in lgnd.legend_handles:
+                handle.set_sizes([50]) #type:ignore
+            mesh = ax.pcolormesh(([], []), cmap = plt.cm.jet)
+            try:
+                mesh.set_clim(np.min(weights),np.max(weights))
+            except:
+                pass
+            # Visualizing colorbar part -start
+            cbar = plt.colorbar(
+                mesh,
+                ax=ax, 
+                label = color_bar_label if color_bar_label is not None else 'emissions (in kg CO2)',
+            )
+            cbar.formatter.set_powerlimits((0, 0))
+            # to get 10^3 instead of 1e3
+            cbar.formatter.set_useMathText(True)
 
         # plt.colorbar()
         # plt.style.use("dark_background")

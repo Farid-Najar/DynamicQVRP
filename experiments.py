@@ -3,7 +3,7 @@ from tqdm import tqdm
 from copy import deepcopy
 
 import numpy as np
-from methods.agent import GreedyAgent, MSAAgent, Agent, OfflineAgent, SLAgent, DQNAgent
+from methods.agent import GreedyAgent, MSAAgent, Agent, OfflineAgent, DQNAgent
 from envs import DynamicQVRPEnv
 
 import os
@@ -357,11 +357,53 @@ def experiment_DoD(
             run_agent(**agents[agent_name], path=path)
             print(agent_name, "done")
      
-       
+def experiment_Q_impact(
+      steps = 100,
+      env_configs = {
+            "horizon" : 100,
+            "Q" : 1000, 
+            "DoD" : 1.,
+            "vehicle_capacity" : 25,
+            "re_optimization" : False,
+            "emissions_KM" : [.3, .3, .3, .3],
+            "test"  : True,
+        },
+      comment = "",
+    ):
+    rewards = []
+    for Q in np.arange(steps, env_configs["Q"], steps):
+        env_configs["Q"] = Q
+        rs, *_ = run_agent(
+            agentClass = OfflineAgent,
+            env_configs = env_configs,
+            episodes = 100,
+            agent_configs = {"n_workers": 7},
+            title = f"res_offline{int(Q)}",
+        )
+        rewards.append(rs.copy())
+        print(Q, "done")
+        
+    np.save(f'results/rewards_Q{comment}.npy', np.array(rewards))
+    
 if __name__ == "__main__":
     ###############################################
     #### Main experiments
     ###############################################
+    
+    # Studying the impact of the quota
+    # experiment_Q_impact()
+    experiment_Q_impact(
+      env_configs = {
+            "horizon" : 100,
+            "Q" : 1000, 
+            "DoD" : 1.,
+            "vehicle_capacity" : 25,
+            "re_optimization" : False,
+            "emissions_KM" : [.1, .1, .3, .3],
+            "test"  : True,
+        },
+      comment = "_heterogenous",
+    )
     
     # VRP full dynamic with 4 vehicles Q = 50
     # experiment(
@@ -418,22 +460,22 @@ if __name__ == "__main__":
     # )
     
     # VRP with 4 vehicles on real scenarios different quantities
-    experiment(
-        100,
-        env_configs = {
-            "horizon" : 100,
-            "Q" : 50, 
-            "DoD" : 1.,
-            "vehicle_capacity" : 20,
-            "re_optimization" : True,
-            "emissions_KM" : [.1, .1, .3, .3],
-            # "n_scenarios" : 500,
-            "different_quantities" : True,
-            "test"  : True,
-            # "vehicle_assignment" : True,
-        },
-        RL_hidden_layers = [1024, 1024, 1024],
-    )
+    # experiment(
+    #     100,
+    #     env_configs = {
+    #         "horizon" : 100,
+    #         "Q" : 50, 
+    #         "DoD" : 1.,
+    #         "vehicle_capacity" : 20,
+    #         "re_optimization" : True,
+    #         "emissions_KM" : [.1, .1, .3, .3],
+    #         # "n_scenarios" : 500,
+    #         "different_quantities" : True,
+    #         "test"  : True,
+    #         # "vehicle_assignment" : True,
+    #     },
+    #     RL_hidden_layers = [1024, 1024, 1024],
+    # )
     
     
     ###############################################

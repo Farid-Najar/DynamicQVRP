@@ -1,6 +1,6 @@
 from tqdm import tqdm
 import numpy as np
-from methods import GreedyAgent, MSAAgent, Agent, OfflineAgent, SLAgent, RLAgent
+from methods.agent import DQNAgent
 from envs import DynamicQVRPEnv
 
 import os
@@ -14,7 +14,7 @@ def train_agents(
     # We setup different scenarios
     envs_configs = [
         {
-            "K" : 50,
+            "horizon" : 50,
             "Q" : 100, 
             "DoD" : 1.,
             "vehicle_capacity" : 30,
@@ -25,7 +25,7 @@ def train_agents(
             # "test"  : True
         },
         {
-            "K" : 50,
+            "horizon" : 50,
             "Q" : 50, 
             "DoD" : 1,
             "vehicle_capacity" : 20,
@@ -36,7 +36,7 @@ def train_agents(
             # "test"  : True
         },
         {
-            "K" : 50,
+            "horizon" : 50,
             "Q" : 100, 
             "DoD" : .9,
             "vehicle_capacity" : 30,
@@ -47,7 +47,7 @@ def train_agents(
             # "test"  : True
         },
         {
-            "K" : 50,
+            "horizon" : 50,
             "Q" : 100, 
             "DoD" : .7,
             "vehicle_capacity" : 20,
@@ -83,7 +83,7 @@ def train_agents(
     
     envs = [DynamicQVRPEnv(**env_configs) for env_configs in envs_configs]
     # env = DynamicQVRPEnv(**env_configs)
-    agent = RLAgent(envs[0], load_model=False, algo='DQN',**agent_configs)
+    agent = DQNAgent(envs[0], load_model=False, algo='DQN',**agent_configs)
     agent.train(episodes=15)
     
     
