@@ -1,10 +1,13 @@
-from torch import softmax
 from tqdm import tqdm
 from copy import deepcopy
 
 import numpy as np
 from methods.agent import GreedyAgent, MSAAgent, Agent, OfflineAgent, DQNAgent
 from envs import DynamicQVRPEnv
+
+from methods.static import OA_experiments
+
+from methods.static import game_experiments, EXP3, LRI
 
 import os
 
@@ -392,18 +395,19 @@ if __name__ == "__main__":
     
     # Studying the impact of the quota
     # experiment_Q_impact()
-    experiment_Q_impact(
-      env_configs = {
-            "horizon" : 100,
-            "Q" : 1000, 
-            "DoD" : 1.,
-            "vehicle_capacity" : 25,
-            "re_optimization" : False,
-            "emissions_KM" : [.1, .1, .3, .3],
-            "test"  : True,
-        },
-      comment = "_heterogenous",
-    )
+    # experiment_Q_impact(
+    #   env_configs = {
+    #         "horizon" : 100,
+    #         "Q" : 1000, 
+    #         "DoD" : 1.,
+    #         "vehicle_capacity" : 25,
+    #         "re_optimization" : False,
+    #         "emissions_KM" : [.1, .1, .3, .3],
+    #         "test"  : True,
+    #     },
+    #   comment = "_heterogenous",
+    # )
+    
     
     # VRP full dynamic with 4 vehicles Q = 50
     # experiment(
@@ -477,7 +481,41 @@ if __name__ == "__main__":
     #     RL_hidden_layers = [1024, 1024, 1024],
     # )
     
-    
+    ###############################################
+    #### Static experiments
+    ###############################################
+    # game_experiments(
+    #     5,
+    #     EXP3,
+    #     T = 10_000,
+    #     K = 100,
+    #     Q = 50, 
+    #     # real_data=True, 
+    #     VA = True,
+    #     log = False,
+    #     env_configs = {
+    #         "vehicle_capacity" : 25,
+    #         "re_optimization" : False,
+    #         "emissions_KM" : [.1, .1, .3, .3],
+    #     },
+        
+    # )
+    OA_experiments(
+        100,
+        # real_data=True, 
+        T = 50_000,
+        T_init = 10_000,
+        lamb = 0.999,
+        env_configs = {
+            "horizon" : 100,
+            "Q" : 50,
+            "vehicle_capacity" : 25,
+            "re_optimization" : False,
+            "emissions_KM" : [.1, .1, .3, .3],
+            "test"  : True,
+        },
+        
+    )
     ###############################################
     #### Other experiments
     ###############################################

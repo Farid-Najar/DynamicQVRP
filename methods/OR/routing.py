@@ -23,7 +23,7 @@ def NN_routing(
     max_capacity,
     costs_KM,
     emissions_KM,
-):
+    ):
     # routes = []#List()
     costs = np.zeros(len(cost_matrix), np.float64)
     emissions = np.zeros(len(cost_matrix), np.float64)
@@ -142,13 +142,16 @@ def _run(env, assignment, action = None):
     
     info['routes'] = routes
     total_emission = np.sum(emissions)
+    info["total_emission"] = np.sum(emissions)
     # info = dict()
     
     info['remained_quota'] = env.Q - total_emission
+    info['excess_emission'] = -info['remained_quota']
     
     env.routes = routes
+    env.assignment = a
     
-    r = -(np.sum(costs) + max(0, total_emission - env.Q - 1e-5)*env.CO2_penalty + np.sum(a == 0)*env.omission_cost)
+    r = -(total_emission + max(0, total_emission - env.Q - 1e-5)*env.CO2_penalty + np.sum(a == 0)*env.omission_cost)
     d = total_emission - env.Q - 1e-5 <= 0
     # r *= float(d)
     
