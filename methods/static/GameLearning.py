@@ -108,7 +108,7 @@ def GameLearning(env : StaticQVRPEnv, strategy = LRI, T = 1_000, log = True):
     res['oqs'] = np.sum(env._env.quantities)*np.ones(T+1)
     nrmlz = np.sum(env._env.quantities)*env._env.omission_cost
     res['rewards'][0] = float(done)*(nrmlz + info['r'])/nrmlz
-    res['oqs'][0] = info['oq']
+    res['oqs'][0] = info['oq'] if done else np.sum(env._env.quantities)
     
     res['infos'] = []
     
@@ -128,7 +128,7 @@ def GameLearning(env : StaticQVRPEnv, strategy = LRI, T = 1_000, log = True):
             players[i].update(actions[i], -loss[i])
             
         res['rewards'][t+1] = float(done)*(nrmlz + info['r'])/nrmlz
-        res['oqs'][t+1] = info['oq']
+        res['oqs'][t+1] = info['oq'] if done else np.sum(env._env.quantities)
         
         if res['oqs'][t+1] == res['oqs'].min():
             if res['rewards'][t+1]> best_reward:

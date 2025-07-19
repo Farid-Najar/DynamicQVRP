@@ -24,8 +24,7 @@ def recuit(env : StaticQVRPEnv, T_init, T_limit, lamb = .99, id = 0, log = False
     solution = best.copy()
     T = T_init
     _, r, d, _, info = env.step(best)
-    
-    best_oq = info['oq'] if d else num_packages
+    best_oq = info['oq'] if d else np.sum(env._env.quantities)
     eval_best = -r
     eval_solution = eval_best
     m = 0
@@ -36,7 +35,7 @@ def recuit(env : StaticQVRPEnv, T_init, T_limit, lamb = .99, id = 0, log = False
         # infos['T'].append(T)
         sol = rand_neighbor(solution)
         _, r, d, _, info = env.step(sol)
-        oq = info['oq'] if d else num_packages
+        oq = info['oq'] if d else np.sum(env._env.quantities)
         eval_sol = -r
         # eval_sol, info = eval_annealing(sol, env)
         # infos['history'].append(info)

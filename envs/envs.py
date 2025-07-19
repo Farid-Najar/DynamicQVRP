@@ -1216,7 +1216,8 @@ def _step(
                 quantity += quantities[alpha[j]-1]
                 
                 if quantity > max_capacity or (
-                    emissions.sum() + distance_matrix[routes[i-1][k-1], alpha[j]]*emissions_KM[i-1]
+                    emissions.sum() 
+                    + distance_matrix[routes[i-1][k-1], alpha[j]]*emissions_KM[i-1]
                     > Q):
                     # routes[0] += alpha
                     info['LCF'][i-1] += np.sum(quantities[np.array(alpha)-1])*omission_cost

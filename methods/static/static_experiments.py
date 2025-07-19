@@ -30,6 +30,7 @@ def OA_experiments(
     n_threads = 7,
     ):
     
+    real_data = False
     if cluster_data:
         env_configs['cluster_scenario'] = True
     elif random_data:
@@ -169,6 +170,7 @@ def run_SA_VA(
     n_threads = 7,
     ):
     
+    real_data = False
     if cluster_data:
         env_configs['cluster_scenario'] = True
     elif random_data:
@@ -194,12 +196,12 @@ def run_SA_VA(
         *_, d, _, info = env.step(action_SA)
         # nrmlz = np.sum(env.quantities)*env.omission_cost
         # r_SA = float(d)*(nrmlz + info['r'])/nrmlz
-        r_SA = info['r']
+        r_SA = info['r']*float(d)
         res['time'] = time() - t0
         res['sol'] = action_SA
         res['a'] = info['a']
         res['r'] = r_SA
-        res['oq'] = info['oq']
+        res['oq'] = info['oq'] if d else np.sum(env._env.quantities)
         q.put((i, res))
         print(f'SA {i} done')
         return
