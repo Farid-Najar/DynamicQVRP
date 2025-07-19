@@ -79,11 +79,11 @@ def recuit(env : StaticQVRPEnv, T_init, T_limit, lamb = .99, id = 0, log = False
         
     return best, list_best_costs, infos
 
-def recuit_tsp(env : StaticQVRPEnv, T_init, T_limit, lamb = .99, var = False, id = 0, log = False, H = 500) :
+def recuit_VA(env : StaticQVRPEnv, T_init, T_limit = 0, lamb = .99, var = False, id = 0, log = False, H = 500) :
     """
     This function finds a solution for the steiner problem
         using annealing algorithm
-    :param game: the assignment game
+    :param env: the environment
     :param T_init: the initial temperature
     :param T_limit: the lowest temperature allowed
     :return: the solution found and the evolution of the best evaluations
@@ -93,9 +93,10 @@ def recuit_tsp(env : StaticQVRPEnv, T_init, T_limit, lamb = .99, var = False, id
     best = np.random.randint(env.num_actions, size=num_packages)
     solution = best.copy()
     T = T_init
-    *_, info = env.step(best)
+    *_, d, _, info = env.step(best)
     eval_best = -info['r']
-    best_oq = num_packages
+    max_oq = np.sum(env._env.quantities)
+    best_oq = info['oq'] if d else max_oq
     eval_solution = eval_best
     m = 0
     list_best_costs = [eval_best]
@@ -109,6 +110,7 @@ def recuit_tsp(env : StaticQVRPEnv, T_init, T_limit, lamb = .99, var = False, id
         # info['done'] = d
         # eval_sol, info = eval_annealing(sol, game)
         eval_sol = -info['r']
+        oq = info['oq'] if d else max_oq
         # infos['history'].append(info)
         
         if m%20 == 0 and log:
@@ -120,11 +122,12 @@ def recuit_tsp(env : StaticQVRPEnv, T_init, T_limit, lamb = .99, var = False, id
             print('omitted : ', info['omitted'])
             print('cost : ', eval_sol)
             print('best cost : ', eval_best)
-        if eval_sol < eval_best :
-            if d:
+        
+        if oq <= best_oq:
+            if eval_sol < eval_best :
                 best = sol.copy()
-            eval_best = eval_sol
-            infos.append(info)
+                eval_best = eval_sol
+                infos.append(info)
             
         if eval_sol < eval_solution :
             prob = 1
@@ -132,7 +135,7 @@ def recuit_tsp(env : StaticQVRPEnv, T_init, T_limit, lamb = .99, var = False, id
             prob = exp((eval_best - eval_sol)/T)
         rand = rd.random()
         if rand <= prob :
-            solution = sol
+            solution = sol.copy()
             eval_solution = eval_sol
         list_best_costs.append(eval_best)
         T *= lamb

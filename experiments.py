@@ -5,7 +5,7 @@ import numpy as np
 from methods.agent import GreedyAgent, MSAAgent, Agent, OfflineAgent, DQNAgent
 from envs import DynamicQVRPEnv
 
-from methods.static import OA_experiments
+from methods.static import OA_experiments, run_SA_VA
 
 from methods.static import game_experiments, EXP3, LRI
 
@@ -388,6 +388,46 @@ def experiment_Q_impact(
         
     np.save(f'results/rewards_Q{comment}.npy', np.array(rewards))
     
+def run_offline(
+        episodes = 200,
+        env_configs = {
+            "horizon" : 50,
+            "Q" : 100, 
+            "DoD" : 0.5,
+            "vehicle_capacity" : 25,
+            "re_optimization" : False,
+            "emissions_KM" : [.1, .3],
+            "n_scenarios" : 500
+        },
+    ):
+    """Compares different methods implemented so far between them on the 
+    same environment.
+
+    Parameters
+    ----------
+    episodes : int, optional
+        The number of episodes to run for each agent, by default 200
+    """
+    
+    with open(f'results/env_configs.pkl', 'wb') as f:
+        pickle.dump(env_configs, f)
+        
+    agents = {
+        "offline" : dict(
+            agentClass = OfflineAgent,
+            env_configs = env_configs,
+            episodes = episodes,
+            agent_configs = {"n_workers": 7},
+            save_results = True,
+            title = "res_offline",
+        ),
+    }
+    
+    for agent_name in agents:
+        run_agent(**agents[agent_name])
+        print(agent_name, "done")
+
+
 if __name__ == "__main__":
     ###############################################
     #### Main experiments
@@ -484,38 +524,171 @@ if __name__ == "__main__":
     ###############################################
     #### Static experiments
     ###############################################
+    
+    #### Real experiments
+    
     # game_experiments(
-    #     5,
+    #     100,
     #     EXP3,
     #     T = 10_000,
-    #     K = 100,
-    #     Q = 50, 
-    #     # real_data=True, 
-    #     VA = True,
+    #     real_data=True,
     #     log = False,
     #     env_configs = {
+    #         "horizon" : 100,
+    #         "Q" : 50,
     #         "vehicle_capacity" : 25,
+    #         "vehicle_assignment" : True,
     #         "re_optimization" : False,
     #         "emissions_KM" : [.1, .1, .3, .3],
     #     },
-        
     # )
+    
+    # game_experiments(
+    #     100,
+    #     LRI,
+    #     T = 10_000,
+    #     real_data=True,
+    #     log = False,
+    #     env_configs = {
+    #         "horizon" : 100,
+    #         "Q" : 50,
+    #         "vehicle_capacity" : 25,
+    #         "vehicle_assignment" : True,
+    #         "re_optimization" : False,
+    #         "emissions_KM" : [.1, .1, .3, .3],
+    #     },
+    # )
+        
+    # OA_experiments(
+    #     100,
+    #     # real_data=True, 
+    #     T = 50_000,
+    #     T_init = 10_000,
+    #     lamb = 0.999,
+    #     env_configs = {
+    #         "horizon" : 100,
+    #         "Q" : 50,
+    #         "vehicle_capacity" : 25,
+    #         "re_optimization" : False,
+    #         "emissions_KM" : [.1, .1, .3, .3],
+    #         "test"  : True,
+    #     },
+    # )
+    # run_SA_VA(
+    #     100,
+    #     # real_data=True, 
+    #     T = 75_000,
+    #     T_init = 10_000,
+    #     lamb = 0.999,
+    #     env_configs = {
+    #         "horizon" : 100,
+    #         "Q" : 50,
+    #         "vehicle_assignment" : True,
+    #         "vehicle_capacity" : 25,
+    #         "re_optimization" : False,
+    #         "emissions_KM" : [.1, .1, .3, .3],
+    #         "test"  : True,
+    #     },
+    # )
+    # run_offline(
+    #     100,
+    #     env_configs = {
+    #         "horizon" : 100,
+    #         "Q" : 50,
+    #         "DoD" : 1.,
+    #         "vehicle_capacity" : 25,
+    #         "emissions_KM" : [.1, .1, .3, .3],
+    #         "test"  : True,
+    #     },
+    # )
+    
+    
+    #### Uniform experiments
+    
+    game_experiments(
+        100,
+        EXP3,
+        T = 10_000,
+        # real_data=True,
+        log = False,
+        env_configs = {
+            "horizon" : 100,
+            "Q" : 50,
+            "vehicle_capacity" : 25,
+            # "uniform_scenario" : True,
+            "vehicle_assignment" : True,
+            "re_optimization" : False,
+            "emissions_KM" : [.1, .1, .3, .3],
+        },
+    )
+    
+    game_experiments(
+        100,
+        LRI,
+        T = 10_000,
+        # real_data=True,
+        log = False,
+        env_configs = {
+            "horizon" : 100,
+            "Q" : 50,
+            "vehicle_capacity" : 25,
+            "vehicle_assignment" : True,
+            # "uniform_scenario" : True,
+            "re_optimization" : False,
+            "emissions_KM" : [.1, .1, .3, .3],
+        },
+    )
+        
     OA_experiments(
         100,
         # real_data=True, 
         T = 50_000,
         T_init = 10_000,
+        random_data=True,
         lamb = 0.999,
         env_configs = {
             "horizon" : 100,
             "Q" : 50,
             "vehicle_capacity" : 25,
+            # "uniform_scenario" : True,
             "re_optimization" : False,
             "emissions_KM" : [.1, .1, .3, .3],
             "test"  : True,
         },
-        
     )
+    run_SA_VA(
+        100,
+        # real_data=True, 
+        random_data=True,
+        T = 75_000,
+        T_init = 10_000,
+        lamb = 0.999,
+        env_configs = {
+            "horizon" : 100,
+            "Q" : 50,
+            "vehicle_assignment" : True,
+            "vehicle_capacity" : 25,
+            # "uniform_scenario" : True,
+            "re_optimization" : False,
+            "emissions_KM" : [.1, .1, .3, .3],
+            "test"  : True,
+        },
+    )
+    run_offline(
+        100,
+        env_configs = {
+            "horizon" : 100,
+            "Q" : 50,
+            "DoD" : 1.,
+            "uniform_scenario" : True,
+            "vehicle_capacity" : 25,
+            "emissions_KM" : [.1, .1, .3, .3],
+            "test"  : True,
+        },
+    )
+    
+    #### CLuster experiments
+    
     ###############################################
     #### Other experiments
     ###############################################

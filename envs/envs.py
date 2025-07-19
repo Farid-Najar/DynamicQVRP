@@ -1186,6 +1186,7 @@ def _step(
     max_capacity,
     omission_cost,
     emissions_KM,
+    Q
     ):
     info = dict()
     # routes = []#List()
@@ -1214,7 +1215,9 @@ def _step(
                 
                 quantity += quantities[alpha[j]-1]
                 
-                if quantity > max_capacity:
+                if quantity > max_capacity or (
+                    emissions.sum() + distance_matrix[routes[i-1][k-1], alpha[j]]*emissions_KM[i-1]
+                    > Q):
                     # routes[0] += alpha
                     info['LCF'][i-1] += np.sum(quantities[np.array(alpha)-1])*omission_cost
                     a[np.array(alpha) - 1] = 0
@@ -1468,6 +1471,7 @@ class StaticQVRPEnv(gym.Env):
                 self._env.max_capacity,
                 self._env.omission_cost,
                 self._env.emissions_KM,
+                self._env.Q,
                 )
             
             self.assignment = a
@@ -1504,6 +1508,8 @@ class StaticQVRPEnv(gym.Env):
             info['costs per vehicle'] = costs
             info['emissions per vehicle'] = emissions
             info['omitted'] = np.where(a==0)[0]
+            info['oq'] = np.sum(self._env.quantities[info['omitted']])
+            
             info['excess_emission'] = total_emission - self._env.Q - 1e-5
             self.omitted = info['omitted']
             self.obs = obs
@@ -1743,6 +1749,7 @@ class GameEnv(gym.Env):
             self.omission_cost,
             self.costs_KM,
             self.emissions_KM,
+            self.Q,
         )
         info = dict(info) # It changes ir from the numba dict type
         # info['LCF'] = np.concatenate([[0], costs + emissions*self.CO2_penalty])

@@ -4,7 +4,7 @@
 # print(str(path)+'/ppo')
 
 from methods.static.shortcut import multi_types
-from methods.static.SA_baseline import recuit, recuit_tsp
+from methods.static.SA_baseline import recuit, recuit_VA
 from methods.static.greedy_baseline import baseline
 import multiprocess as mp
 import numpy as np
@@ -179,7 +179,7 @@ def run_SA_VA(
     real = "real_" if real_data else "cluster_" if cluster_data else ""
     retain_comment = f"_retain{retain}" if retain is not None else ""
     
-    env = StaticQVRPEnv(obs_mode='action', **env_configs)
+    env = StaticQVRPEnv(obs_mode='game', **env_configs)
 
     np.random.seed(1917)
 
@@ -187,19 +187,19 @@ def run_SA_VA(
         t0 = time()
         res = dict()
 
-        env.reset()
-        action_SA, *_ = recuit_tsp(deepcopy(env), T_init, T_limit, lamb, H=T)
+        action_SA, *_ = recuit_VA(deepcopy(env), T_init, T_limit, lamb, H=T)
         # res = recuit_multiple(game, T_init = T_init, T_limit = T_limit, lamb = lamb, log=log, H=T)
         # a = np.where(action_SA == 0)[0]
         
-        env.reset()
         *_, d, _, info = env.step(action_SA)
-        nrmlz = np.sum(env.quantities)*env.omission_cost
-        r_SA = float(d)*(nrmlz + info['r'])/nrmlz
+        # nrmlz = np.sum(env.quantities)*env.omission_cost
+        # r_SA = float(d)*(nrmlz + info['r'])/nrmlz
+        r_SA = info['r']
         res['time'] = time() - t0
         res['sol'] = action_SA
         res['a'] = info['a']
         res['r'] = r_SA
+        res['oq'] = info['oq']
         q.put((i, res))
         print(f'SA {i} done')
         return
@@ -207,6 +207,9 @@ def run_SA_VA(
     q_SA = mp.Manager().Queue()
     
     res_SA = dict()
+    # env.reset(0)
+    # process(env, 0, q_SA)
+    # print('test passed')
     
 
     pool =  mp.Pool(processes=n_threads)
@@ -226,7 +229,7 @@ def run_SA_VA(
     }
     
     # with open(f"res_compare_baseline_greedy_SA_{strategy.__name__}_Q{Q}_K{K}_n{n_simulation}_T{T}.pkl","wb") as f:
-    with open(f"{real}res_SA_TSP_K{env._env.H}_n{n_simulation}{retain_comment}.pkl","wb") as f:
+    with open(f"results/static/{real}res_SA_VA_K{env._env.H}_n{n_simulation}{retain_comment}.pkl","wb") as f:
         pickle.dump(res, f)
             
             

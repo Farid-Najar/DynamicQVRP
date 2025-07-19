@@ -51,6 +51,7 @@ def EXP3(w, pi, a, r, mu, N, t, gamma = 0.1, *args, **kwargs):
     r = 1 + r/2
     if not(r>=0 and r<=1):
         r = np.clip(r, 0, 1)
+        
     # assert r>=0 and r<=1, f'r  : {r}'
     K = len(pi)
     x = r/pi[a]
@@ -104,8 +105,10 @@ def GameLearning(env : StaticQVRPEnv, strategy = LRI, T = 1_000, log = True):
     res = dict()
     # res['actions_hist'] = [best]
     res['rewards'] = np.zeros(T+1)
+    res['oqs'] = np.sum(env._env.quantities)*np.ones(T+1)
     nrmlz = np.sum(env._env.quantities)*env._env.omission_cost
     res['rewards'][0] = float(done)*(nrmlz + info['r'])/nrmlz
+    res['oqs'][0] = info['oq']
     
     res['infos'] = []
     
@@ -125,12 +128,14 @@ def GameLearning(env : StaticQVRPEnv, strategy = LRI, T = 1_000, log = True):
             players[i].update(actions[i], -loss[i])
             
         res['rewards'][t+1] = float(done)*(nrmlz + info['r'])/nrmlz
+        res['oqs'][t+1] = info['oq']
         
-        if res['rewards'][t+1]> best_reward:
-            best_reward = res['rewards'][t+1]
-            best = actions.copy()
-            res['infos'].append(info)
-        if t%20 == 0 and log:
+        if res['oqs'][t+1] == res['oqs'].min():
+            if res['rewards'][t+1]> best_reward:
+                best_reward = res['rewards'][t+1]
+                best = actions.copy()
+                res['infos'].append(info)
+        if t%500 == 0 and log:
             print(20*'-')
             print(t)
             print('excess_emission : ', info['excess_emission'])
@@ -142,8 +147,8 @@ def GameLearning(env : StaticQVRPEnv, strategy = LRI, T = 1_000, log = True):
     return res
             
             
-def game_experiments(n_simulation = 1, strategy = LRI, T = 500, Q = 30, K=50, log = True, VA = False, 
-                        comment = '', n_threads=5, real_data = False, cluster_data = False, env_configs = dict()):
+def game_experiments(n_simulation = 1, strategy = LRI, T = 500, log = True, 
+                        comment = '', n_threads=7, real_data = False, cluster_data = False, env_configs = dict()):
 
     real = "real_" if real_data else "cluster_" if cluster_data else ""
 
@@ -163,9 +168,6 @@ def game_experiments(n_simulation = 1, strategy = LRI, T = 500, Q = 30, K=50, lo
     env = StaticQVRPEnv(
         obs_mode='game',
         # DQVRP Env kwargs
-        horizon = K,
-        Q = Q,
-        vehicle_assignment = VA,
         test = True,
         cluster_scenario = cluster_data,
         uniform_scenario = not(real_data or cluster_data),
@@ -189,7 +191,7 @@ def game_experiments(n_simulation = 1, strategy = LRI, T = 500, Q = 30, K=50, lo
         i, d = q.get()
         res[i] = d
     
-    with open(f"results/static/{real}res_GameLearning_{strategy.__name__}_K{K}_n{n_simulation}{comment}.pkl","wb") as f:
+    with open(f"results/static/{real}res_GameLearning_{strategy.__name__}_K{env._env.H}_n{n_simulation}{comment}.pkl","wb") as f:
         pickle.dump(res, f)
     
     
