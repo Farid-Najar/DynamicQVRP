@@ -7,7 +7,7 @@ from envs import DynamicQVRPEnv
 
 from methods.static import OA_experiments, run_SA_VA
 
-from methods.static import game_experiments, EXP3, LRI
+from methods.static import game_experiments, EXP3, LRI, run_RL
 
 import os
 
@@ -410,8 +410,8 @@ def run_offline(
         The number of episodes to run for each agent, by default 200
     """
     
-    with open(f'results/static/env_configs.pkl', 'wb') as f:
-        pickle.dump(env_configs, f)
+    # with open(f'results/static/env_configs.pkl', 'wb') as f:
+    #     pickle.dump(env_configs, f)
         
     agents = {
         "offline" : dict(
@@ -425,7 +425,7 @@ def run_offline(
     }
     
     for agent_name in agents:
-        run_agent(**agents[agent_name])
+        run_agent(**agents[agent_name], path = f'results/static/{comment}')
         print(agent_name, "done")
 
 
@@ -601,7 +601,21 @@ if __name__ == "__main__":
     #         "emissions_KM" : [.1, .1, .3, .3],
     #         "test"  : True,
     #     },
+    #     comment = "real_",
     # )
+    
+    run_RL(
+        env_configs = {
+            "horizon" : 100,
+            "Q" : 50,
+            "vehicle_capacity" : 25,
+            "re_optimization" : False,
+            "emissions_KM" : [.1, .1, .3, .3],
+            "test"  : True,
+            "obs_mode" : "multi",
+            "change_instance" : False,
+        },
+    )
     
     #### CLuster experiments
     
@@ -685,6 +699,7 @@ if __name__ == "__main__":
     #         "emissions_KM" : [.1, .3],
     #         "test"  : True,
     #     },
+    #     comment = "cluster_",
     # )
     
     #### Uniform experiments
@@ -758,18 +773,18 @@ if __name__ == "__main__":
     #         "test"  : True,
     #     },
     # )
-    run_offline(
-        100,
-        env_configs = {
-            "horizon" : 100,
-            "Q" : 50,
-            "DoD" : 1.,
-            "uniform_scenario" : True,
-            "vehicle_capacity" : 25,
-            "emissions_KM" : [.1, .1, .3, .3],
-            "test"  : True,
-        },
-    )
+    # run_offline(
+    #     100,
+    #     env_configs = {
+    #         "horizon" : 100,
+    #         "Q" : 50,
+    #         "DoD" : 1.,
+    #         "uniform_scenario" : True,
+    #         "vehicle_capacity" : 25,
+    #         "emissions_KM" : [.1, .1, .3, .3],
+    #         "test"  : True,
+    #     },
+    # )
     
     
     ###############################################

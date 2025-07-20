@@ -22,3 +22,4 @@ results/others
 !dqn_VRP4_DoD100_Q50_rs_VA_woGeo_test.npy
 !dqn_VRP4_DoD100_Q50_rs_VA_woH_test.npy
 results_others.ipynb
+methods/static/MaskablePPO.zip
