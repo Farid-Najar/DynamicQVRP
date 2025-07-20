@@ -633,11 +633,11 @@ def generate_neighbor(current_solution):
 @njit
 def simulated_annealing_vrp(D, demands, capacity, initial_solution, 
                             max_vehicles=5, initial_temp=10_000.0, cooling_rate=0.995,
-                           max_iter=10_000, seed=1917, depot = 0,
+                           max_iter=10_000, depot = 0,
                            Q = 100):
     """Numba-optimized SA for multi-vehicle VRP"""
     # numba.seed(seed)
-    np.random.seed(seed)
+    # np.random.seed(seed)
     # Problem setup
     # customers = np.arange(1, n + 1)
     dist_mat = D#compute_distance_matrix(coords)
@@ -707,11 +707,10 @@ def simulated_annealing_vrp(D, demands, capacity, initial_solution,
 # @njit
 def simulated_annealing_tsp(D, demands, capacity, initial_solution, 
                             initial_temp=100.0, cooling_rate=0.99,
-                           max_iter=500, seed=1917, depot = 0,
+                           max_iter=500, depot = 0,
                            Q = 100):
     """Numba-optimized SA for multi-vehicle VRP"""
     # numba.seed(seed)
-    np.random.seed(seed)
     # Problem setup
     # customers = np.arange(1, n + 1)
     dist_mat = D#compute_distance_matrix(coords)

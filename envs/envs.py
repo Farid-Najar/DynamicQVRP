@@ -674,7 +674,7 @@ class DynamicQVRPEnv(gym.Env):
         
         return obs
     
-    def reset(self, instance_id = -1, *args, **kwargs):
+    def reset(self, instance_id = -1, seed = None, *args, **kwargs):
         """Reset the environment to a new state.
     
         Initializes a new scenario instance and returns the initial observation
@@ -697,6 +697,8 @@ class DynamicQVRPEnv(gym.Env):
         """
         
         self._init_instance(instance_id)
+        if seed is not None:
+            np.random.seed(seed)
         
         obs = self._get_obs()
         
@@ -1376,7 +1378,7 @@ class StaticQVRPEnv(gym.Env):
         
         elif self.obs_mode == 'elimination_gain':
             self.observation[:-1] = get_elimination_gain(
-                self.costs_matrix, self.initial_routes, self.observation_space.shape, True
+                self._env.cost_matrix, self.initial_routes, self._env.H, True
             )
             self.observation[-1] = info['excess_emission']/self._env.Q
             
@@ -1392,7 +1394,7 @@ class StaticQVRPEnv(gym.Env):
         
         if self.obs_mode == 'elimination_gain':
             self.observation[:-1] = get_elimination_gain(
-                self._env.cost_matrix, routes, self.observation_space.shape, True
+                self._env.cost_matrix, routes, self._env.H, True
             )
             self.observation[-1] = info['excess_emission']/(5*self._env.Q)
             
@@ -1441,8 +1443,8 @@ class StaticQVRPEnv(gym.Env):
 
     
     def reset(self, instance_id = -1, *args, **kwargs):
+        Q = self._env.Q
         if not self.reseted or self.change_instance:
-            Q = self._env.Q
             # Calculate initial routes
             self._env.Q = 1e10
             self._env.reset(instance_id, *args, **kwargs)
@@ -1450,6 +1452,8 @@ class StaticQVRPEnv(gym.Env):
             self.initial_assignment = self.assignment.copy()
             self.initial_info = deepcopy(self.info)
             self._env.Q = Q
+            
+            self.reseted = True
         
         self.initial_info['excess_emission'] = np.sum(self.initial_info["emissions per vehicle"])-Q
         a = self.initial_assignment.astype(np.bool).astype(np.int_)
@@ -1677,7 +1681,7 @@ class RemoveActionEnv(gym.Env):
         elif self.rewards_mode == 'aq':
             if done:
                 total_q = np.sum(self._env._env.quantities)
-                r = 1.*(total_q - info['oq'])/total_q # service rate
+                r = 1.*(total_q - info['oq'])#/total_q # service rate
             else:
                 r = 0.
         

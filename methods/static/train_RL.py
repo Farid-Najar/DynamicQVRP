@@ -56,7 +56,7 @@ def make_env(env, rank: int, seed: int = 0):
         env2 = deepcopy(env)
         env2.reset(instance_id = i, seed=seed + rank)
         return env2
-    set_random_seed(seed + rank)
+    set_random_seed(seed)
     return _init
 
 def train_RL(
@@ -278,6 +278,7 @@ def run_RL(
     steps = 150000,
     cluster_data = False,
     random_data = False,
+    rewards_mode = 'aq'
     ):
     
     real_data = False
@@ -292,17 +293,29 @@ def run_RL(
     
     
     env = StaticQVRPEnv(**env_configs)
-                
-    policy = 'MultiInputPolicy'
-    p_kwargs = dict(
-        # normalize
-        features_extractor_class=Multi,
-        # features_extractor_kwargs=dict(features_dim=128),
-    )
+    
+    if env_configs['obs_mode'] == 'multi':                
+        policy = 'MultiInputPolicy'
+        p_kwargs = dict(
+            # normalize
+            features_extractor_class=Multi,
+            # features_extractor_kwargs=dict(features_dim=128),
+        )
+    else:
+        policy = 'MlpPolicy'
+        p_kwargs = dict(
+            activation_fn=nn.ReLU,
+            share_features_extractor=True,
+            net_arch=[1024, 1024, 1024, 256]#dict(
+            #    pi=[2048, 2048, 1024, 256],#, 128], 
+            #    vf=[2048, 2048, 1024, 256])#, 128])
+        )
+    
     comment = ''
-    comment += f'_instanceID{str(i)}'
+    if not env.change_instance:
+        comment += f'_instanceID{str(i)}'
     train_algo = train_PPO_mask
-    save_dir = str(path)+f'/ppo_mask/{real}K{env._env.H}_rewardMode(aq)_obsMode(multi)_steps({steps})'+comment
+    save_dir = str(path)+f'/ppo_mask/{real}K{env._env.H}_rewardMode({rewards_mode})_obsMode({env_configs['obs_mode']})_steps({steps})'+comment
     os.makedirs(save_dir, exist_ok=True)
     
     
@@ -312,14 +325,14 @@ def run_RL(
     train_algo(
         env_kwargs = dict(
             env = env,
-            rewards_mode = 'aq', # possible values ['heuristic', 'terminal', 'normalized_terminal', 'aq']
+            rewards_mode = rewards_mode, # possible values ['heuristic', 'terminal', 'normalized_terminal', 'aq']
             action_mode = "destinations",
         ),
         instance_id = i,
         policy_kwargs = p_kwargs,
         policy=policy,
         budget=steps, n_eval=10, save = True, save_path=save_dir,
-        eval_freq = 1000, progress_bar =True, n_steps = 128,
+        eval_freq = 1000, progress_bar =True, n_steps = 256,
         gamma = .99, algo_file = None,
     )
         

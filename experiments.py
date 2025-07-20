@@ -604,7 +604,44 @@ if __name__ == "__main__":
     #     comment = "real_",
     # )
     
+    # run_RL(
+    #     steps = 500_000,
+    #     cluster_data=False,
+    #     random_data=False,
+    #     env_configs = {
+    #         "horizon" : 100,
+    #         "Q" : 50,
+    #         "vehicle_capacity" : 25,
+    #         "re_optimization" : False,
+    #         "emissions_KM" : [.1, .1, .3, .3],
+    #         "test"  : True,
+    #         "obs_mode" : "multi",
+    #         "change_instance" : False,
+    #     },
+    #     rewards_mode= 'aq', #'normalized_terminal', 
+    # )
+    
+    # run_RL(
+    #     steps = 500_000,
+    #     cluster_data=False,
+    #     random_data=False,
+    #     env_configs = {
+    #         "horizon" : 100,
+    #         "Q" : 50,
+    #         "vehicle_capacity" : 25,
+    #         "re_optimization" : False,
+    #         "emissions_KM" : [.1, .1, .3, .3],
+    #         "test"  : True,
+    #         "obs_mode" : "assignment",
+    #         "change_instance" : False,
+    #     },
+    #     rewards_mode= 'aq', #'normalized_terminal', 
+    # )
+    
     run_RL(
+        steps = 500_000,
+        cluster_data=False,
+        random_data=False,
         env_configs = {
             "horizon" : 100,
             "Q" : 50,
@@ -612,10 +649,47 @@ if __name__ == "__main__":
             "re_optimization" : False,
             "emissions_KM" : [.1, .1, .3, .3],
             "test"  : True,
-            "obs_mode" : "multi",
+            "obs_mode" : "elimination_gain",
             "change_instance" : False,
         },
+        rewards_mode= 'aq', #'normalized_terminal', 
     )
+    
+    run_RL(
+        steps = 500_000,
+        cluster_data=False,
+        random_data=False,
+        env_configs = {
+            "horizon" : 100,
+            "Q" : 50,
+            "vehicle_capacity" : 25,
+            "re_optimization" : False,
+            "emissions_KM" : [.1, .1, .3, .3],
+            "test"  : True,
+            "obs_mode" : "action",
+            "change_instance" : False,
+        },
+        rewards_mode= 'aq', #'normalized_terminal', 
+    )
+    
+    
+    
+    # run_RL(
+    #     steps = 1_000_000,
+    #     cluster_data=False,
+    #     random_data=False,
+    #     env_configs = {
+    #         "horizon" : 100,
+    #         "Q" : 50,
+    #         "vehicle_capacity" : 25,
+    #         "re_optimization" : False,
+    #         "emissions_KM" : [.1, .1, .3, .3],
+    #         "test"  : True,
+    #         "obs_mode" : "multi",
+    #         "change_instance" : True,
+    #     },
+    #     rewards_mode= 'aq', #'normalized_terminal', 
+    # )
     
     #### CLuster experiments
     

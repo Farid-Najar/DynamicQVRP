@@ -173,7 +173,7 @@ def _run_sa_tsp(env, action, info):
     
     route, emission, oq, _ = simulated_annealing_tsp(D, demands, env.max_capacity, initial_solution, 
                     initial_temp=100.0, cooling_rate=0.995,
-                   max_iter=500, seed=1917, depot = env.hub,
+                   max_iter=500, depot = env.hub,
                    Q = env.Q-emissions.sum())
     emissions[v] = emission[0]
     total_emission = np.sum(emissions)
