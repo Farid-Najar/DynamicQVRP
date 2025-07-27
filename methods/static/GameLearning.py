@@ -196,47 +196,5 @@ def game_experiments(n_simulation = 1, strategy = LRI, T = 500, log = True,
     
     
 if __name__ == '__main__' :
-    # K = 50
-    # make_different_sims(K = K, strategy = LRI, n_simulation=100, T=10_000, log=False, VA=True, comment = '_tsp')
-    # make_different_sims(K = K, strategy = LRI, n_simulation=100, T=10_000, log=False, VA=False, comment = '_vrp')
-    # make_different_sims(K = K, strategy = EXP3, n_simulation=100, T=10_000, log=False, VA=True, comment = '_tsp')
-    # make_different_sims(K = K, strategy = EXP3, n_simulation=100, T=10_000, log=False, VA=False, comment = '_vrp')
-    
-    # K = 100
-    # make_different_sims(K = K, strategy = LRI, n_simulation=100, T=15_000, log=False, VA=True, comment = '_tsp')
-    # make_different_sims(K = K, strategy = LRI, n_simulation=100, T=15_000, log=False, VA=False, comment = '_vrp')
-    # make_different_sims(K = K, strategy = EXP3, n_simulation=100, T=15_000, log=False, VA=True, comment = '_tsp')
-    # make_different_sims(K = K, strategy = EXP3, n_simulation=100, T=15_000, log=False, VA=False, comment = '_vrp')
-    
     K = 20
-    # make_different_sims(K = K, strategy = LRI, n_simulation=100, T=10_000, log=False, VA=True, comment = '_tsp')
-    # # make_different_sims(K = K, strategy = LRI, n_simulation=100, T=10_000, log=False, VA=False, comment = '_vrp')
     game_experiments(K = K, strategy = EXP3, n_simulation=100, T=10_000, log=False, VA=True, comment = '_tsp')
-    # K = 30
-    # make_different_sims(K = K, strategy = EXP3, n_simulation=100, T=10_000, log=False, VA=True, comment = '_tsp')
-    # make_different_sims(K = K, strategy = EXP3, n_simulation=100, T=10_000, log=False, VA=False, comment = '_vrp')
-    # game = AssignmentEnv(obs_mode='game')
-    # game.reset()
-    # with open(f'TransportersDilemma/RL/game_K{K}_retain1.0.pkl', 'rb') as f:
-    #     g = pickle.load(f)
-    # routes = np.load(f'TransportersDilemma/RL/routes_K{K}_retain1.0.npy')
-    # dests = np.load(f'TransportersDilemma/RL/destinations_K{K}_retain1.0.npy')
-    # qs = np.load(f'TransportersDilemma/RL/quantities_K{K}_retain1.0.npy')
-    # env = GameEnv(AssignmentEnv(game=deepcopy(g), saved_routes=routes, saved_dests=dests, saved_q=qs, obs_mode='game', instance_id=37, change_instance=False))
-    
-    # # with open(f'TransportersDilemma/RL/game_K{K}.pkl', 'rb') as f:
-    # #     g = pickle.load(f)
-    # # routes = np.load(f'TransportersDilemma/RL/routes_K{K}.npy')
-    # # dests = np.load(f'TransportersDilemma/RL/destinations_K{K}.npy')
-    # # env = GameEnv(AssignmentEnv(game=deepcopy(g), saved_routes=routes, saved_dests=dests, obs_mode='game', instance_id=1, change_instance=False))
-    # _, info = env.reset()
-    # # env.render()
-    # print(info)
-    # action = np.array([0, 1, 0, 0 ,0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3])
-    # # action = np.zeros(K, dtype=int)
-    # # print(np.sum(env._env.quantities[np.where(action==0)[0]]))
-    # *_, info = env.step(action)
-    # nrmlz = env.H*env.omission_cost
-    # print(info)
-    # print((nrmlz + info['r'])/nrmlz)
-    # env.render()

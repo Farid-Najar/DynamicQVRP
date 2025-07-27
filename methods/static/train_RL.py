@@ -61,7 +61,8 @@ def make_env(env, rank: int, seed: int = 0):
 
 def train_RL(
     vec_env,
-    algo = PPO,
+    test_vec_env = None,
+    algo = MaskablePPO,
     policy = "MlpPolicy",
     policy_kwargs = {},
     callbackClass=EvalCallback,
@@ -74,7 +75,7 @@ def train_RL(
     progress_bar =True,
     n_steps = 128,
     gamma = 0.99,
-):
+    ):
     
     # Instantiate the agent
     if algo_file is not None:
@@ -93,6 +94,7 @@ def train_RL(
             policy_kwargs=policy_kwargs,
             n_steps=n_steps,
             gamma=gamma,
+            ent_coef=.01,
             batch_size=n_steps*os.cpu_count(),
             # n_epochs=50,
             # learning_rate=5e-5,
@@ -101,13 +103,15 @@ def train_RL(
         )
     logging.info(f"the model parameters :\n {model.__dict__}")
     # Train the agent and display a progress bar
-    if issubclass(algo, PPO):
-        mean_reward, std_reward = evaluate_policy(model, model.get_env(), n_eval_episodes=n_eval)
-        logging.info(f'Before training :\n mean, std = {mean_reward}, {std_reward}')
-    else:
-        mean_reward, std_reward = evaluate_maskable(model, model.get_env(), n_eval_episodes=n_eval)
-        logging.info(f'Before training :\n mean, std = {mean_reward}, {std_reward}')
+    # if issubclass(algo, PPO):
+    #     mean_reward, std_reward = evaluate_policy(model, model.get_env(), n_eval_episodes=n_eval)
+    #     logging.info(f'Before training :\n mean, std = {mean_reward}, {std_reward}')
+    # else:
+    #     mean_reward, std_reward = evaluate_maskable(model, model.get_env(), n_eval_episodes=n_eval)
+    #     logging.info(f'Before training :\n mean, std = {mean_reward}, {std_reward}')
     
+    if test_vec_env is None:
+        test_vec_env = deepcopy(vec_env)
     # checkpoint_callback = CheckpointCallback(
     # #   save_freq=1000,
     #   save_path="./logs/",
@@ -116,7 +120,7 @@ def train_RL(
     #   save_vecnormalize=True,
     # )
     
-    eval_callback = callbackClass(vec_env, best_model_save_path=algo_dir,
+    eval_callback = callbackClass(test_vec_env, best_model_save_path=algo_dir,
                              log_path=algo_dir, eval_freq=eval_freq,
                              deterministic=True, verbose=0)
     
@@ -127,18 +131,17 @@ def train_RL(
         callback=eval_callback,
         # tb_log_name="ppo",
     )
-    # Save the agent
-    if save:
-        model.save(f'{str(path)}/{algo.__name__}')
+    # # Save the agent
+    # if save:
+    #     model.save(f'{str(path)}/{algo.__name__}')
     # del model  # delete trained model to demonstrate loading
     return model
 
 ############################################################################
 
 def train_PPO_mask(
-    env_kwargs = dict(
-        rewards_mode = 'terminal', # possible values ['heuristic', 'terminal']
-    ),
+    env_kwargs ,
+    test_env_kwargs,
     policy_kwargs = dict(
         activation_fn=nn.ReLU,
         share_features_extractor=True,
@@ -159,7 +162,7 @@ def train_PPO_mask(
     instance_id = 0,
     # normalize = True,
     **kwargs
-):
+    ):
     if save_path is None:
         save_path = str(path)+'/ppo_mask'
     logging.basicConfig(
@@ -185,16 +188,25 @@ def train_PPO_mask(
     # else:
     env = RemoveActionEnv(**env_kwargs)
     env.reset(instance_id)
+    
+    # test_env_kwargs = deepcopy(env_kwargs)
+    test_env = RemoveActionEnv(**test_env_kwargs)
+    test_env.reset(instance_id)
+    
     # check_env(env)
     
     num_cpu = os.cpu_count()
     logging.info(f'Number of CPUs = {num_cpu}')
     vec_env = SubprocVecEnv([make_env(env, instance_id, seed = i) for i in range(num_cpu)])
     vec_env = VecMonitor(vec_env, save_path+"/")
+    
+    test_vec_env = SubprocVecEnv([make_env(test_env, instance_id, seed = i) for i in range(num_cpu)])
+    test_vec_env = VecMonitor(test_vec_env, save_path+"/")
     # log(type(env))
     
     model = train_RL(
         vec_env,
+        test_vec_env = test_vec_env,
         algo=MaskablePPO,
         policy=policy,
         policy_kwargs=policy_kwargs,
@@ -225,7 +237,7 @@ class Multi(BaseFeaturesExtractor):
 
     def __init__(self, 
                  observation_space: spaces.Box, 
-                 hidden_layers : list = [1024, 1024, 1024, 256],
+                 hidden_layers : list = [1024, 1024, 1024],
                 #  features_dim: int = 256
                  ):
         super().__init__(observation_space, hidden_layers[-1])
@@ -278,7 +290,9 @@ def run_RL(
     steps = 150000,
     cluster_data = False,
     random_data = False,
-    rewards_mode = 'aq'
+    rewards_mode = 'aq',
+    action_mode = 'destinations',
+    comment = '',
     ):
     
     real_data = False
@@ -291,10 +305,14 @@ def run_RL(
         
     real = "real_" if real_data else "cluster_" if cluster_data else ""
     
-    
+    env_configs["test"] = False
     env = StaticQVRPEnv(**env_configs)
     
-    if env_configs['obs_mode'] == 'multi':                
+    # test_env_kwargs = deepcopy(env_kwargs)
+    env_configs["test"] = True
+    test_env = StaticQVRPEnv(**env_configs)
+    
+    if env_configs['obs_mode'] == 'multi' or env_configs['obs_mode'] == 'multi_q':                
         policy = 'MultiInputPolicy'
         p_kwargs = dict(
             # normalize
@@ -306,16 +324,16 @@ def run_RL(
         p_kwargs = dict(
             activation_fn=nn.ReLU,
             share_features_extractor=True,
-            net_arch=[1024, 1024, 1024, 256]#dict(
+            net_arch=[1024, 1024, 1024]#dict(
             #    pi=[2048, 2048, 1024, 256],#, 128], 
             #    vf=[2048, 2048, 1024, 256])#, 128])
         )
     
-    comment = ''
-    if not env.change_instance:
-        comment += f'_instanceID{str(i)}'
+    # comment = ''
+    # if not env.change_instance:
+    #     comment += f'_instanceID{str(i)}'
     train_algo = train_PPO_mask
-    save_dir = str(path)+f'/ppo_mask/{real}K{env._env.H}_rewardMode({rewards_mode})_obsMode({env_configs['obs_mode']})_steps({steps})'+comment
+    save_dir = str(path)+f'/ppo_mask/{real}K{env._env.H}_rewardMode({rewards_mode})_obsMode({env_configs['obs_mode']})_actionMode({action_mode})_steps({steps})'+comment
     os.makedirs(save_dir, exist_ok=True)
     
     
@@ -326,13 +344,18 @@ def run_RL(
         env_kwargs = dict(
             env = env,
             rewards_mode = rewards_mode, # possible values ['heuristic', 'terminal', 'normalized_terminal', 'aq']
-            action_mode = "destinations",
+            action_mode = action_mode,
+        ),
+        test_env_kwargs = dict(
+            env = test_env,
+            rewards_mode = rewards_mode, # possible values ['heuristic', 'terminal', 'normalized_terminal', 'aq']
+            action_mode = action_mode,
         ),
         instance_id = i,
         policy_kwargs = p_kwargs,
         policy=policy,
-        budget=steps, n_eval=10, save = True, save_path=save_dir,
-        eval_freq = 1000, progress_bar =True, n_steps = 256,
+        budget=steps, n_eval=100, save = True, save_path=save_dir,
+        eval_freq = 5000, progress_bar =True, n_steps = 128,
         gamma = .99, algo_file = None,
     )
         

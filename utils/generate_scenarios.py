@@ -8,7 +8,7 @@ def create_random_scenarios(
     save = True,
     p = None,
     comment = ''
-):
+    ):
     dests = np.zeros((n_scenarios, d), np.int64)
     p = p if p is not None else np.load("data/prob_dests.npy")
     p[hub] = 0
@@ -32,7 +32,7 @@ def create_noised_random_scenarios(
     hub = 0,
     save = True,
     p = None,
-):
+    ):
     dests = np.zeros((n_scenarios, d), np.int64)
     p = p if p is not None else np.load("data/prob_dests.npy")
     p += np.random.normal(0, noise_level, len(p))

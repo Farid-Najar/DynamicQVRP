@@ -267,7 +267,7 @@ class DynamicQVRPEnv(gym.Env):
                  vehicle_assignment = False,
                  costs_KM = None, # for the moment, it has no impact since the focus is on emissions
                  CO2_penalty = 10_000,
-                 n_scenarios = None,
+                 n_scenarios = 500,
                  hub = 0,
                  test = False,
                  allow_initial_omission = True,
@@ -401,7 +401,11 @@ class DynamicQVRPEnv(gym.Env):
                 qs = np.load(f'data/quantities_K{K}.npy')
             else:
                 qs = np.random.randint(1, vehicle_capacity//4, (len(self.all_dests), K))
-            # np.save(f'data/quantities_K{K}.npy', qs)
+                qs = np.ones(self.H, dtype=int)
+                C = self.max_capacity * (self.num_actions - 1) - self.H
+                c = (C*np.random.dirichlet(np.ones(self.H))).astype(int)
+                qs += c
+                # np.save(f'data/quantities_K{K}.npy', qs)
         else:
             qs = np.ones((len(self.all_dests), K))
             
@@ -860,7 +864,7 @@ class DynamicQVRPEnv(gym.Env):
         # env.action_mask[:self.t+H] = True
         return SA_routing2(env, offline_mode=True, **SA_configs)
     
-    def offline_solution(self, *args, **kwargs):
+    def offline_solution(self, assignment = None, *args, **kwargs):
         """Compute an offline solution for the environment.
     
         Creates a copy of the current environment with all customer requests
@@ -879,10 +883,13 @@ class DynamicQVRPEnv(gym.Env):
         """
     
         env = deepcopy(self)
-        if len(self.cost_matrix) > 1:
-            env.action_mask[:] = True
+        if assignment is None:
+            if len(self.cost_matrix) > 1:
+                env.action_mask[:] = True
+            else:
+                env.action_mask = env.is_O_allowed.copy()
         else:
-            env.action_mask = env.is_O_allowed.copy()
+            env.action_mask = assignment.astype(bool)
         env.T = 0
         return SA_routing2(env, offline_mode=True, *args, **kwargs)
         
@@ -1259,9 +1266,10 @@ def _step(
 
 class StaticQVRPEnv(gym.Env):
     def __init__(self, 
-                 obs_mode = 'multi', # possible values ['multi', 'multi_q', 'routes', 'action', 'elimination_gain', 'assignment_q', 'game']
+                 obs_mode = 'action', # possible values ['multi', 'multi_q', 'a+e', 'action', 'elimination_gain', 'assignment_q', 'game']
                  change_instance = True,
                  is_0_allowed = False,
+                 re_optimization_freq = -1,
                  **kwargs):
         self._env = DynamicQVRPEnv(
             DoD=1., # Static envs have DoD = 0 but we take 1 to avoid unnecessary route calculations
@@ -1285,7 +1293,7 @@ class StaticQVRPEnv(gym.Env):
                 "other" : self._env.H + (self._env.max_capacity + 2)*(self._env.num_actions-1) + 1
             }
             
-        elif obs_mode == 'assignment_q':
+        elif obs_mode == 'assignment_q' or obs_mode == 'a+e':
             self.obs_dim = 2*self._env.H +1
             
         elif obs_mode == 'action' or obs_mode == 'elimination_gain' or obs_mode == 'assignment' or obs_mode == 'game':
@@ -1299,6 +1307,8 @@ class StaticQVRPEnv(gym.Env):
         self.change_instance = change_instance
         self.reseted = False
         
+        self.re_optimization_freq = re_optimization_freq
+        
         # if obs_mode == 'action':
         #     self.observation_space = gym.spaces.MultiBinary(self._env.H)
         # elif obs_mode == 'assignment':
@@ -1306,14 +1316,12 @@ class StaticQVRPEnv(gym.Env):
         #         (self._env.num_actions)*np.ones(d, dtype=int)
         #     )
             
-        if obs_mode == 'multi':
+        if obs_mode == 'multi' or obs_mode == 'multi_q':
             d = self._env.H + 1
             self.observation_space = gym.spaces.Dict({
                 "costs" : gym.spaces.Box(0, 1, (1, d, d,), np.float64),
                 "other" : gym.spaces.Box(0, 1, (self.obs_dim["other"],), np.float64)
             })
-        elif obs_mode == 'cost_matrix':
-            self.observation_space = gym.spaces.Box(0, 1, (1, d, d,), np.float64)
         elif obs_mode == 'game':
             self.observation_space = gym.spaces.Box(0, 1e10, (self.obs_dim-1,), np.float64)
         else:
@@ -1365,22 +1373,29 @@ class StaticQVRPEnv(gym.Env):
             
         if self.obs_mode == 'action':
             self.observation[:-1] = a
-            self.observation[-1] = info['excess_emission']/self._env.Q
+            self.observation[-1] = info['excess_emission']/(5*self._env.Q)
             
         elif self.obs_mode == 'assignment':
             self.observation[:-1] = self.assignment
-            self.observation[-1] = info['excess_emission']/self._env.Q
+            self.observation[-1] = info['excess_emission']/(5*self._env.Q)
         
         elif self.obs_mode == 'assignment_q':
-            self.observation[:self._env.H] = self._env.quantities/self._env.max_capacity
-            self.observation[self._env.H:-1] = self.assignment
-            self.observation[-1] = info['excess_emission']/self._env.Q
+            self.observation[:self._env.H] = self.assignment
+            self.observation[self._env.H:-1] = self._env.quantities/self._env.max_capacity
+            self.observation[-1] = info['excess_emission']/(5*self._env.Q)
+            
+        elif self.obs_mode == 'a+e':
+            self.observation[:self._env.H] = self.assignment
+            self.observation[self._env.H:-1] = get_elimination_gain(
+                self._env.cost_matrix, self.initial_routes, self._env.H, False
+            )
+            self.observation[-1] = info['excess_emission']#/self._env.Q
         
         elif self.obs_mode == 'elimination_gain':
             self.observation[:-1] = get_elimination_gain(
-                self._env.cost_matrix, self.initial_routes, self._env.H, True
+                self._env.cost_matrix, self.initial_routes, self._env.H, False
             )
-            self.observation[-1] = info['excess_emission']/self._env.Q
+            self.observation[-1] = info['excess_emission']#/(5*self._env.Q)
             
         
         elif self.obs_mode == 'game':
@@ -1394,9 +1409,9 @@ class StaticQVRPEnv(gym.Env):
         
         if self.obs_mode == 'elimination_gain':
             self.observation[:-1] = get_elimination_gain(
-                self._env.cost_matrix, routes, self._env.H, True
+                self._env.cost_matrix, routes, self._env.H, False
             )
-            self.observation[-1] = info['excess_emission']/(5*self._env.Q)
+            self.observation[-1] = info['excess_emission']#/(5*self._env.Q)
             
             
         elif self.obs_mode == 'action':
@@ -1413,14 +1428,19 @@ class StaticQVRPEnv(gym.Env):
         
         elif self.obs_mode == 'assignment_q':
             if self._env.vehicle_assignment:
-                self.observation[self._env.H:-1] = action
+                self.observation[:self._env.H] = action
             else:
-                self.observation[self._env.H:-1] = self.assignment
-                self.observation[self._env.H:-1][~action] = 0
+                self.observation[:self._env.H] = self.assignment
+                self.observation[:self._env.H][~action] = 0
                 
             self.observation[-1] = info['excess_emission']/(5*self._env.Q)
             
-        
+        elif self.obs_mode == 'a+e':
+            self.observation[:self._env.H] = self.assignment
+            self.observation[self._env.H:-1] = get_elimination_gain(
+                self._env.cost_matrix, self.initial_routes, self._env.H, False
+            )
+            self.observation[-1] = info['excess_emission']#/self._env.Q
         
         elif self.obs_mode == 'multi_q':
             self.observation['other'][self._env.H:-1] = routes.reshape(-1)
@@ -1458,12 +1478,23 @@ class StaticQVRPEnv(gym.Env):
         self.initial_info['excess_emission'] = np.sum(self.initial_info["emissions per vehicle"])-Q
         a = self.initial_assignment.astype(np.bool).astype(np.int_)
         self._get_initial_obs(a, self.initial_info)
+        self.t = 0
         
         return self.observation, self.initial_info
     
-    def step(self, action):
+    def step(self, action, simulation = False):
+        if not simulation:
+            self.t += 1
         # action is an assignment
-        
+        if self.re_optimization_freq > 0 and self.t%self.re_optimization_freq == 0:
+            # Calculate initial routes
+            Q = self._env.Q
+            self._env.Q = 1e10
+            self.assignment, self.initial_routes, self.info = self._env.offline_solution(action)
+            self.initial_assignment = self.assignment.copy()
+            self.initial_info = deepcopy(self.info)
+            self._env.Q = Q
+            
         if self._env.vehicle_assignment:
             # r, done, self.info = _run(self._env, action)
             self.routes = np.zeros_like(self.initial_routes)
@@ -1600,9 +1631,16 @@ class RemoveActionEnv(gym.Env):
         self.rewards_mode = rewards_mode
         
         if action_mode == 'all_nodes':
-            self.action_mask = np.zeros(len(self._env._env.distance_matrix), dtype=bool)
+            self.action_mask = np.zeros(len(self._env._env.D), dtype=bool)
             self.action_space = gym.spaces.Discrete(len(self.action_mask))
-            self.observation_space = self._env.observation_space
+            if self._env.obs_mode == 'assignment' or self._env.obs_mode == 'assignment_q':
+                self.obs_dim = len(self.action_mask) +1
+                self.observation_space = gym.spaces.Box(0, 1, (self.obs_dim,), np.float64)
+            elif self._env.obs_mode == 'a+e':
+                self.obs_dim = len(self.action_mask) + self._env.H +1
+                self.observation_space = gym.spaces.Box(0, 1e4, (self.obs_dim,), np.float64)
+            else:
+                self.observation_space = self._env.observation_space
                 
         else:
             self.observation_space = self._env.observation_space
@@ -1631,18 +1669,28 @@ class RemoveActionEnv(gym.Env):
         
         obs, info = self._env.reset(*args, **kwargs)
         self.obs = obs.copy()
-        if self.action_mode == 'destinations' and self._env.obs_mode == 'cost_matrix':
-            self.obs = self.obs[0][self._env.mask].reshape(self.observation_space.shape)
-            obs = self.obs
         
         self.destinations = np.array(self._env._env.dests, dtype=np.int16)
         if self.action_mode == 'all_nodes':
-            self.action_mask = np.zeros(len(self._env._env.distance_matrix), dtype=bool)
+            self.action_mask = np.zeros(len(self._env._env.D), dtype=bool)
             self.action_mask[self.destinations] = True
-            # if self._env.obs_mode != 'cost_matrix':
-            #     obs = self.action_mask.astype(int)
+            if self._env.obs_mode == 'assignment' :
+                self.obs = np.zeros(self.obs_dim)
+                self.obs[self.destinations] = obs[:-1]
+                self.obs[-1] = obs[-1]
+                obs = self.obs
             
-        self.action = np.ones(self.H, dtype=int)
+            elif self._env.obs_mode == 'a+e':
+                
+                self.obs = np.zeros(self.obs_dim)
+                self.obs[self.destinations] = obs[:self._env.H]
+                self.obs[len(self.action_mask):-1] = obs[self._env.H:-1]
+                self.obs[-1] = obs[-1]
+                obs = self.obs
+                
+            self.action = self.action_mask.astype(int)
+        else:    
+            self.action = np.ones(self.H, dtype=int)
         self.t = 0
         self.invalid_actions = []
         self.n_invalid_actions = 0
@@ -1655,20 +1703,49 @@ class RemoveActionEnv(gym.Env):
         self.invalid_actions.append(a)
         self.n_invalid_actions += 1
         self.t += 1
-        obs, r, d, _, info = self._env.step(self.action)
-    
-        if self._env.obs_mode == 'elimination_gain':
-            self.obs = self._env.observation#0.
         
-        elif self._env.obs_mode == 'assignment':
-            self.obs[a] = 0
-            self._env.observation = self.obs
-
+        aa = self.action if self.action_mode == 'destinations' else self.action[self.destinations]
+        obs, r, d, _, info = self._env.step(aa)
+    
         if self.action_mode == 'all_nodes':
             self.action_mask[a] = False
             a = (self.destinations[:, None] == a).argmax(axis=0)
+            
+            if self._env.obs_mode == 'a+e':
+                self.obs = np.zeros(self.obs_dim)
+                self.obs[self.destinations] = obs[:self._env.H]
+                self.obs[len(self.action_mask):-1] = obs[self._env.H:-1]
+                self.obs[-1] = obs[-1]
+                obs = self.obs
+                
+            elif self._env.obs_mode == 'assignment':
+                self.obs = np.zeros(self.obs_dim)
+                self.obs[self.destinations] = obs[:-1]
+                self.obs[-1] = obs[-1]
+                obs = self.obs
+                
+        # else:
+        #     if self._env.obs_mode == 'a+e':
+        #         self.obs = np.zeros(self.obs_dim)
+        #         self.obs[self.destinations] = obs[:self._env.H]
+        #         self.obs[len(self.action_mask):-1] = obs[self._env.H:-1]
+        #         self.obs[-1] = obs[-1]
+        #         obs = self.obs
+                
+        if self._env.obs_mode == 'elimination_gain':
+            self.obs = obs#self._env.observation#0.
         
-        done = d or bool(self.t > (self.H-1))
+        
+            
+        elif self._env.obs_mode == 'assignment_q':
+            self.obs[a] = 0
+            self.obs[a + self._env.H] = 0 # changes the quantity
+            self.obs[-1] = obs[-1]
+            obs = self.obs
+        
+        
+        trun = bool(self.t > (self.H-1))
+        done = d or trun
         
         normalizer_const = np.sum(self._env._env.quantities)*self._env._env.omission_cost
         
@@ -1679,14 +1756,14 @@ class RemoveActionEnv(gym.Env):
             r = np.clip(float(done)*(r+normalizer_const)/normalizer_const, 0, 1)
             
         elif self.rewards_mode == 'aq':
-            if done:
+            if d:
                 total_q = np.sum(self._env._env.quantities)
                 r = 1.*(total_q - info['oq'])#/total_q # service rate
             else:
                 r = 0.
         
             
-        return obs, r, done, done, info
+        return obs, r, done, trun, info
     
 class GameEnv(gym.Env):
     def __init__(self, 

@@ -5,7 +5,7 @@ import numpy as np
 from methods.agent import GreedyAgent, MSAAgent, Agent, OfflineAgent, DQNAgent
 from envs import DynamicQVRPEnv
 
-from methods.static import OA_experiments, run_SA_VA
+from methods.static import OA_experiments, run_SA_VA, RO_greedy_experiments, different_RO_freq
 
 from methods.static import game_experiments, EXP3, LRI, run_RL
 
@@ -526,6 +526,32 @@ if __name__ == "__main__":
     #### Static experiments
     ###############################################
     
+    ###############################################
+    # Finding the best re-optimization frequency
+    # different_RO_freq(
+    #     freqs = [1,2,5,7,10,15,50],
+    #     env_configs = {
+    #         "horizon" : 50,
+    #         "Q" : 50,
+    #         "vehicle_capacity" : 25,
+    #         "re_optimization" : False,
+    #         "emissions_KM" : [.1, .3],
+    #         "vehicle_assignment" : False,
+    #         "change_instance" : True,
+    #         "test" : True
+    #     },
+    #     n_simulation = 20,
+    # )
+    
+    # "horizon" : 50,
+    #         "Q" : 100,
+    #         "vehicle_capacity" : 25,
+    #         # "uniform_scenario" : True,
+    #         "re_optimization" : False,
+    #         "emissions_KM" : [.1, .3],
+    #         "test"  : True,
+    
+    ##############################################################################################
     #### Real experiments
     
     # game_experiments(
@@ -575,6 +601,52 @@ if __name__ == "__main__":
     #         "test"  : True,
     #     },
     # )
+    
+    # RO_greedy_experiments(
+    #     100,
+    #     # real_data=True, 
+    #     env_configs = {
+    #         "horizon" : 100,
+    #         "Q" : 50,
+    #         "vehicle_capacity" : 25,
+    #         "re_optimization" : False,
+    #         "emissions_KM" : [.1, .1, .3, .3],
+    #         "test"  : True,
+    #         "re_optimization_freq" : 1,
+    #     },
+    #     comment='_ReOptimizedEvery1'
+    # )
+    
+    # RO_greedy_experiments(
+    #     100,
+    #     # real_data=True, 
+    #     env_configs = {
+    #         "horizon" : 100,
+    #         "Q" : 50,
+    #         "vehicle_capacity" : 25,
+    #         "re_optimization" : False,
+    #         "emissions_KM" : [.1, .1, .3, .3],
+    #         "test"  : True,
+    #         "re_optimization_freq" : 5,
+    #     },
+    #     comment='_ReOptimizedEvery5'
+    # )
+    
+    # RO_greedy_experiments(
+    #     100,
+    #     # real_data=True, 
+    #     env_configs = {
+    #         "horizon" : 100,
+    #         "Q" : 50,
+    #         "vehicle_capacity" : 25,
+    #         "re_optimization" : False,
+    #         "emissions_KM" : [.1, .1, .3, .3],
+    #         "test"  : True,
+    #         "re_optimization_freq" : 10,
+    #     },
+    #     comment='_ReOptimizedEvery10'
+    # )
+        
     # run_SA_VA(
     #     100,
     #     # real_data=True, 
@@ -638,8 +710,44 @@ if __name__ == "__main__":
     #     rewards_mode= 'aq', #'normalized_terminal', 
     # )
     
+    # run_RL(
+    #     steps = 500_000,
+    #     cluster_data=False,
+    #     random_data=False,
+    #     env_configs = {
+    #         "horizon" : 100,
+    #         "Q" : 50,
+    #         "vehicle_capacity" : 25,
+    #         "re_optimization" : False,
+    #         "emissions_KM" : [.1, .1, .3, .3],
+    #         "test"  : True,
+    #         "obs_mode" : "elimination_gain",
+    #         "change_instance" : False,
+    #     },
+    #     rewards_mode= 'aq', #'normalized_terminal', 
+    # )
+    
+    # run_RL(
+    #     steps = 500_000,
+    #     cluster_data=False,
+    #     random_data=False,
+    #     env_configs = {
+    #         "horizon" : 100,
+    #         "Q" : 50,
+    #         "vehicle_capacity" : 25,
+    #         "re_optimization" : False,
+    #         "emissions_KM" : [.1, .1, .3, .3],
+    #         "test"  : True,
+    #         "obs_mode" : "action",
+    #         "change_instance" : False,
+    #     },
+    #     rewards_mode= 'aq', #'normalized_terminal', 
+    # )
+    
+    
+    
     run_RL(
-        steps = 500_000,
+        steps = 1_000_000,
         cluster_data=False,
         random_data=False,
         env_configs = {
@@ -649,30 +757,12 @@ if __name__ == "__main__":
             "re_optimization" : False,
             "emissions_KM" : [.1, .1, .3, .3],
             "test"  : True,
-            "obs_mode" : "elimination_gain",
-            "change_instance" : False,
+            "obs_mode" : "multi",
+            "re_optimization_freq" : 15,
+            "change_instance" : True,
         },
         rewards_mode= 'aq', #'normalized_terminal', 
     )
-    
-    run_RL(
-        steps = 500_000,
-        cluster_data=False,
-        random_data=False,
-        env_configs = {
-            "horizon" : 100,
-            "Q" : 50,
-            "vehicle_capacity" : 25,
-            "re_optimization" : False,
-            "emissions_KM" : [.1, .1, .3, .3],
-            "test"  : True,
-            "obs_mode" : "action",
-            "change_instance" : False,
-        },
-        rewards_mode= 'aq', #'normalized_terminal', 
-    )
-    
-    
     
     # run_RL(
     #     steps = 1_000_000,
@@ -685,12 +775,52 @@ if __name__ == "__main__":
     #         "re_optimization" : False,
     #         "emissions_KM" : [.1, .1, .3, .3],
     #         "test"  : True,
-    #         "obs_mode" : "multi",
+    #         "obs_mode" : "assignment",
+    #         "re_optimization_freq" : 10,
     #         "change_instance" : True,
     #     },
     #     rewards_mode= 'aq', #'normalized_terminal', 
+    #     action_mode = "all_nodes",
+    # )
+    # run_RL(
+    #     steps = 1_000_000,
+    #     cluster_data=False,
+    #     random_data=False,
+    #     env_configs = {
+    #         "horizon" : 100,
+    #         "Q" : 50,
+    #         "vehicle_capacity" : 25,
+    #         "re_optimization" : False,
+    #         "emissions_KM" : [.1, .1, .3, .3],
+    #         "test"  : True,
+    #         "obs_mode" : "a+e",
+    #         "re_optimization_freq" : 10,
+    #         "change_instance" : True,
+    #     },
+    #     rewards_mode= 'aq', #'normalized_terminal', 
+    #     action_mode = "all_nodes",
     # )
     
+    run_RL(
+        steps = 1_000_000,
+        cluster_data=False,
+        random_data=False,
+        env_configs = {
+            "horizon" : 100,
+            "Q" : 50,
+            "vehicle_capacity" : 25,
+            "re_optimization" : False,
+            "emissions_KM" : [.1, .1, .3, .3],
+            "test"  : True,
+            "obs_mode" : "elimination_gain",
+            "re_optimization_freq" : 10,
+            "change_instance" : True,
+        },
+        rewards_mode= 'aq', #'normalized_terminal', 
+        action_mode = "destinations",
+    )
+    
+    ####################################################################################
     #### CLuster experiments
     
     # game_experiments(
@@ -735,14 +865,61 @@ if __name__ == "__main__":
     #     cluster_data=True,
     #     lamb = 0.999,
     #     env_configs = {
+            # "horizon" : 50,
+            # "Q" : 100,
+            # "vehicle_capacity" : 25,
+            # "emissions_KM" : [.1, .3],
+            # "uniform_scenario" : True,
+    #         "re_optimization" : False,
+    #         "test"  : True,
+    #     },
+    # )
+    # RO_greedy_experiments(
+    #     100,
+    #     # real_data=True, 
+    #     cluster_data=True,
+    #     env_configs = {
     #         "horizon" : 50,
     #         "Q" : 100,
     #         "vehicle_capacity" : 25,
-    #         # "uniform_scenario" : True,
-    #         "re_optimization" : False,
     #         "emissions_KM" : [.1, .3],
     #         "test"  : True,
+    #         "re_optimization" : False,
+    #         "re_optimization_freq" : 1,
     #     },
+    #     comment='_ReOptimizedEvery1'
+    # )
+    
+    # RO_greedy_experiments(
+    #     100,
+    #     # real_data=True, 
+    #     cluster_data=True,
+    #     env_configs = {
+    #         "horizon" : 50,
+    #         "Q" : 100,
+    #         "vehicle_capacity" : 25,
+    #         "emissions_KM" : [.1, .3],
+    #         "re_optimization" : False,
+    #         "test"  : True,
+    #         "re_optimization_freq" : 5,
+    #     },
+    #     comment='_ReOptimizedEvery5'
+    # )
+    
+    # RO_greedy_experiments(
+    #     100,
+    #     # real_data=True, 
+    #     cluster_data=True,
+    #     env_configs = {
+    #         "horizon" : 50,
+    #         "Q" : 100,
+    #         "vehicle_capacity" : 25,
+    #         "emissions_KM" : [.1, .3],
+    #         "re_optimization" : False,
+    #         "test"  : True,
+    #         "re_optimization_freq" : 10,
+    #     },
+    #     comment='_ReOptimizedEvery10'
     # )
     # run_SA_VA(
     #     100,
@@ -776,6 +953,103 @@ if __name__ == "__main__":
     #     comment = "cluster_",
     # )
     
+    
+    
+    # run_RL(
+    #     steps = 500_000,
+    #     cluster_data=True,
+    #     random_data=False,
+    #     env_configs = {
+    #         "horizon" : 50,
+    #         "Q" : 100,
+    #         "vehicle_capacity" : 25,
+    #         "re_optimization" : False,
+    #         "emissions_KM" : [.1, .3],
+    #         "test"  : True,
+    #         "obs_mode" : "multi",
+    #         "change_instance" : True,
+    #         "re_optimization_freq" : 10,
+    #     },
+    #     rewards_mode= 'aq', #'normalized_terminal', 
+    # )
+    
+    # run_RL(
+    #     steps = 1_000_000,
+    #     cluster_data=True,
+    #     random_data=False,
+    #     env_configs = {
+    #         "horizon" : 50,
+    #         "Q" : 100,
+    #         "vehicle_capacity" : 25,
+    #         "re_optimization" : False,
+    #         "emissions_KM" : [.1, .3],
+    #         "test"  : True,
+    #         "obs_mode" : "assignment",
+    #         "change_instance" : True,
+    #         "re_optimization_freq" : 10,
+    #     },
+    #     rewards_mode= 'aq', #'normalized_terminal', 
+    #     action_mode = "all_nodes",
+    # )
+    
+    # run_RL(
+    #     steps = 500_000,
+    #     cluster_data=True,
+    #     random_data=False,
+    #     env_configs = {
+    #         "horizon" : 50,
+    #         "Q" : 100,
+    #         "vehicle_capacity" : 25,
+    #         "re_optimization" : False,
+    #         "emissions_KM" : [.1, .3],
+    #         "test"  : True,
+    #         "obs_mode" : "elimination_gain",
+    #         "re_optimization_freq" : 10,
+    #         "change_instance" : True,
+    #     },
+    #     rewards_mode= 'aq', #'normalized_terminal', 
+    #     action_mode = "destinations",
+    # )
+    
+    # run_RL(
+    #     steps = 2_000_000,
+    #     cluster_data=True,
+    #     random_data=False,
+    #     env_configs = {
+    #         "horizon" : 50,
+    #         "Q" : 100,
+    #         "vehicle_capacity" : 25,
+    #         "re_optimization" : False,
+    #         "emissions_KM" : [.1, .3],
+    #         "test"  : True,
+    #         "obs_mode" : "a+e",
+    #         "re_optimization_freq" : 10,
+    #         "change_instance" : True,
+    #     },
+    #     rewards_mode= 'aq', #'normalized_terminal', 
+    #     action_mode = "all_nodes",
+    # )
+    
+    # run_RL(
+    #     steps = 500_000,
+    #     cluster_data=True,
+    #     random_data=False,
+    #     env_configs = {
+    #         "horizon" : 50,
+    #         "Q" : 100,
+    #         "vehicle_capacity" : 25,
+    #         "re_optimization" : False,
+    #         "emissions_KM" : [.1, .3],
+    #         "test"  : True,
+    #         "obs_mode" : "a+e",
+    #         "re_optimization_freq" : 10,
+    #         "change_instance" : True,
+    #     },
+    #     rewards_mode= 'aq', #'normalized_terminal', 
+    #     action_mode = "destinations",
+    # )
+    
+    ####################################################################################
     #### Uniform experiments
     
     # game_experiments(
@@ -817,17 +1091,64 @@ if __name__ == "__main__":
     #     # real_data=True, 
     #     T = 50_000,
     #     T_init = 10_000,
-    #     random_data=True,
+        # random_data=True,
     #     lamb = 0.999,
+    #     env_configs = {
+            # "horizon" : 100,
+            # "Q" : 50,
+            # "vehicle_capacity" : 25,
+            # "emissions_KM" : [.1, .1, .3, .3],
+    #         # "uniform_scenario" : True,
+    #         "re_optimization" : False,
+    #         "test"  : True,
+    #     },
+    # )
+    # RO_greedy_experiments(
+    #     100,
+    #     # real_data=True, 
+    #     random_data=True,
     #     env_configs = {
     #         "horizon" : 100,
     #         "Q" : 50,
     #         "vehicle_capacity" : 25,
-    #         # "uniform_scenario" : True,
-    #         "re_optimization" : False,
     #         "emissions_KM" : [.1, .1, .3, .3],
     #         "test"  : True,
+    #         "re_optimization" : False,
+    #         "re_optimization_freq" : 1,
     #     },
+    #     comment='_ReOptimizedEvery1'
+    # )
+    
+    # RO_greedy_experiments(
+    #     100,
+    #     # real_data=True, 
+    #     random_data=True,
+    #     env_configs = {
+    #         "horizon" : 100,
+    #         "Q" : 50,
+    #         "vehicle_capacity" : 25,
+    #         "emissions_KM" : [.1, .1, .3, .3],
+    #         "re_optimization" : False,
+    #         "test"  : True,
+    #         "re_optimization_freq" : 5,
+    #     },
+    #     comment='_ReOptimizedEvery5'
+    # )
+    
+    # RO_greedy_experiments(
+    #     100,
+    #     # real_data=True, 
+    #     random_data=True,
+    #     env_configs = {
+    #        "horizon" : 100,
+    #         "Q" : 50,
+    #         "vehicle_capacity" : 25,
+    #         "emissions_KM" : [.1, .1, .3, .3],
+    #         "re_optimization" : False,
+    #         "test"  : True,
+    #         "re_optimization_freq" : 10,
+    #     },
+    #     comment='_ReOptimizedEvery10'
     # )
     # run_SA_VA(
     #     100,
@@ -860,10 +1181,254 @@ if __name__ == "__main__":
     #     },
     # )
     
+    # run_RL(
+    #     steps = 500_000,
+    #     cluster_data=False,
+    #     random_data=True,
+    #     env_configs = {
+    #         "horizon" : 100,
+    #         "Q" : 50,
+    #         "vehicle_capacity" : 25,
+    #         "re_optimization" : False,
+    #         "emissions_KM" : [.1, .1, .3, .3],
+    #         "test"  : True,
+    #         "obs_mode" : "multi",
+    #         "change_instance" : True,
+    #         "re_optimization_freq" : 10,
+    #     },
+    #     rewards_mode= 'aq', #'normalized_terminal', 
+    # )
+    
+    # run_RL(
+    #     steps = 500_000,
+    #     cluster_data=False,
+    #     random_data=True,
+    #     env_configs = {
+    #         "horizon" : 100,
+    #         "Q" : 50,
+    #         "vehicle_capacity" : 25,
+    #         "re_optimization" : False,
+    #         "emissions_KM" : [.1, .1, .3, .3],
+    #         "test"  : True,
+    #         "obs_mode" : "assignment",
+    #         "change_instance" : True,
+    #         "re_optimization_freq" : 10,
+    #     },
+    #     rewards_mode= 'aq', #'normalized_terminal', 
+    #     action_mode = "all_nodes",
+    # )
+    
+    # run_RL(
+    #     steps = 500_000,
+    #     cluster_data=False,
+    #     random_data=True,
+    #     env_configs = {
+    #         "horizon" : 100,
+    #         "Q" : 50,
+    #         "vehicle_capacity" : 25,
+    #         "re_optimization" : False,
+    #         "emissions_KM" : [.1, .1, .3, .3],
+    #         "test"  : True,
+    #         "obs_mode" : "elimination_gain",
+    #         "change_instance" : True,
+    #         "re_optimization_freq" : 10,
+    #     },
+    #     rewards_mode= 'aq', #'normalized_terminal', 
+    #     action_mode = "destinations",
+    # )
+    
+    # run_RL(
+    #     steps = 500_000,
+    #     cluster_data=True,
+    #     random_data=False,
+    #     env_configs = {
+    #         "horizon" : 100,
+    #         "Q" : 50,
+    #         "vehicle_capacity" : 25,
+    #         "re_optimization" : False,
+    #         "emissions_KM" : [.1, .1, .3, .3],
+    #         "test"  : True,
+    #         "obs_mode" : "a+e",
+    #         "re_optimization_freq" : 10,
+    #         "change_instance" : True,
+    #     },
+    #     rewards_mode= 'aq', #'normalized_terminal', 
+    #     action_mode = "all_nodes",
+    # )
+    
+    # run_RL(
+    #     steps = 500_000,
+    #     cluster_data=True,
+    #     random_data=False,
+    #     env_configs = {
+    #         "horizon" : 100,
+    #         "Q" : 50,
+    #         "vehicle_capacity" : 25,
+    #         "re_optimization" : False,
+    #         "emissions_KM" : [.1, .1, .3, .3],
+    #         "test"  : True,
+    #         "obs_mode" : "a+e",
+    #         "re_optimization_freq" : 10,
+    #         "change_instance" : True,
+    #     },
+    #     rewards_mode= 'aq', #'normalized_terminal', 
+    #     action_mode = "destinations",
+    # )
+    
+    #### Real experiments with different quantities
+    
+    # game_experiments(
+    #     100,
+    #     EXP3,
+    #     T = 10_000,
+    #     real_data=True,
+    #     log = False,
+    #     env_configs = {
+    #         "horizon" : 100,
+    #         "Q" : 50,
+    #         "vehicle_capacity" : 25,
+    #         "vehicle_assignment" : True,
+    #         "re_optimization" : False,
+    #         "emissions_KM" : [.1, .1, .3, .3],
+    #         "different_quantities" : True,
+    #     },
+    #     comment = '_different_quantities',
+    # )
+    
+    # game_experiments(
+    #     100,
+    #     LRI,
+    #     T = 10_000,
+    #     real_data=True,
+    #     log = False,
+    #     env_configs = {
+    #         "horizon" : 100,
+    #         "Q" : 50,
+    #         "vehicle_capacity" : 25,
+    #         "vehicle_assignment" : True,
+    #         "re_optimization" : False,
+    #         "emissions_KM" : [.1, .1, .3, .3],
+    #         "different_quantities" : True,
+    #     },
+    #     comment = '_different_quantities',
+    # )
+        
+    # OA_experiments(
+    #     100,
+    #     # real_data=True, 
+    #     T = 50_000,
+    #     T_init = 10_000,
+    #     lamb = 0.999,
+    #     env_configs = {
+    #         "horizon" : 100,
+    #         "Q" : 50,
+    #         "vehicle_capacity" : 25,
+    #         "re_optimization" : False,
+    #         "emissions_KM" : [.1, .1, .3, .3],
+    #         "test"  : True,
+    #         "different_quantities" : True,
+    #     },
+    #     comment = '_different_quantities',
+    # )
+    # run_SA_VA(
+    #     100,
+    #     # real_data=True, 
+    #     T = 75_000,
+    #     T_init = 10_000,
+    #     lamb = 0.999,
+    #     env_configs = {
+    #         "horizon" : 100,
+    #         "Q" : 50,
+    #         "vehicle_assignment" : True,
+    #         "vehicle_capacity" : 25,
+    #         "re_optimization" : False,
+    #         "emissions_KM" : [.1, .1, .3, .3],
+    #         "test"  : True,
+    #         "different_quantities" : True,
+    #     },
+    #     comment = '_different_quantities',
+    # )
+    # run_offline(
+    #     100,
+    #     env_configs = {
+    #         "horizon" : 100,
+    #         "Q" : 50,
+    #         "DoD" : 1.,
+    #         "vehicle_capacity" : 25,
+    #         "emissions_KM" : [.1, .1, .3, .3],
+    #         "test"  : True,
+    #         "different_quantities" : True,
+    #     },
+    #     comment = "different_quantities_",
+    # )
+    
+    
+    
+    # run_RL(
+    #     steps = 1_000_000,
+    #     cluster_data=False,
+    #     random_data=False,
+    #     env_configs = {
+    #         "horizon" : 100,
+    #         "Q" : 50,
+    #         "vehicle_capacity" : 25,
+    #         "re_optimization" : False,
+    #         "emissions_KM" : [.1, .1, .3, .3],
+    #         "test"  : True,
+    #         "obs_mode" : "multi_q",
+    #         "change_instance" : True,
+    #         "different_quantities" : True,
+    #     },
+    #     rewards_mode= 'aq', #'normalized_terminal', 
+    # )
+    
+    # run_RL(
+    #     steps = 1_000_000,
+    #     cluster_data=False,
+    #     random_data=False,
+    #     env_configs = {
+    #         "horizon" : 100,
+    #         "Q" : 50,
+    #         "vehicle_capacity" : 25,
+    #         "re_optimization" : False,
+    #         "emissions_KM" : [.1, .1, .3, .3],
+    #         "test"  : True,
+    #         "obs_mode" : "assignment_q",
+    #         "change_instance" : True,
+    #         "different_quantities" : True,
+    #     },
+    #     rewards_mode= 'aq', #'normalized_terminal', 
+    #     action_mode = "destinations",
+    # )
+    
+    # run_RL(
+    #     steps = 1_000_000,
+    #     cluster_data=False,
+    #     random_data=False,
+    #     env_configs = {
+    #         "horizon" : 100,
+    #         "Q" : 50,
+    #         "vehicle_capacity" : 25,
+    #         "re_optimization" : False,
+    #         "emissions_KM" : [.1, .1, .3, .3],
+    #         "test"  : True,
+    #         "obs_mode" : "elimination_gain",
+    #         "change_instance" : True,
+    #         "different_quantities" : True,
+    #     },
+    #     rewards_mode= 'aq', #'normalized_terminal', 
+    #     action_mode = "destinations",
+    # )
+    
+    
+    
+    
     
     ###############################################
     #### Other experiments
     ###############################################
+    
+    
     
     # VRP with 2 vehicles
     # experiment(

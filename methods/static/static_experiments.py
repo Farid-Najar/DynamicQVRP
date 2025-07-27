@@ -16,18 +16,16 @@ from time import time
 from envs import StaticQVRPEnv, RemoveActionEnv
 
 
-def OA_experiments(
+def RO_greedy_experiments(
     n_simulation = 1,
     # strategy = LRI,
     random_data = False,
     cluster_data = False,
-    T = 50_000,
-    T_init = 10_000,
-    lamb = 0.999,
     log = False,
-    retain = None,
     env_configs = dict(),
     n_threads = 7,
+    comment = '',
+    save = True,
     ):
     
     real_data = False
@@ -39,7 +37,110 @@ def OA_experiments(
         real_data = True
         
     real = "real_" if real_data else "cluster_" if cluster_data else ""
-    retain_comment = f"_retain{retain}" if retain is not None else ""
+    
+    env = StaticQVRPEnv(obs_mode='action', **env_configs)
+    np.random.seed(1917)
+        
+        
+    def process_greedy(env, i, q):
+        t0 = time()
+        res = dict()
+        
+        # env.reset(i)
+        # r_EG = EHEG(env, obs)
+        rs = baseline(deepcopy(env))
+        a = rs['solution'].astype(int)
+        
+        # ac = np.where(a == 0)[0]
+        _, r, *_ , info = env.step(a)
+        
+        res['time'] = time() - t0
+        res['sol'] = a
+        res['r'] = r
+        res['oq'] = info['oq']
+        q.put((i, res))
+        print(f'greedy {i} done')
+        return
+        
+    q_greedy = mp.Manager().Queue()
+    
+    res_greedy = dict()
+    
+
+    pool =  mp.Pool(processes=n_threads)
+    for i in range(n_simulation):
+        _, info = env.reset(i)
+        pool.apply_async(process_greedy, args=(deepcopy(env), i, q_greedy,))
+    pool.close()
+    pool.join()
+
+    print('all done !')
+    
+    while not q_greedy.empty():
+        i, d = q_greedy.get()
+        res_greedy[i] = d
+    
+    # res = {
+    #     'res_greedy' : res_greedy,
+    # }
+    if save:
+        with open(f"results/static/{real}res_greedy_K{env.H}_n{n_simulation}{comment}.pkl","wb") as f:
+            pickle.dump(res_greedy, f)
+    else:
+        return res_greedy
+        
+def different_RO_freq(
+    freqs = [1,2,5,7,10,15],
+    env_configs = dict(),
+    n_simulation = 10,
+    **kwargs,
+    ):
+    
+    oqs = np.zeros((len(freqs), n_simulation))
+    for i, freq in enumerate(freqs):
+        env_configs['re_optimization_freq'] = freq
+        res = RO_greedy_experiments(
+            n_simulation = n_simulation,
+            env_configs = env_configs,
+            save = False,
+            **kwargs,
+            )
+        oqs[i] = np.array([
+            res[k]['oq']
+            for k in res.keys()
+        ])
+    
+    res = {
+        'freqs' : freqs,
+        'oqs' : oqs, 
+    }
+    with open(f"results/static/different_freqs.pkl","wb") as f:
+        pickle.dump(res, f)
+    
+    
+def OA_experiments(
+    n_simulation = 1,
+    # strategy = LRI,
+    random_data = False,
+    cluster_data = False,
+    T = 50_000,
+    T_init = 10_000,
+    lamb = 0.999,
+    log = False,
+    env_configs = dict(),
+    n_threads = 7,
+    comment = '',
+    ):
+    
+    real_data = False
+    if cluster_data:
+        env_configs['cluster_scenario'] = True
+    elif random_data:
+        env_configs['uniform_scenario'] = True
+    else:
+        real_data = True
+        
+    real = "real_" if real_data else "cluster_" if cluster_data else ""
     
     env = StaticQVRPEnv(obs_mode='action', **env_configs)
     np.random.seed(1917)
@@ -153,7 +254,7 @@ def OA_experiments(
         'res_greedy' : res_greedy,
     }
     
-    with open(f"results/static/{real}res_compare_DP_greedy_OASA_K{env.H}_n{n_simulation}{retain_comment}.pkl","wb") as f:
+    with open(f"results/static/{real}res_compare_DP_greedy_OASA_K{env.H}_n{n_simulation}{comment}.pkl","wb") as f:
         pickle.dump(res, f)
     
 def run_SA_VA(
@@ -165,9 +266,9 @@ def run_SA_VA(
     T_init = 10_000,
     T_limit = 0,
     lamb = 0.9999,
-    retain = None,
     env_configs = dict(),
     n_threads = 7,
+    comment = '',
     ):
     
     real_data = False
@@ -179,7 +280,6 @@ def run_SA_VA(
         real_data = True
         
     real = "real_" if real_data else "cluster_" if cluster_data else ""
-    retain_comment = f"_retain{retain}" if retain is not None else ""
     
     env = StaticQVRPEnv(obs_mode='game', **env_configs)
 
@@ -231,7 +331,7 @@ def run_SA_VA(
     }
     
     # with open(f"res_compare_baseline_greedy_SA_{strategy.__name__}_Q{Q}_K{K}_n{n_simulation}_T{T}.pkl","wb") as f:
-    with open(f"results/static/{real}res_SA_VA_K{env._env.H}_n{n_simulation}{retain_comment}.pkl","wb") as f:
+    with open(f"results/static/{real}res_SA_VA_K{env._env.H}_n{n_simulation}{comment}.pkl","wb") as f:
         pickle.dump(res, f)
             
             
