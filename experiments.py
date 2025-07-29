@@ -5,7 +5,10 @@ import numpy as np
 from methods.agent import GreedyAgent, MSAAgent, Agent, OfflineAgent, DQNAgent
 from envs import DynamicQVRPEnv
 
-from methods.static import OA_experiments, run_SA_VA, RO_greedy_experiments, different_RO_freq
+from methods.static import (
+    OA_experiments, run_SA_VA, RO_greedy_experiments, different_RO_freq,
+    run_RL_experiments
+    )
 
 from methods.static import game_experiments, EXP3, LRI, run_RL
 
@@ -632,6 +635,56 @@ if __name__ == "__main__":
     #     comment='_ReOptimizedEvery5'
     # )
     
+    # run_RL_experiments(
+    #     100,
+    #     # real_data=True, 
+    #     env_configs = {
+    #         "horizon" : 100,
+    #         "Q" : 50,
+    #         "vehicle_capacity" : 25,
+    #         "re_optimization" : False,
+    #         "emissions_KM" : [.1, .1, .3, .3],
+    #         "test"  : True,
+    #         "re_optimization_freq" : 10,
+    #         "obs_mode" : "a+e",
+    #     },
+    #     log_dir = f'methods/static/ppo_mask/real_K100_rewardMode(aq)_obsMode(a+e)_steps(1000000)',
+    #     comment='_ReOptimizedEvery10' 
+    # )
+    
+    # run_RL_experiments(
+    #     100,
+    #     # real_data=True, 
+    #     env_configs = {
+    #         "horizon" : 100,
+    #         "Q" : 50,
+    #         "vehicle_capacity" : 25,
+    #         "re_optimization" : False,
+    #         "emissions_KM" : [.1, .1, .3, .3],
+    #         "test"  : True,
+    #         "re_optimization_freq" : 5,
+    #         "obs_mode" : "a+e",
+    #     },
+    #     log_dir = f'methods/static/ppo_mask/real_K100_rewardMode(aq)_obsMode(a+e)_steps(1000000)',
+    #     comment='_ReOptimizedEvery5' 
+    # )
+    
+    # run_RL_experiments(
+    #     100,
+    #     # real_data=True, 
+    #     env_configs = {
+    #         "horizon" : 100,
+    #         "Q" : 50,
+    #         "vehicle_capacity" : 25,
+    #         "re_optimization" : False,
+    #         "emissions_KM" : [.1, .1, .3, .3],
+    #         "test"  : True,
+    #         "re_optimization_freq" : 1,
+    #         "obs_mode" : "a+e",
+    #     },
+    #     log_dir = f'methods/static/ppo_mask/real_K100_rewardMode(aq)_obsMode(a+e)_steps(1000000)',
+    #     comment='_ReOptimizedEvery1' 
+    # )
     # RO_greedy_experiments(
     #     100,
     #     # real_data=True, 
@@ -675,6 +728,8 @@ if __name__ == "__main__":
     #     },
     #     comment = "real_",
     # )
+    
+    
     
     # run_RL(
     #     steps = 500_000,
@@ -746,23 +801,23 @@ if __name__ == "__main__":
     
     
     
-    run_RL(
-        steps = 1_000_000,
-        cluster_data=False,
-        random_data=False,
-        env_configs = {
-            "horizon" : 100,
-            "Q" : 50,
-            "vehicle_capacity" : 25,
-            "re_optimization" : False,
-            "emissions_KM" : [.1, .1, .3, .3],
-            "test"  : True,
-            "obs_mode" : "multi",
-            "re_optimization_freq" : 15,
-            "change_instance" : True,
-        },
-        rewards_mode= 'aq', #'normalized_terminal', 
-    )
+    # run_RL(
+    #     steps = 1_000_000,
+    #     cluster_data=False,
+    #     random_data=False,
+    #     env_configs = {
+    #         "horizon" : 100,
+    #         "Q" : 50,
+    #         "vehicle_capacity" : 25,
+    #         "re_optimization" : False,
+    #         "emissions_KM" : [.1, .1, .3, .3],
+    #         "test"  : True,
+    #         "obs_mode" : "multi",
+    #         "re_optimization_freq" : 15,
+    #         "change_instance" : True,
+    #     },
+    #     rewards_mode= 'aq', #'normalized_terminal', 
+    # )
     
     # run_RL(
     #     steps = 1_000_000,
@@ -801,24 +856,24 @@ if __name__ == "__main__":
     #     action_mode = "all_nodes",
     # )
     
-    run_RL(
-        steps = 1_000_000,
-        cluster_data=False,
-        random_data=False,
-        env_configs = {
-            "horizon" : 100,
-            "Q" : 50,
-            "vehicle_capacity" : 25,
-            "re_optimization" : False,
-            "emissions_KM" : [.1, .1, .3, .3],
-            "test"  : True,
-            "obs_mode" : "elimination_gain",
-            "re_optimization_freq" : 10,
-            "change_instance" : True,
-        },
-        rewards_mode= 'aq', #'normalized_terminal', 
-        action_mode = "destinations",
-    )
+    # run_RL(
+    #     steps = 500_000,
+    #     cluster_data=False,
+    #     random_data=False,
+    #     env_configs = {
+    #         "horizon" : 100,
+    #         "Q" : 50,
+    #         "vehicle_capacity" : 25,
+    #         "re_optimization" : False,
+    #         "emissions_KM" : [.1, .1, .3, .3],
+    #         "test"  : True,
+    #         "obs_mode" : "elimination_gain",
+    #         "re_optimization_freq" : 10,
+    #         "change_instance" : True,
+    #     },
+    #     rewards_mode= 'aq', #'normalized_terminal', 
+    #     action_mode = "destinations",
+    # )
     
     ####################################################################################
     #### CLuster experiments
@@ -921,6 +976,57 @@ if __name__ == "__main__":
     #     },
     #     comment='_ReOptimizedEvery10'
     # )
+    
+    # run_RL_experiments(
+    #     100,
+    #     cluster_data=True,
+    #     env_configs = {
+    #         "horizon" : 50,
+    #         "Q" : 100,
+    #         "vehicle_capacity" : 25,
+    #         "emissions_KM" : [.1, .3],
+    #         "re_optimization" : False,
+    #         "test"  : True,
+    #         "re_optimization_freq" : 10,
+    #         "obs_mode" : "a+e",
+    #     },
+    #     log_dir = f'methods/static/ppo_mask/cluster_K50_rewardMode(aq)_obsMode(a+e)_actionMode(all_nodes)_steps(2000000)',
+    #     comment='_ReOptimizedEvery10' 
+    # )
+    
+    # run_RL_experiments(
+    #     100,
+    #     cluster_data=True,
+    #     env_configs = {
+    #         "horizon" : 50,
+    #         "Q" : 100,
+    #         "vehicle_capacity" : 25,
+    #         "emissions_KM" : [.1, .3],
+    #         "re_optimization" : False,
+    #         "test"  : True,
+    #         "re_optimization_freq" : 5,
+    #         "obs_mode" : "a+e",
+    #     },
+    #     log_dir = f'methods/static/ppo_mask/cluster_K50_rewardMode(aq)_obsMode(a+e)_actionMode(all_nodes)_steps(2000000)',
+    #     comment='_ReOptimizedEvery5' 
+    # )
+    
+    # run_RL_experiments(
+    #     100,
+    #     cluster_data=True,
+    #     env_configs = {
+    #         "horizon" : 50,
+    #         "Q" : 100,
+    #         "vehicle_capacity" : 25,
+    #         "emissions_KM" : [.1, .3],
+    #         "re_optimization" : False,
+    #         "test"  : True,
+    #         "re_optimization_freq" : 1,
+    #         "obs_mode" : "a+e",
+    #     },
+    #     log_dir = f'methods/static/ppo_mask/cluster_K50_rewardMode(aq)_obsMode(a+e)_actionMode(all_nodes)_steps(2000000)',
+    #     comment='_ReOptimizedEvery1' 
+    # )
     # run_SA_VA(
     #     100,
     #     # real_data=True, 
@@ -974,7 +1080,7 @@ if __name__ == "__main__":
     # )
     
     # run_RL(
-    #     steps = 1_000_000,
+    #     steps = 2_000_000,
     #     cluster_data=True,
     #     random_data=False,
     #     env_configs = {
@@ -1150,6 +1256,58 @@ if __name__ == "__main__":
     #     },
     #     comment='_ReOptimizedEvery10'
     # )
+    
+    # run_RL_experiments(
+    #     100,
+    #     random_data=True,
+    #     env_configs = {
+    #         "horizon" : 100,
+    #         "Q" : 50,
+    #         "vehicle_capacity" : 25,
+    #         "emissions_KM" : [.1, .1, .3, .3],
+    #         "re_optimization" : False,
+    #         "test"  : True,
+    #         "re_optimization_freq" : 10,
+    #         "obs_mode" : "a+e",
+    #     },
+    #     log_dir = f'methods/static/ppo_mask/K100_rewardMode(aq)_obsMode(a+e)_actionMode(all_nodes)_steps(2000000)',
+    #     comment='_ReOptimizedEvery10' 
+    # )
+    
+    # run_RL_experiments(
+    #     100,
+    #     random_data=True,
+    #     env_configs = {
+    #         "horizon" : 100,
+    #         "Q" : 50,
+    #         "vehicle_capacity" : 25,
+    #         "re_optimization" : False,
+    #         "emissions_KM" : [.1, .1, .3, .3],
+    #         "test"  : True,
+    #         "re_optimization_freq" : 5,
+    #         "obs_mode" : "a+e",
+    #     },
+    #     log_dir = f'methods/static/ppo_mask/K100_rewardMode(aq)_obsMode(a+e)_actionMode(all_nodes)_steps(2000000)',
+    #     comment='_ReOptimizedEvery5' 
+    # )
+    
+    # run_RL_experiments(
+    #     100,
+    #     random_data=True,
+    #     env_configs = {
+    #         "horizon" : 100,
+    #         "Q" : 50,
+    #         "vehicle_capacity" : 25,
+    #         "re_optimization" : False,
+    #         "emissions_KM" : [.1, .1, .3, .3],
+    #         "test"  : True,
+    #         "re_optimization_freq" : 1,
+    #         "obs_mode" : "a+e",
+    #     },
+    #     log_dir = f'methods/static/ppo_mask/K100_rewardMode(aq)_obsMode(a+e)_actionMode(all_nodes)_steps(2000000)',
+    #     comment='_ReOptimizedEvery1' 
+    # )
+    
     # run_SA_VA(
     #     100,
     #     # real_data=True, 
@@ -1200,7 +1358,7 @@ if __name__ == "__main__":
     # )
     
     # run_RL(
-    #     steps = 500_000,
+    #     steps = 1_000_000,
     #     cluster_data=False,
     #     random_data=True,
     #     env_configs = {
@@ -1238,9 +1396,8 @@ if __name__ == "__main__":
     # )
     
     # run_RL(
-    #     steps = 500_000,
-    #     cluster_data=True,
-    #     random_data=False,
+    #     steps = 2_000_000,
+    #     random_data=True,
     #     env_configs = {
     #         "horizon" : 100,
     #         "Q" : 50,
@@ -1275,6 +1432,7 @@ if __name__ == "__main__":
     #     action_mode = "destinations",
     # )
     
+    ############################################################################################
     #### Real experiments with different quantities
     
     # game_experiments(
@@ -1284,35 +1442,34 @@ if __name__ == "__main__":
     #     real_data=True,
     #     log = False,
     #     env_configs = {
-    #         "horizon" : 100,
+    #         "horizon" : 50,
     #         "Q" : 50,
     #         "vehicle_capacity" : 25,
     #         "vehicle_assignment" : True,
     #         "re_optimization" : False,
     #         "emissions_KM" : [.1, .1, .3, .3],
     #         "different_quantities" : True,
+    #         # "test" : True,
     #     },
     #     comment = '_different_quantities',
     # )
     
-    # game_experiments(
+    # RO_greedy_experiments(
     #     100,
-    #     LRI,
-    #     T = 10_000,
-    #     real_data=True,
-    #     log = False,
+    #     # real_data=True, 
     #     env_configs = {
-    #         "horizon" : 100,
+    #         "horizon" : 50,
     #         "Q" : 50,
     #         "vehicle_capacity" : 25,
-    #         "vehicle_assignment" : True,
     #         "re_optimization" : False,
     #         "emissions_KM" : [.1, .1, .3, .3],
     #         "different_quantities" : True,
+    #         "test"  : True,
+    #         "re_optimization_freq" : 1,
     #     },
-    #     comment = '_different_quantities',
+    #     comment='_RO1_different_quantities'
     # )
-        
+    
     # OA_experiments(
     #     100,
     #     # real_data=True, 
@@ -1320,7 +1477,7 @@ if __name__ == "__main__":
     #     T_init = 10_000,
     #     lamb = 0.999,
     #     env_configs = {
-    #         "horizon" : 100,
+    #         "horizon" : 50,
     #         "Q" : 50,
     #         "vehicle_capacity" : 25,
     #         "re_optimization" : False,
@@ -1337,7 +1494,7 @@ if __name__ == "__main__":
     #     T_init = 10_000,
     #     lamb = 0.999,
     #     env_configs = {
-    #         "horizon" : 100,
+    #         "horizon" : 50,
     #         "Q" : 50,
     #         "vehicle_assignment" : True,
     #         "vehicle_capacity" : 25,
@@ -1351,7 +1508,7 @@ if __name__ == "__main__":
     # run_offline(
     #     100,
     #     env_configs = {
-    #         "horizon" : 100,
+    #         "horizon" : 50,
     #         "Q" : 50,
     #         "DoD" : 1.,
     #         "vehicle_capacity" : 25,
@@ -1363,31 +1520,50 @@ if __name__ == "__main__":
     # )
     
     
-    
     # run_RL(
     #     steps = 1_000_000,
     #     cluster_data=False,
     #     random_data=False,
     #     env_configs = {
-    #         "horizon" : 100,
+    #         "horizon" : 50,
     #         "Q" : 50,
     #         "vehicle_capacity" : 25,
     #         "re_optimization" : False,
     #         "emissions_KM" : [.1, .1, .3, .3],
     #         "test"  : True,
-    #         "obs_mode" : "multi_q",
+    #         "obs_mode" : "assignment",
     #         "change_instance" : True,
     #         "different_quantities" : True,
     #     },
     #     rewards_mode= 'aq', #'normalized_terminal', 
+    #     action_mode = "all_nodes",
     # )
     
     # run_RL(
-    #     steps = 1_000_000,
+    #     steps = 2_000_000,
     #     cluster_data=False,
     #     random_data=False,
     #     env_configs = {
-    #         "horizon" : 100,
+    #         "horizon" : 50,
+    #         "Q" : 50,
+    #         "vehicle_capacity" : 25,
+    #         "re_optimization" : False,
+    #         "emissions_KM" : [.1, .1, .3, .3],
+    #         "test"  : True,
+    #         "obs_mode" : "a+e_q",
+    #         "change_instance" : True,
+    #         "different_quantities" : True,
+    #     },
+    #     rewards_mode= 'aq', #'normalized_terminal', 
+    #     action_mode = "all_nodes",
+    # )
+    
+    # run_RL(
+    #     steps = 2_000_000,
+    #     cluster_data=False,
+    #     random_data=False,
+    #     env_configs = {
+    #         "horizon" : 50,
     #         "Q" : 50,
     #         "vehicle_capacity" : 25,
     #         "re_optimization" : False,
@@ -1398,29 +1574,26 @@ if __name__ == "__main__":
     #         "different_quantities" : True,
     #     },
     #     rewards_mode= 'aq', #'normalized_terminal', 
-    #     action_mode = "destinations",
+    #     action_mode = "all_nodes",
     # )
     
-    # run_RL(
-    #     steps = 1_000_000,
-    #     cluster_data=False,
-    #     random_data=False,
-    #     env_configs = {
-    #         "horizon" : 100,
-    #         "Q" : 50,
-    #         "vehicle_capacity" : 25,
-    #         "re_optimization" : False,
-    #         "emissions_KM" : [.1, .1, .3, .3],
-    #         "test"  : True,
-    #         "obs_mode" : "elimination_gain",
-    #         "change_instance" : True,
-    #         "different_quantities" : True,
-    #     },
-    #     rewards_mode= 'aq', #'normalized_terminal', 
-    #     action_mode = "destinations",
-    # )
-    
-    
+    run_RL_experiments(
+        100,
+        env_configs = {
+            "horizon" : 50,
+            "Q" : 50,
+            "vehicle_capacity" : 25,
+            "re_optimization" : False,
+            "emissions_KM" : [.1, .1, .3, .3],
+            "test"  : True,
+            "re_optimization_freq" : 1,
+            "different_quantities" : True,
+            "obs_mode" : "assignment_q",
+        },
+        log_dir = 'methods/static/ppo_mask/real_K50_rewardMode(aq)_obsMode(assignment_q)_actionMode(all_nodes)_steps(2000000)',
+        # log_dir = f'methods/static/ppo_mask/K100_rewardMode(aq)_obsMode(a+e)_actionMode(all_nodes)_steps(2000000)',
+        comment='_RO1_diffQ' 
+    )
     
     
     

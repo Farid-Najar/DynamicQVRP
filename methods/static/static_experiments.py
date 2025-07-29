@@ -10,6 +10,9 @@ import multiprocess as mp
 import numpy as np
 import pickle
 
+from sb3_contrib.ppo_mask import MaskablePPO
+
+
 from copy import deepcopy
 from time import time
 
@@ -334,7 +337,92 @@ def run_SA_VA(
     with open(f"results/static/{real}res_SA_VA_K{env._env.H}_n{n_simulation}{comment}.pkl","wb") as f:
         pickle.dump(res, f)
             
-            
+
+def run_RL_experiments(
+    n_simulation = 1,
+    # strategy = LRI,
+    random_data = False,
+    cluster_data = False,
+    log = False,
+    env_configs = dict(),
+    n_threads = 7,
+    log_dir = '',
+    comment = '',
+    action_mode = "all_nodes",
+    save = True,
+    ):
+    
+    real_data = False
+    if cluster_data:
+        env_configs['cluster_scenario'] = True
+    elif random_data:
+        env_configs['uniform_scenario'] = True
+    else:
+        real_data = True
+        
+    real = "real_" if real_data else "cluster_" if cluster_data else ""
+    
+    # log_dir_change_elimination = f'methods/static/ppo_mask/{real}K{env_configs['horizon']}_rewardMode(aq)_obsMode(elimination_gain)_steps(1000000)' #all nodes
+
+    _env = StaticQVRPEnv(**env_configs)
+    env = RemoveActionEnv(_env, action_mode=action_mode)
+    np.random.seed(1917)
+        
+        
+    def process(env, i, q):
+        t0 = time()
+        res = dict()
+        actions = []
+        obs, info = env.reset(i)
+        model = MaskablePPO.load(log_dir+'/best_model', env=env)
+        d = False
+        returns = 0.
+        # print(info)
+        while not d:  
+            a = model.predict(obs, deterministic=True, action_masks=env.action_masks())[0]
+            # assert info['excess_emission'] >= 0
+            obs, r, d, _, info = env.step(a)
+            actions.append(a)
+            returns += r
+        
+        
+        res['time'] = time() - t0
+        res['sol'] = actions
+        res['r'] = returns
+        res['oq'] = env._env._env.quantities.sum() - returns
+        q.put((i, res))
+        print(f'RL {i} done')
+        return
+        
+    q = mp.Manager().Queue()
+    
+    res = dict()
+    
+    # test
+    # process(env, 0, q)
+
+    pool =  mp.Pool(processes=n_threads)
+    for i in range(n_simulation):
+        pool.apply_async(process, args=(deepcopy(env), i, q,))
+    pool.close()
+    pool.join()
+
+    print('all done !')
+    
+    while not q.empty():
+        i, d = q.get()
+        res[i] = d
+    
+    # res = {
+    #     'res_greedy' : res_greedy,
+    # }
+    if save:
+        with open(f"results/static/{real}res_RL_K{env.H}_n{n_simulation}{comment}.pkl","wb") as f:
+            pickle.dump(res, f)
+    else:
+        return res
+
+        
 if __name__ == '__main__' :
     
     
