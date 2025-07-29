@@ -93,6 +93,9 @@ def experiment(
         RL_model_comment += 'clusters_'
     elif "uniform_scenario" in env_configs and env_configs["uniform_scenario"]:
         RL_model_comment += 'uniform_'
+    
+    if "different_quantities" in env_configs and env_configs["different_quantities"]:
+        RL_model_comment += 'different_qs_'
         
     RL_model_comment += 'VRP' if len(env_configs["emissions_KM"])>1 else 'TSP'
     RL_model_comment += str(len(env_configs["emissions_KM"])) if len(env_configs["emissions_KM"])>1 else ''
@@ -105,22 +108,22 @@ def experiment(
     if RL_model is None:
         RL_model = f'DQN_{RL_model_comment}_VA'
     agents = {
-        "fafs" : dict(
-            agentClass = GreedyAgent,
-            env_configs = env_configs,
-            episodes = episodes,
-            agent_configs = {},
-            save_results = True,
-            title = "res_fafs",
-        ),
-        "random" : dict(
-            agentClass = Agent,
-            env_configs = env_configs,
-            episodes = episodes,
-            agent_configs = {},
-            save_results = True,
-            title = "res_random",
-        ),
+        # "fafs" : dict(
+        #     agentClass = GreedyAgent,
+        #     env_configs = env_configs,
+        #     episodes = episodes,
+        #     agent_configs = {},
+        #     save_results = True,
+        #     title = "res_fafs",
+        # ),
+        # "random" : dict(
+        #     agentClass = Agent,
+        #     env_configs = env_configs,
+        #     episodes = episodes,
+        #     agent_configs = {},
+        #     save_results = True,
+        #     title = "res_random",
+        # ),
         # "SL" : dict(
         #     agentClass = SLAgent,
         #     env_configs = env_configs,
@@ -141,17 +144,17 @@ def experiment(
         #     title = "res_RL_DQN_OA",
         # ),
         
-        "RL_VA" : dict(
-            agentClass = DQNAgent,
-            env_configs = env_configs_DQN_VA,
-            episodes = episodes,
-            agent_configs = dict(
-                algo = RL_model,
-                hidden_layers = RL_hidden_layers, 
-            ),
-            save_results = True,
-            title = "res_RL_DQN_VA",
-        ),
+        # "RL_VA" : dict(
+        #     agentClass = DQNAgent,
+        #     env_configs = env_configs_DQN_VA,
+        #     episodes = episodes,
+        #     agent_configs = dict(
+        #         algo = RL_model,
+        #         hidden_layers = RL_hidden_layers, 
+        #     ),
+        #     save_results = True,
+        #     title = "res_RL_DQN_VA",
+        # ),
         # "RL_VA_as_OA" : dict(
         #     agentClass = DQNAgent,
         #     env_configs = env_configs_DQN_VA_as_OA,
@@ -184,25 +187,25 @@ def experiment(
         #     save_results = True,
         #     title = "res_RL_PPO",
         # ),
-        "offline" : dict(
-            agentClass = OfflineAgent,
-            env_configs = env_configs,
-            episodes = episodes,
-            agent_configs = {"n_workers": 7},
-            save_results = True,
-            title = "res_offline",
-        ),
-        # "MSA" : dict(
-        #     agentClass = MSAAgent,
+        # "offline" : dict(
+        #     agentClass = OfflineAgent,
         #     env_configs = env_configs,
         #     episodes = episodes,
-        #     agent_configs = dict(
-        #         horizon = env_configs["horizon"], 
-        #         n_sample=101, parallelize = False, 
-        #         accept_bonus = 0),
+        #     agent_configs = {"n_workers": 7},
         #     save_results = True,
-        #     title = "res_MSA",
+        #     title = "res_offline",
         # ),
+        "MSA" : dict(
+            agentClass = MSAAgent,
+            env_configs = env_configs,
+            episodes = episodes,
+            agent_configs = dict(
+                horizon = env_configs["horizon"], 
+                n_sample=101, parallelize = False, 
+                accept_bonus = 0),
+            save_results = True,
+            title = "res_MSA",
+        ),
         # "MSA_softmax" : dict(
         #     agentClass = MSAAgent,
         #     env_configs = env_configs,
@@ -508,22 +511,22 @@ if __name__ == "__main__":
     # )
     
     # VRP with 4 vehicles on real scenarios different quantities
-    # experiment(
-    #     100,
-    #     env_configs = {
-    #         "horizon" : 100,
-    #         "Q" : 50, 
-    #         "DoD" : 1.,
-    #         "vehicle_capacity" : 20,
-    #         "re_optimization" : True,
-    #         "emissions_KM" : [.1, .1, .3, .3],
-    #         # "n_scenarios" : 500,
-    #         "different_quantities" : True,
-    #         "test"  : True,
-    #         # "vehicle_assignment" : True,
-    #     },
-    #     RL_hidden_layers = [1024, 1024, 1024],
-    # )
+    experiment(
+        100,
+        env_configs = {
+            "horizon" : 50,
+            "Q" : 50, 
+            "DoD" : 1.,
+            "vehicle_capacity" : 20,
+            "re_optimization" : True,
+            "emissions_KM" : [.1, .1, .3, .3],
+            # "n_scenarios" : 500,
+            "different_quantities" : True,
+            "test"  : True,
+            # "vehicle_assignment" : True,
+        },
+        RL_hidden_layers = [1024, 1024, 1024],
+    )
     
     ###############################################
     #### Static experiments
@@ -1577,23 +1580,23 @@ if __name__ == "__main__":
     #     action_mode = "all_nodes",
     # )
     
-    run_RL_experiments(
-        100,
-        env_configs = {
-            "horizon" : 50,
-            "Q" : 50,
-            "vehicle_capacity" : 25,
-            "re_optimization" : False,
-            "emissions_KM" : [.1, .1, .3, .3],
-            "test"  : True,
-            "re_optimization_freq" : 1,
-            "different_quantities" : True,
-            "obs_mode" : "assignment_q",
-        },
-        log_dir = 'methods/static/ppo_mask/real_K50_rewardMode(aq)_obsMode(assignment_q)_actionMode(all_nodes)_steps(2000000)',
-        # log_dir = f'methods/static/ppo_mask/K100_rewardMode(aq)_obsMode(a+e)_actionMode(all_nodes)_steps(2000000)',
-        comment='_RO1_diffQ' 
-    )
+    # run_RL_experiments(
+    #     100,
+    #     env_configs = {
+    #         "horizon" : 50,
+    #         "Q" : 50,
+    #         "vehicle_capacity" : 25,
+    #         "re_optimization" : False,
+    #         "emissions_KM" : [.1, .1, .3, .3],
+    #         "test"  : True,
+    #         "re_optimization_freq" : 1,
+    #         "different_quantities" : True,
+    #         "obs_mode" : "assignment_q",
+    #     },
+    #     log_dir = 'methods/static/ppo_mask/real_K50_rewardMode(aq)_obsMode(assignment_q)_actionMode(all_nodes)_steps(2000000)',
+    #     # log_dir = f'methods/static/ppo_mask/K100_rewardMode(aq)_obsMode(a+e)_actionMode(all_nodes)_steps(2000000)',
+    #     comment='_RO1_diffQ' 
+    # )
     
     
     

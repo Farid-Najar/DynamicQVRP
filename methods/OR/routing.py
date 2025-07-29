@@ -208,7 +208,9 @@ def insertion(env, action = None, run_sa = False):
     best_routes = deepcopy(env.routes)
     
     if action is not None:
-        if np.sum(best_routes[action-1].astype(bool)) >= env.max_capacity:
+        if np.sum(
+            env.quantities[best_routes[action-1][best_routes[action-1] != 0] -1]#.astype(bool)]
+            ) >= env.max_capacity:
             assignment[env.t] = 0
             return assignment, best_routes, best_info
             
