@@ -144,17 +144,17 @@ def experiment(
         #     title = "res_RL_DQN_OA",
         # ),
         
-        # "RL_VA" : dict(
-        #     agentClass = DQNAgent,
-        #     env_configs = env_configs_DQN_VA,
-        #     episodes = episodes,
-        #     agent_configs = dict(
-        #         algo = RL_model,
-        #         hidden_layers = RL_hidden_layers, 
-        #     ),
-        #     save_results = True,
-        #     title = "res_RL_DQN_VA",
-        # ),
+        "RL_VA" : dict(
+            agentClass = DQNAgent,
+            env_configs = env_configs_DQN_VA,
+            episodes = episodes,
+            agent_configs = dict(
+                algo = RL_model,
+                hidden_layers = RL_hidden_layers, 
+            ),
+            save_results = True,
+            title = "res_RL_DQN_VA",
+        ),
         # "RL_VA_as_OA" : dict(
         #     agentClass = DQNAgent,
         #     env_configs = env_configs_DQN_VA_as_OA,
@@ -195,17 +195,17 @@ def experiment(
         #     save_results = True,
         #     title = "res_offline",
         # ),
-        "MSA" : dict(
-            agentClass = MSAAgent,
-            env_configs = env_configs,
-            episodes = episodes,
-            agent_configs = dict(
-                horizon = env_configs["horizon"], 
-                n_sample=101, parallelize = False, 
-                accept_bonus = 0),
-            save_results = True,
-            title = "res_MSA",
-        ),
+        # "MSA" : dict(
+        #     agentClass = MSAAgent,
+        #     env_configs = env_configs,
+        #     episodes = episodes,
+        #     agent_configs = dict(
+        #         horizon = env_configs["horizon"], 
+        #         n_sample=101, parallelize = False, 
+        #         accept_bonus = 0),
+        #     save_results = True,
+        #     title = "res_MSA",
+        # ),
         # "MSA_softmax" : dict(
         #     agentClass = MSAAgent,
         #     env_configs = env_configs,

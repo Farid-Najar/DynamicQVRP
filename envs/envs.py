@@ -660,7 +660,7 @@ class DynamicQVRPEnv(gym.Env):
             remaining_demands = (self.T - self.h) / self.H
         
         obs = np.array([
-            self.quantities[self.t]/ self.total_capacity, # the quantity rate asked by the current demand
+            self.quantities[self.t]/ self.max_capacity, # the quantity rate asked by the current demand
             # self.remained_capacity / self.total_capacity, # the percentage of capacity remained
             *cap, # the percentage of capacity remained for each vehicle, dim = len(self.emissions_KM)
             remaining_demands,#, # the remaining demands to come

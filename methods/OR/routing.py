@@ -104,10 +104,10 @@ def _run(env, assignment, action = None):
     
     # routes = np.zeros((len(env.emissions_KM), env.max_capacity+2), dtype=np.int64)
     # print([np.sum(env.quantities[assignment == v]) > env.max_capacity for v in range(1, len(env.costs_KM)+1)])
-    if (np.sum(env.quantities[assignment.astype(bool)]) > env.total_capacity
+    if (np.sum(env.quantities[assignment.astype(bool)]) > env.total_capacity# *float(action is None) + env.max_capacity*float(action is not None)
         or np.any([np.sum(env.quantities[assignment == v]) > env.max_capacity for v in range(1, len(env.costs_KM)+1) ])
         ):
-        return -env.H*env.omission_cost, False, env.info
+        return -env.quantities.sum()*env.omission_cost, False, env.info
     
     if action is not None:
         routes = deepcopy(env.routes) #np.zeros((len(env.emissions_KM), env.max_capacity+2), dtype=np.int64)
@@ -152,7 +152,7 @@ def _run(env, assignment, action = None):
     env.assignment = a
     
     r = -(total_emission + max(0, total_emission - env.Q - 1e-5)*env.CO2_penalty + np.sum(a == 0)*env.omission_cost)
-    d = total_emission - env.Q - 1e-5 <= 0
+    d = total_emission <= env.Q + 1e-5
     # r *= float(d)
     
     return r, d, info
@@ -195,6 +195,7 @@ def _run_sa_tsp(env, action, info):
     
 def insertion(env, action = None, run_sa = False):
     
+    # env = deepcopy(e)
     assignment = env.assignment
     best = 0
     if env.h == 0:
@@ -218,10 +219,14 @@ def insertion(env, action = None, run_sa = False):
         a = np.zeros_like(assignment)
         a[assignment==action] = assignment[assignment==action]
         # print('info run : ', best_info['emissions per vehicle'])
-        _, d, info = _run(env, a, action)
+        r, d, info = _run(env, a, action)
+        if not d and r == -env.quantities.sum()*env.omission_cost: # it means not enough capacity
+            assignment[env.t] = 0
+            return assignment, best_routes, best_info
         # print('info run : ', info['emissions per vehicle'])
         if run_sa:
             _, d, info = _run_sa_tsp(env, action, info)
+            
             # print('info run sa : ', info['emissions per vehicle'])
             
         if d:

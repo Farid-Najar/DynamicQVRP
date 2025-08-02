@@ -480,7 +480,7 @@ def calculate_cost(permutation, demands, distance_matrices, vehicle_capacity,
             
             
             current_load = demand
-            if v+1 >= max_vehicles:
+            if v+1 >= max_vehicles-1:
                 # print(v)
                 oq += np.sum(demands[permutation[i:]])
                 # print(individual[i+1:])
@@ -563,7 +563,7 @@ def calculate_routes_and_assignment(permutation, demands, distance_matrices, veh
             
             
             current_load = demand
-            if v+1 >= max_vehicles:
+            if v+1 >= max_vehicles-1:
                 # print(v)
                 oq += np.sum(demands[permutation[i:]])
                 # print(individual[i+1:])
