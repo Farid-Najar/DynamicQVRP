@@ -847,8 +847,14 @@ class DynamicQVRPEnv(gym.Env):
         # assert False
         np.random.seed(None)
         future_dests = np.random.choice(len(p), H, False, p)
+        qs = np.ones(env.H, dtype=int)
+        C = (self.max_capacity -1) * len(self.emissions_KM) - env.H/2
+        c = (C*np.random.dirichlet(np.ones(env.H), size = (len(self.all_dests),))).astype(int)
+        qs += c
+        future_qs = qs[-H:]
         # print(env.t, future_dests)
         env.dests[env.t+1 : env.t+H+1] = future_dests
+        env.quantities[env.t+1 : env.t+H+1] = future_qs
         
         l = [env.hub] + list(env.dests)
         env.mask = np.ix_(l, l)
