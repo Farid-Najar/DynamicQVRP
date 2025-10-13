@@ -630,6 +630,7 @@ class DynamicQVRPEnv(gym.Env):
         
         idx_NA = knn(D_NA, self.k_med)
         med_knn = np.median(p[idx_NA]*D_NA[idx_NA])
+        # med_knn = np.mean(p[idx_NA]*D_NA[idx_NA])
         # med_knn = np.median(knn(self.D[self.NA, self.dests[self.t]]/(p[self.NA] + 1e-8), self.k_med))
         
         

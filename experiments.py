@@ -49,7 +49,7 @@ def run_agent(
     
 
 def experiment(
-        episodes = 200,
+        episodes = 100,
         env_configs = {
             "horizon" : 50,
             "Q" : 100, 
@@ -57,7 +57,6 @@ def experiment(
             "vehicle_capacity" : 25,
             "re_optimization" : False,
             "emissions_KM" : [.1, .3],
-            "n_scenarios" : 500
         },
         RL_hidden_layers = [512, 512, 512],
         RL_model = None,
@@ -145,17 +144,17 @@ def experiment(
         #     title = "res_RL_DQN_OA",
         # ),
         
-        # "RL_VA" : dict(
-        #     agentClass = DQNAgent,
-        #     env_configs = env_configs_DQN_VA,
-        #     episodes = episodes,
-        #     agent_configs = dict(
-        #         algo = RL_model,
-        #         hidden_layers = RL_hidden_layers, 
-        #     ),
-        #     save_results = True,
-        #     title = "res_RL_DQN_VA",
-        # ),
+        "RL_VA" : dict(
+            agentClass = DQNAgent,
+            env_configs = env_configs_DQN_VA,
+            episodes = episodes,
+            agent_configs = dict(
+                algo = RL_model,
+                hidden_layers = RL_hidden_layers, 
+            ),
+            save_results = True,
+            title = "res_RL_DQN_VA",
+        ),
         # "RL_VA_as_OA" : dict(
         #     agentClass = DQNAgent,
         #     env_configs = env_configs_DQN_VA_as_OA,
