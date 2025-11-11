@@ -8,7 +8,7 @@ from envs import DynamicQVRPEnv
 
 from methods.static import (
     OA_experiments, run_SA_VA, RO_greedy_experiments, different_RO_freq,
-    run_RL_experiments
+    run_RL_experiments, run_ACO
     )
 
 from methods.static import game_experiments, EXP3, LRI, run_RL
@@ -726,6 +726,28 @@ if __name__ == "__main__":
     #         "test"  : True,
     #     },
     # )
+    
+    # run_ACO(
+    #     100,
+    #     # cluster_data = False,
+    #     # random_data = False,
+    #     num_ants=50,
+    #     max_iter=100,
+    #     rho=0.1,
+    #     alpha=1.0,
+    #     beta=2.0,
+    #     seed=42,
+    #     env_configs = {
+    #         "horizon" : 100,
+    #         "Q" : 50,
+    #         "vehicle_assignment" : True,
+    #         "vehicle_capacity" : 25,
+    #         "re_optimization" : False,
+    #         "emissions_KM" : [.1, .1, .3, .3],
+    #         "test"  : True,
+    #     },
+    # )
+    
     # run_offline(
     #     100,
     #     env_configs = {
@@ -888,6 +910,26 @@ if __name__ == "__main__":
     ####################################################################################
     #### CLuster experiments
     
+    run_ACO(
+        100,
+        cluster_data = True,
+        # random_data = False,
+        num_ants=50,
+        max_iter=100,
+        rho=0.1,
+        alpha=1.0,
+        beta=2.0,
+        seed=42,
+        env_configs = {
+            "horizon" : 50,
+            "Q" : 100,
+            "vehicle_assignment" : True,
+            "vehicle_capacity" : 25,
+            "re_optimization" : False,
+            "emissions_KM" : [.1, .3],
+            "test"  : True,
+        },
+    )
     # game_experiments(
     #     100,
     #     EXP3,
@@ -1168,6 +1210,26 @@ if __name__ == "__main__":
     ####################################################################################
     #### Uniform experiments
     
+    run_ACO(
+        100,
+        # cluster_data = False,
+        random_data = True,
+        num_ants=50,
+        max_iter=100,
+        rho=0.1,
+        alpha=1.0,
+        beta=2.0,
+        seed=42,
+        env_configs = {
+            "horizon" : 100,
+            "Q" : 50,
+            "vehicle_assignment" : True,
+            "vehicle_capacity" : 25,
+            "re_optimization" : False,
+            "emissions_KM" : [.1, .1, .3, .3],
+            "test"  : True,
+        },
+    )
     # game_experiments(
     #     100,
     #     EXP3,
@@ -1747,19 +1809,19 @@ if __name__ == "__main__":
     # )
     
     # TSP different DoDs
-    experiment_DoD(
-        100,
-        # DoDs = [1., .95, .9, .85, .8, .75, .65, .5],#[1., .95, .9, .85, .8, .75, .7, .65, .6]
-        DoDs = np.arange(0.05, .55, .05),
-        env_configs = {
-            "horizon" : 100,
-            "Q" : 50, 
-            "vehicle_capacity" : 20,
-            # "re_optimization" : False,
-            "re_optimization" : True,
-            "emissions_KM" : [.1, .1, .3, .3],
-            # "n_scenarios" : 500 ,
-            "test"  : True
-        },
-        RL_hidden_layers = [1024, 1024, 1024],
-    )
+    # experiment_DoD(
+    #     100,
+    #     # DoDs = [1., .95, .9, .85, .8, .75, .65, .5],#[1., .95, .9, .85, .8, .75, .7, .65, .6]
+    #     DoDs = np.arange(0.05, .55, .05),
+    #     env_configs = {
+    #         "horizon" : 100,
+    #         "Q" : 50, 
+    #         "vehicle_capacity" : 20,
+    #         # "re_optimization" : False,
+    #         "re_optimization" : True,
+    #         "emissions_KM" : [.1, .1, .3, .3],
+    #         # "n_scenarios" : 500 ,
+    #         "test"  : True
+    #     },
+    #     RL_hidden_layers = [1024, 1024, 1024],
+    # )

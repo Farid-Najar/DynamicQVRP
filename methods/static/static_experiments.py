@@ -6,6 +6,7 @@
 from methods.static.shortcut import multi_types
 from methods.static.SA_baseline import recuit, recuit_VA
 from methods.static.greedy_baseline import baseline
+from methods.static.aco import ACO_TOP
 import multiprocess as mp
 import numpy as np
 import pickle
@@ -42,7 +43,7 @@ def RO_greedy_experiments(
     real = "real_" if real_data else "cluster_" if cluster_data else ""
     
     env = StaticQVRPEnv(obs_mode='action', **env_configs)
-    np.random.seed(1917)
+    np.random.seed(42)
         
         
     def process_greedy(env, i, q):
@@ -146,7 +147,7 @@ def OA_experiments(
     real = "real_" if real_data else "cluster_" if cluster_data else ""
     
     env = StaticQVRPEnv(obs_mode='action', **env_configs)
-    np.random.seed(1917)
+    np.random.seed(42)
 
     def process_DP(env, i, info, q):
         t0 = time()
@@ -286,7 +287,7 @@ def run_SA_VA(
     
     env = StaticQVRPEnv(obs_mode='game', **env_configs)
 
-    np.random.seed(1917)
+    np.random.seed(42)
 
     def process(env, i, q):
         t0 = time()
@@ -366,7 +367,7 @@ def run_RL_experiments(
 
     _env = StaticQVRPEnv(**env_configs)
     env = RemoveActionEnv(_env, action_mode=action_mode)
-    np.random.seed(1917)
+    np.random.seed(42)
         
         
     def process(env, i, q):
@@ -421,6 +422,103 @@ def run_RL_experiments(
             pickle.dump(res, f)
     else:
         return res
+
+
+def run_ACO(
+    n_simulation = 1,
+    # strategy = LRI,
+    cluster_data = False,
+    random_data = False,
+    num_ants=50,
+    max_iter=100,
+    rho=0.1,
+    alpha=1.0,
+    beta=2.0,
+    seed=42,
+    env_configs = dict(),
+    n_threads = 7,
+    comment = '',
+    ):
+    
+    real_data = False
+    if cluster_data:
+        env_configs['cluster_scenario'] = True
+    elif random_data:
+        env_configs['uniform_scenario'] = True
+    else:
+        real_data = True
+        
+    real = "real_" if real_data else "cluster_" if cluster_data else ""
+    
+    env = StaticQVRPEnv(obs_mode='game', **env_configs)
+
+    np.random.seed(seed)
+
+    def process(env, i, q):
+        t0 = time()
+        res = dict()
+
+        cost_matrices = env._env.cost_matrix
+        n_customers = cost_matrices.shape[1] - 1
+
+        rewards = np.zeros(n_customers + 1)  # q[0] = 0
+        rewards[1:] = env._env.quantities
+        Q = env._env.Q   # global total emission budget
+        Cap = env._env.max_capacity    # max stops per vehicle
+        aco = ACO_TOP(
+            cost_matrices=cost_matrices,
+            rewards=rewards,
+            Q=Q,
+            Cap=Cap,
+            num_ants=num_ants,
+            max_iter=max_iter,
+            rho=rho,
+            alpha=alpha,
+            beta=beta,
+            seed=seed,
+        )
+
+        routes, reward, total_e = aco.solve()
+        # res = recuit_multiple(game, T_init = T_init, T_limit = T_limit, lamb = lamb, log=log, H=T)
+        # a = np.where(action_SA == 0)[0]
+        
+        res['time'] = time() - t0
+        res['routes'] = routes
+        res['r'] = reward
+        oq = np.sum(env._env.quantities) - reward
+        res['oq'] = oq if total_e <= Q + 1e-5 else np.sum(env._env.quantities)
+        q.put((i, res))
+        print(f'ACO {i} done')
+        return
+        
+    q_SA = mp.Manager().Queue()
+    
+    res_SA = dict()
+    # env.reset(0)
+    # process(env, 0, q_SA)
+    # print('test passed')
+    
+
+    pool =  mp.Pool(processes=n_threads)
+    for i in range(n_simulation):
+        _, info = env.reset(i)
+        pool.apply_async(process, args=(deepcopy(env), i, q_SA,))
+    pool.close()
+    pool.join()
+        
+    print('all done !')
+    while not q_SA.empty():
+        i, d = q_SA.get()
+        res_SA[i] = d
+    
+    res = {
+        'res_ACO' : res_SA,
+    }
+    
+    # with open(f"res_compare_baseline_greedy_SA_{strategy.__name__}_Q{Q}_K{K}_n{n_simulation}_T{T}.pkl","wb") as f:
+    with open(f"results/static/{real}res_ACO_K{env._env.H}_n{n_simulation}{comment}.pkl","wb") as f:
+        pickle.dump(res, f)
+            
 
         
 if __name__ == '__main__' :
