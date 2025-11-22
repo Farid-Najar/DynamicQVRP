@@ -16,6 +16,36 @@ VEHICLE_PENALTY_FACTOR = 0  # Penalty multiplier for exceeding vehicle limit
 
 # njit = lambda x, *args : x
 
+def distribute_random(lst, n):
+    """
+    Distribute elements of `lst` randomly into `n` sublists.
+    Each element is assigned to a bucket uniformly at random, independently.
+    Returns a list of `n` lists (some may be empty).
+    """
+    if n <= 0:
+        raise ValueError("n must be positive")
+    
+    arr = np.array(lst)
+    buckets = np.random.randint(0, n, size=len(arr))
+    
+    # Build result in Python (safe and clear)
+    result = [[] for _ in range(n)]
+    # result = List([[] for _ in range(n)])
+    for item, bucket in zip(arr, buckets):
+        result[bucket].append(item)
+    
+    try:
+        out_numba = List()
+        for l in result:
+            l.append(-1) # To fingerprint the type
+            out_numba.append(l)
+            out_numba[-1].remove(-1)
+    except Exception as e :
+        print(result)
+        raise(e)
+        
+    return out_numba
+
 @njit(nogil=True)
 def ordered_crossover(parent1, parent2):
     """Numba-optimized ordered crossover"""
@@ -514,6 +544,79 @@ def calculate_cost(permutation, demands, distance_matrices, vehicle_capacity,
     return total_distance + penalty, oq, routes
 
 @njit
+def calculate_cost2(sol, demands, distance_matrices, vehicle_capacity, 
+                     depot, max_vehicles, Q, omit_penalty):
+    """Numba-accelerated fitness calculation with multiple distance matrices"""
+    # num_vehicles = distance_matrices.shape[0]
+    total_distance = 0.0
+    # vehicle_used = np.zeros(num_vehicles, dtype=np.bool)
+    
+    # current_route = np.zeros(len(permutation)+2, dtype=np.int64)
+    # current_route = [depot]
+    # routes = []
+    routes = np.zeros((max_vehicles, vehicle_capacity+2), dtype=np.int64)#List(List())#[[]]#
+    oq = 0.
+    
+    # served_idx = 0
+    # vehicle_assignments = np.empty(len(individual), dtype=np.int64)
+    # Split into routes based on capacity
+    for v, route in enumerate(sol):
+        current_load = 0
+        route_length = 0
+        current_route = np.zeros(vehicle_capacity+2, dtype=np.int64)
+        current_route[0] = depot
+        
+        for i, customer in enumerate(route):
+            demand = demands[customer]
+            
+            if not demand:
+                continue
+            
+            if (total_distance + 
+                distance_matrices[v, current_route[route_length], customer] +
+                distance_matrices[v, customer, depot] )> Q:
+                oq += demand#demands[customer]
+                # print()
+                # vehicle_assignments[customer] = -1
+                # continue
+            
+            elif current_load + demand > vehicle_capacity:
+                # Finalize current route
+                total_distance += distance_matrices[v, current_route[route_length], depot]
+                # current_route[route_length] = depot
+                routes[v, :] = current_route[:].copy()
+                # routes[v, :route_length+1] = current_route[:route_length+1]
+                # Start new route
+                
+                
+                # current_load = demand
+                # oq += np.sum(demands[route[i:]])
+                oq += demand#demands[customer]
+                
+                    
+                # vehicle_assignments[customer] = v
+            else:
+                total_distance += distance_matrices[v, current_route[route_length], customer]
+                route_length += 1
+                current_route[route_length] = customer
+                current_load += demand
+            
+            # vehicle_assignments[customer] = v
+    
+    total_distance += distance_matrices[v, current_route[route_length], depot]
+    # current_route[route_length] = depot
+    # routes[v, :route_length+2] = current_route[:route_length+2]
+    routes[v, :] = current_route[:]
+    # routes.append(current_route[:route_length+1])
+
+    penalty = omit_penalty*oq
+
+    # return total_distance + penalty#, oq
+    return total_distance + penalty, oq, routes
+
+
+
+@njit
 def calculate_routes_and_assignment(permutation, demands, distance_matrices, vehicle_capacity, 
                      depot, max_vehicles, Q, omit_penalty):
     """Numba-accelerated fitness calculation with multiple distance matrices"""
@@ -605,6 +708,86 @@ def calculate_routes_and_assignment(permutation, demands, distance_matrices, veh
     return distances, oq, routes, assignment[1:] # exclude the hub
 
 @njit
+def calculate_routes_and_assignment2(sol, demands, distance_matrices, vehicle_capacity, 
+                     depot, max_vehicles, Q, omit_penalty):
+    """Numba-accelerated fitness calculation with multiple distance matrices"""
+    # num_vehicles = distance_matrices.shape[0]
+    total_distance = 0.0
+    distances = np.zeros(len(distance_matrices))
+    
+    # vehicle_used = np.zeros(num_vehicles, dtype=np.bool)
+    
+    # current_route = np.zeros(len(permutation)+2, dtype=np.int64)
+    assignment = np.zeros(len(demands), np.int64)
+    # current_route = [depot]
+    # routes = []
+    routes = np.zeros((max_vehicles, vehicle_capacity+2), dtype=np.int64)#List(List())#[[]]#
+    oq = 0.
+    
+    # served_idx = 0
+    # vehicle_assignments = np.empty(len(individual), dtype=np.int64)
+    for v, route in enumerate(sol):
+        # Split into routes based on capacity
+        current_load = 0
+        route_length = 0
+        current_route = np.zeros(vehicle_capacity+2, dtype=np.int64)
+        current_route[0] = depot
+        for i, customer in enumerate(route):
+            demand = demands[customer]
+            
+            if not demand:
+                continue
+            
+            if (total_distance + 
+                distance_matrices[v, current_route[route_length], customer] +
+                distance_matrices[v, customer, depot] )> Q:
+                oq += demand#demands[customer]
+                assignment[customer] = 0
+                # print()
+                # vehicle_assignments[customer] = -1
+                # continue
+            
+            elif current_load + demand > vehicle_capacity:
+                # Finalize current route
+                total_distance += distance_matrices[v, current_route[route_length], depot]
+                distances[v] += distance_matrices[v, current_route[route_length], depot]
+                # current_route[route_length] = depot
+                routes[v, :] = current_route[:].copy()
+                # routes[v, :route_length+1] = current_route[:route_length+1]
+                # Start new route
+                
+                
+                # current_load = demand
+                # oq += np.sum(demands[route[i:]])
+                assignment[customer] = 0
+                oq += demand#demands[customer]
+            else:
+                total_distance += distance_matrices[v, current_route[route_length], customer]
+                distances[v] += distance_matrices[v, current_route[route_length], customer]
+                route_length += 1
+                current_route[route_length] = customer
+                assignment[customer] = v+1
+                current_load += demand
+                
+                # vehicle_assignments[customer] = v
+        
+    # * It must calculate the return to the depot even if the capacity is not reached
+    # * This was the source of a bug
+    total_distance += distance_matrices[v, current_route[route_length], depot]
+    distances[v] += distance_matrices[v, current_route[route_length], depot]
+    
+    # current_route[route_length] = depot
+    # routes[v, :route_length+2] = current_route[:route_length+2]
+    routes[v, :] = current_route[:]
+    # routes.append(current_route[:route_length+1])
+
+    # penalty = omit_penalty*oq
+
+    # return total_distance + penalty#, oq
+    return distances, oq, routes, assignment[1:] # exclude the hub
+
+
+@njit
 def generate_neighbor(current_solution):
     """Generate neighboring solution using various operators"""
     new_solution = current_solution.copy()
@@ -629,6 +812,41 @@ def generate_neighbor(current_solution):
         # new_solution = np.insert(new_solution, insert_pos, customer)
     
     return new_solution
+
+@njit
+def generate_neighbor2(current_solution):
+    """Generate neighboring solution using various operators"""
+    new_solution = current_solution.copy()
+    n = len(current_solution)
+    non_empty = List()
+    for v in range(n):
+        if len(current_solution[v]):
+            non_empty.append(v)
+    non_empty = np.array(list(non_empty), dtype=np.int64)
+    # Choose between different neighborhood operations
+    rand_val = np.random.random()
+    
+    if rand_val < 0.3:  # Swap
+        v1, v2 = np.random.choice(non_empty, size=2, replace = True)
+        i1 = np.random.randint(0, len(current_solution[v1]))
+        i2 = np.random.randint(0, len(current_solution[v2]))
+        new_solution[v1][i1], new_solution[v2][i2] = new_solution[v2][i2], new_solution[v1][i1]
+    elif rand_val < 0.4:  # Reverse
+        v1 = np.random.choice(non_empty, replace = True)
+        start, end = sorted(np.random.randint(0, len(current_solution[v1]), size=2))
+        new_solution[v1][start:end+1] = new_solution[v1][start:end+1][::-1]
+    else:  # Insert
+        v1 = np.random.choice(non_empty, replace = True)
+        v2 = np.random.randint(0, n)
+        pos = np.random.randint(0, len(current_solution[v1]))
+        customer = new_solution[v1].pop(pos)
+        insert_pos = np.random.randint(0, len(current_solution[v2])+1)
+        new_solution[v2].insert(insert_pos, customer)
+        # new_solution[v2] = new_solution[v2][:insert_pos] + List([customer]) + new_solution[v2][insert_pos:]
+        # new_solution = np.insert(new_solution, insert_pos, customer)
+    
+    return new_solution
+
 
 @njit
 def simulated_annealing_vrp(D, demands, capacity, initial_solution, 
@@ -704,7 +922,82 @@ def simulated_annealing_vrp(D, demands, capacity, initial_solution,
     
     return best_routes, best_costs, best_oq, assignment
 
-# @njit
+@njit
+def simulated_annealing_vrp2(D, demands, capacity, initial_solution, 
+                            max_vehicles=5, initial_temp=10_000.0, cooling_rate=0.995,
+                           max_iter=10_000, depot = 0,
+                           Q = 100):
+    """Numba-optimized SA for multi-vehicle VRP"""
+    # numba.seed(seed)
+    # np.random.seed(seed)
+    # Problem setup
+    # customers = np.arange(1, n + 1)
+    dist_mat = D#compute_distance_matrix(coords)
+    
+    omit_penalty = 3*np.amax(D)
+    
+    # Initial solution
+    current_solution = initial_solution
+    # current_cost, current_vehicles, _ = calculate_total_cost(
+    #     current_solution, demands, capacity, dist_mat, max_vehicles
+    # )
+    current_cost, current_oq, _ = calculate_cost2(current_solution, demands, dist_mat, capacity, 
+                     depot, max_vehicles, Q, omit_penalty)
+    best_solution = current_solution.copy()
+    best_cost = current_cost
+    # best_vehicles = current_vehicles
+    best_oq = current_oq
+    
+    # We shake up the solution for better exploration
+    # current_solution = np.random.permutation(current_solution).astype(np.int64)
+    
+    # SA parameters
+    T = initial_temp
+    
+    for i in range(max_iter):
+        new_solution = generate_neighbor2(current_solution)
+        new_cost, oq, _ = calculate_cost2(new_solution, demands, dist_mat, capacity, 
+                     depot, max_vehicles, Q, omit_penalty)
+        # new_cost, new_vehicles, _ = calculate_total_cost(
+        #     new_solution, demands, capacity, dist_mat, max_vehicles
+        # )
+        
+        # Acceptance criteria with vehicle count consideration
+        if (new_cost < current_cost or 
+            np.exp((current_cost - new_cost)/T) > np.random.rand()):
+            current_solution = new_solution
+            current_cost = new_cost
+            current_oq = oq
+            
+            if oq <= best_oq:
+                if current_cost < best_cost:
+                    best_solution = current_solution.copy()
+                    best_cost = new_cost
+                    best_oq = oq
+        
+        # Adaptive cooling
+        if T > 1e-10:
+            T *= cooling_rate
+            if i % 1000 == 0:
+                T *= 1.2  # Extra heating boost
+    
+    # Get final routes
+    # print(best_solution)
+    # print(best_solution.shape)
+    best_costs, best_oq, best_routes, assignment = calculate_routes_and_assignment2(
+        best_solution, demands, dist_mat, capacity, 
+        depot, max_vehicles, Q, omit_penalty
+    )
+    # _, _, best_routes = calculate_total_cost(
+    #     best_solution, demands, capacity, dist_mat, max_vehicles
+    # )
+    
+    # print('Final temperature : ', T)
+    
+    return best_routes, best_costs, best_oq, assignment
+
+
+@njit
 def simulated_annealing_tsp(D, demands, capacity, initial_solution, 
                             initial_temp=100.0, cooling_rate=0.99,
                            max_iter=500, depot = 0,
@@ -871,6 +1164,106 @@ def SA_vrp(distance_matrix, Q, qs, capacity, emissions_KM,
                 print(f"Vehicle {i+1}: {route}")
     
     return costs, oq, routes, assignment
+
+def SA_vrp2(distance_matrix, Q, qs, capacity, emissions_KM, 
+           customers = None, log = False,
+           initial_solution = None,
+           SA_configs = dict(
+              initial_temp=1_000,
+              cooling_rate=0.995,
+              max_iter=50_000, 
+            ),
+    ):
+    
+    # Problem parameters
+    # em_factors = [.1, .1, .3, .3]
+    # em_factors = [.1, .3]
+    max_vehicles = len(emissions_KM)
+    # Q = 100
+    # excess_penalty = 10_000
+    
+    # # Generate multiple distance matrices
+    # distance_matrices = np.random.randint(1, 100, (NUM_VEHICLES, NUM_NODES, NUM_NODES)).astype(np.float64)
+    # for v in range(NUM_VEHICLES):
+    #     np.fill_diagonal(distance_matrices[v], 0)
+    #     distance_matrices[v] = (distance_matrices[v] + distance_matrices[v].T) / 2
+    
+    # distance_matrix = np.load('data/distance_matrix.npy').astype(np.float64)#[:100, :100]
+    # scenarios = np.load('data/destinations_K100_100_test.npy').astype(np.int64)
+    
+    # s = [0] + list(scenarios[s_idx])
+    NUM_NODES = len(distance_matrix)
+    # mask = np.ix_(s, s)
+    # distance_matrix = distance_matrix[mask]
+    
+    D = np.array([
+        emissions_KM[v]*distance_matrix
+        for v in range(max_vehicles)
+    ]).astype(np.float64)
+    
+    
+    # print(distance_matrices.shape)
+    
+    # # Generate demands
+    # demands = np.zeros(NUM_NODES, dtype=np.int64)
+    # # demands[1:] = np.random.randint(0, 2, NUM_NODES-1)
+    # demands[1:] = np.ones(NUM_NODES-1)
+    
+    # # Generate sample data
+    # np.random.seed(1917)
+    # depot = np.array([[0, 0]])
+    # customers = np.random.randint(0, 100, (20, 2))
+    # coords = np.vstack((depot, customers))
+    # emission = [.1, .3, .3]
+    # # Problem setup
+    # # n = coords.shape[0] - 1  # Exclude depot
+    # # customers = np.arange(1, n + 1)
+    # mat = compute_distance_matrix(coords)
+    # D = np.array([
+    #     mat*emission[v]
+    #     for v in range(len(emission))
+    # ])
+    
+    
+    # demands = np.concatenate(([0], np.random.randint(1, 5, 20)))
+    # Generate demands
+    demands = np.zeros(NUM_NODES, dtype=np.int64)
+    n = D.shape[1] - 1  # Exclude depot
+    customers = np.arange(1, n + 1, dtype=np.int64) if customers is None else customers
+    
+    if initial_solution is None:
+        initial_solution = distribute_random(customers, max_vehicles)
+    else:
+        initial_solution_numba = List()
+        for l in initial_solution :
+            initial_solution_numba.append(List(l))
+        initial_solution = initial_solution_numba
+        
+    # demands[1:] = np.random.randint(0, 2, NUM_NODES-1)
+    demands[customers] = qs[customers-1]#np.ones(NUM_NODES-1)
+    
+    # Run optimized SA
+    routes, costs, oq, assignment = simulated_annealing_vrp2(
+        D, demands, capacity, initial_solution, max_vehicles,
+        Q = Q,
+        **SA_configs,
+    )
+    
+    # print(f"Total cost: {cost:.2f}")
+    # print(f"Emissions: {cost - oq*3*np.amax(D):.2f}")
+    if log:
+        print(f"Emissions: {costs:.2f}")
+        print(f"Best Oq: {oq}")
+        print(f"Best r: {NUM_NODES -1 -oq}")
+        print(f"Best r (assignment): {np.sum(assignment.astype(bool))}")
+        print(f"Assignment: {assignment}")
+
+        for i, route in enumerate(routes):
+            if route.any():  # Skip empty routes
+                print(f"Vehicle {i+1}: {route}")
+    
+    return costs, oq, routes, assignment
+    
     
 def multiple_SA_tsp(distance_matrix, Q, qs, capacity, emissions_KM, 
            initial_solutions,

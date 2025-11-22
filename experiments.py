@@ -290,7 +290,7 @@ def experiment_DoD(
     
     for dod in DoDs:
         
-        path = f'results/DoD{dod:.2f}/'
+        path = f'results/DoDs/DoD{dod:.2f}/'
         try:
             os.mkdir(path)
         except :
@@ -362,7 +362,7 @@ def experiment_DoD(
             #     save_results = True,
             #     title = "res_RL_DQN_VA",
             # ),
-            "RL_VA2" : dict(
+            "RL_VA3" : dict(
                 agentClass = DQNAgent,
                 env_configs = env_configs_DQN_VA,
                 episodes = episodes,
@@ -371,7 +371,7 @@ def experiment_DoD(
                     hidden_layers = RL_hidden_layers, 
                 ),
                 save_results = True,
-                title = "res_RL_DQN_VA2",
+                title = "res_RL_DQN_VA6",
             ),
             # "RL_VA_as_OA" : dict(
             #     agentClass = RLAgent,
@@ -388,7 +388,7 @@ def experiment_DoD(
 
         for agent_name in agents:
             run_agent(**agents[agent_name], path=path)
-            print(agent_name, "done")
+            print(agent_name, f"DoD {dod}", "done")
      
 def experiment_Q_impact(
       steps = 100,
@@ -518,24 +518,24 @@ if __name__ == "__main__":
     #     path = 'results/main/clustered/'
     # )
     
-    # VRP with 4 vehicles on uniform scenarios
-    experiment(
-        100,
-        env_configs = {
-            "horizon" : 100,
-            "Q" : 50, 
-            "DoD" : 1.,
-            "vehicle_capacity" : 20,
-            "re_optimization" : True,
-            "emissions_KM" : [.1, .1, .3, .3],
-            # "n_scenarios" : 500,
-            "uniform_scenario" : True,
-            "test"  : True,
-            # "vehicle_assignment" : True,
-        },
-        RL_hidden_layers = [1024, 1024, 1024],
-        path = 'results/main/uniform/'
-    )
+    # # VRP with 4 vehicles on uniform scenarios
+    # experiment(
+    #     100,
+    #     env_configs = {
+    #         "horizon" : 100,
+    #         "Q" : 50, 
+    #         "DoD" : 1.,
+    #         "vehicle_capacity" : 20,
+    #         "re_optimization" : True,
+    #         "emissions_KM" : [.1, .1, .3, .3],
+    #         # "n_scenarios" : 500,
+    #         "uniform_scenario" : True,
+    #         "test"  : True,
+    #         # "vehicle_assignment" : True,
+    #     },
+    #     RL_hidden_layers = [1024, 1024, 1024],
+    #     path = 'results/main/uniform/'
+    # )
     
     # VRP with 4 vehicles on real scenarios different quantities
     # experiment(
@@ -1862,9 +1862,10 @@ if __name__ == "__main__":
             # "re_optimization" : False,
             "re_optimization" : True,
             "emissions_KM" : [.1, .1, .3, .3],
+            # "advantage_pollutant" : True,
             # "n_scenarios" : 500 ,
             "test"  : True
         },
         RL_hidden_layers = [1024, 1024, 1024],
-        RL_model = 'model_DQN_perturbed_Q_VRP4Q50_VA',
+        # RL_model = 'DQN_perturbed_Q_VRP4Q50_VA',
     )

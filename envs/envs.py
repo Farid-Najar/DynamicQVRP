@@ -7,7 +7,7 @@ from numba import njit
 from sklearn.preprocessing import normalize
 
 
-from methods.OR.routing import SA_routing, SA_routing2, insertion, _run
+from methods.OR.routing import SA_routing,SA_routing2, SA_routing3, insertion, _run
 from utils.generate_scenarios import create_random_scenarios
 # from methods import VA_SA
 
@@ -280,6 +280,7 @@ class DynamicQVRPEnv(gym.Env):
                  static_as_dynamic = False,
                  noise_horizon = 0., # Represents the percentage of the noise in horizon. in [0, 1]
                  retain_rate = 0.,
+                 advantage_pollutant = False,
                  seed = 1917,
         ):
         """Initialize the Dynamic QVRP environment.
@@ -343,6 +344,8 @@ class DynamicQVRPEnv(gym.Env):
         self.D, self.coordx, self.coordy, self.p = load_data(cluster_scenario, uniform_scenario)
         
         self.emissions_KM = emissions_KM
+        self.advantage_pollutant = advantage_pollutant
+        
         if costs_KM is None:
             costs_KM =  np.ones(len(emissions_KM), int).tolist()
             
@@ -532,6 +535,7 @@ class DynamicQVRPEnv(gym.Env):
         
         if self.t:
             self.assignment, self.routes, self.info = SA_routing2(self)
+            # self.assignment, self.routes, self.info = SA_routing3(self)
         
         self.omitted += list(np.where(self.assignment[:self.t]==0)[0])
         
