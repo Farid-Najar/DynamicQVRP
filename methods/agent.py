@@ -2,6 +2,7 @@ import numpy as np
 from tqdm import tqdm
 import multiprocess as mp
 from copy import deepcopy
+from time import time
 
 import torch
 
@@ -38,6 +39,7 @@ class Agent:
             actions = []
             infos = []
             o, info = env.reset(initial_instance + i)
+            t0 = time()
             infos.append(info)
             while True:
                 a = self.act(o, env = env)
@@ -50,6 +52,7 @@ class Agent:
             
 
             res['a'] = a
+            res['t'] = time() - t0
             res['r'] = episode_rewards
             res['info'] = infos
             q.put((i, res))
@@ -80,22 +83,25 @@ class Agent:
         while not q.empty():
             i, d = q.get()
             episode_rewards[i] = d["r"]
+            times[i] = d["t"]
             actions[i] = d["a"]
             infos[i] = d["info"]
             # pbar.update(1)
             
             
         pbar.close()
-        return episode_rewards, actions, infos
+        return episode_rewards, actions, infos, times
     
     def _simple_run(self, n, initial_instance = 0):
         
         episode_rewards = np.zeros(n)
         actions = [[] for _ in range(n)]
         infos = [[] for _ in range(n)]
+        times = np.zeros(n)
         
         for i in tqdm(range(n)):
             o, info = self.env.reset(initial_instance + i)
+            t0 = time()
             infos[i].append(info)
             while True:
                 a = self.act(o)
@@ -105,8 +111,11 @@ class Agent:
                 infos[i].append(info)
                 if d or trun:
                     break
+                
+            times[i] = time() - t0
+            
         
-        return episode_rewards, actions, infos
+        return episode_rewards, actions, infos, times
     
     def run(self, n, initial_instance = 0):
         if self.parallelize:

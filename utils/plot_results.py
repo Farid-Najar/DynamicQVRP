@@ -521,6 +521,6 @@ def plot(data : dict, total_cap = None, H = None):
     plot_gap_offline(data)
     plot_gap_method(data, 'FAFS')
     # plot_gap_method(data, 'MSA')
-    plot_gap_method(data, 'Random')
+    # plot_gap_method(data, 'Random')
     plot_gap_method(data, 'DQN \nVA')
     plot_dist_occupancy(data, H)

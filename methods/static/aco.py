@@ -96,8 +96,8 @@ class ACO_TOP:
                 local_visited.append(next_node)
                 visited.add(next_node)
                 unvisited.remove(next_node)
+                stops += self.rewards[current]
                 current = next_node
-                stops += 1
 
             # Return to depot
             if len(route) > 1:

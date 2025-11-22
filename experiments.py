@@ -31,12 +31,13 @@ def run_agent(
     env = DynamicQVRPEnv(**env_configs)
     agent = agentClass(env, env_configs = env_configs, **agent_configs)
     
-    rs, actions, infos = agent.run(episodes)
+    rs, actions, infos, times = agent.run(episodes)
     
     res = {
         "rs" : rs,
         "actions" : actions,
-        "infos" : infos
+        "infos" : infos,
+        "ts" : times,
     }
     if save_results:
         tit = path+title+'.pkl' if title is not None else f'results/{agentClass.__name__}.pkl'
@@ -61,6 +62,7 @@ def experiment(
         RL_hidden_layers = [512, 512, 512],
         RL_model = None,
         RL_name_comment = '',
+        path = 'results/'
     ):
     """Compares different methods implemented so far between them on the 
     same environment.
@@ -71,7 +73,7 @@ def experiment(
         The number of episodes to run for each agent, by default 200
     """
     
-    with open(f'results/env_configs.pkl', 'wb') as f:
+    with open(path+f'env_configs.pkl', 'wb') as f:
         pickle.dump(env_configs, f)
         
     try:
@@ -115,6 +117,7 @@ def experiment(
         #     agent_configs = {},
         #     save_results = True,
         #     title = "res_fafs",
+        #     path = path,
         # ),
         # "random" : dict(
         #     agentClass = Agent,
@@ -123,6 +126,7 @@ def experiment(
         #     agent_configs = {},
         #     save_results = True,
         #     title = "res_random",
+        #     path = path,
         # ),
         # "SL" : dict(
         #     agentClass = SLAgent,
@@ -144,17 +148,18 @@ def experiment(
         #     title = "res_RL_DQN_OA",
         # ),
         
-        "RL_VA" : dict(
-            agentClass = DQNAgent,
-            env_configs = env_configs_DQN_VA,
-            episodes = episodes,
-            agent_configs = dict(
-                algo = RL_model,
-                hidden_layers = RL_hidden_layers, 
-            ),
-            save_results = True,
-            title = "res_RL_DQN_VA",
-        ),
+        # "RL_VA" : dict(
+        #     agentClass = DQNAgent,
+        #     env_configs = env_configs_DQN_VA,
+        #     episodes = episodes,
+        #     agent_configs = dict(
+        #         algo = RL_model,
+        #         hidden_layers = RL_hidden_layers, 
+        #     ),
+        #     save_results = True,
+        #     title = "res_RL_DQN_VA",
+        #     path = path,
+        # ),
         # "RL_VA_as_OA" : dict(
         #     agentClass = DQNAgent,
         #     env_configs = env_configs_DQN_VA_as_OA,
@@ -205,6 +210,7 @@ def experiment(
                 accept_bonus = 0),
             save_results = True,
             title = "res_MSA",
+            path = path,
         ),
         # "MSA_softmax" : dict(
         #     agentClass = MSAAgent,
@@ -297,14 +303,14 @@ def experiment_DoD(
             pickle.dump(env_configs, f)
 
         agents = {
-            "greedy" : dict(
-                agentClass = GreedyAgent,
-                env_configs = env_configs,
-                episodes = episodes,
-                agent_configs = {},
-                save_results = True,
-                title = "res_greedy",
-            ),
+            # "greedy" : dict(
+            #     agentClass = GreedyAgent,
+            #     env_configs = env_configs,
+            #     episodes = episodes,
+            #     agent_configs = {},
+            #     save_results = True,
+            #     title = "res_greedy",
+            # ),
             # "random" : dict(
             #     agentClass = Agent,
             #     env_configs = env_configs,
@@ -313,14 +319,14 @@ def experiment_DoD(
             #     save_results = True,
             #     title = "res_random",
             # ),
-            "offline" : dict(
-                agentClass = OfflineAgent,
-                env_configs = env_configs,
-                episodes = episodes,
-                agent_configs = {"n_workers": 7},
-                save_results = True,
-                title = "res_offline",
-            ),
+            # "offline" : dict(
+            #     agentClass = OfflineAgent,
+            #     env_configs = env_configs,
+            #     episodes = episodes,
+            #     agent_configs = {"n_workers": 7},
+            #     save_results = True,
+            #     title = "res_offline",
+            # ),
             # "MSA" : dict(
             #     agentClass = MSAAgent,
             #     env_configs = env_configs,
@@ -345,7 +351,18 @@ def experiment_DoD(
             #     save_results = True,
             #     title = "res_RL",
             # ),
-            "RL_VA" : dict(
+            # "RL_VA" : dict(
+            #     agentClass = DQNAgent,
+            #     env_configs = env_configs_DQN_VA,
+            #     episodes = episodes,
+            #     agent_configs = dict(
+            #         algo = RL_model,
+            #         hidden_layers = RL_hidden_layers, 
+            #     ),
+            #     save_results = True,
+            #     title = "res_RL_DQN_VA",
+            # ),
+            "RL_VA2" : dict(
                 agentClass = DQNAgent,
                 env_configs = env_configs_DQN_VA,
                 episodes = episodes,
@@ -354,7 +371,7 @@ def experiment_DoD(
                     hidden_layers = RL_hidden_layers, 
                 ),
                 save_results = True,
-                title = "res_RL_DQN_VA",
+                title = "res_RL_DQN_VA2",
             ),
             # "RL_VA_as_OA" : dict(
             #     agentClass = RLAgent,
@@ -479,6 +496,7 @@ if __name__ == "__main__":
     #     },
     #     # RL_model='DQN_VRP4_VA',
     #     RL_hidden_layers = [1024, 1024, 1024],
+    #     path = 'results/main/real/'
     # )
     
     # VRP with 2 vehicles on cluster scenarios
@@ -497,25 +515,27 @@ if __name__ == "__main__":
     #         # "vehicle_assignment" : True,
     #     },
     #     RL_hidden_layers = [1024, 1024, 1024],
+    #     path = 'results/main/clustered/'
     # )
     
     # VRP with 4 vehicles on uniform scenarios
-    # experiment(
-    #     100,
-    #     env_configs = {
-    #         "horizon" : 100,
-    #         "Q" : 50, 
-    #         "DoD" : 1.,
-    #         "vehicle_capacity" : 20,
-    #         "re_optimization" : True,
-    #         "emissions_KM" : [.1, .1, .3, .3],
-    #         # "n_scenarios" : 500,
-    #         "uniform_scenario" : True,
-    #         "test"  : True,
-    #         # "vehicle_assignment" : True,
-    #     },
-    #     RL_hidden_layers = [1024, 1024, 1024],
-    # )
+    experiment(
+        100,
+        env_configs = {
+            "horizon" : 100,
+            "Q" : 50, 
+            "DoD" : 1.,
+            "vehicle_capacity" : 20,
+            "re_optimization" : True,
+            "emissions_KM" : [.1, .1, .3, .3],
+            # "n_scenarios" : 500,
+            "uniform_scenario" : True,
+            "test"  : True,
+            # "vehicle_assignment" : True,
+        },
+        RL_hidden_layers = [1024, 1024, 1024],
+        path = 'results/main/uniform/'
+    )
     
     # VRP with 4 vehicles on real scenarios different quantities
     # experiment(
@@ -731,7 +751,7 @@ if __name__ == "__main__":
     #     100,
     #     # cluster_data = False,
     #     # random_data = False,
-    #     num_ants=50,
+    #     num_ants=200,
     #     max_iter=100,
     #     rho=0.1,
     #     alpha=1.0,
@@ -910,26 +930,26 @@ if __name__ == "__main__":
     ####################################################################################
     #### CLuster experiments
     
-    run_ACO(
-        100,
-        cluster_data = True,
-        # random_data = False,
-        num_ants=50,
-        max_iter=100,
-        rho=0.1,
-        alpha=1.0,
-        beta=2.0,
-        seed=42,
-        env_configs = {
-            "horizon" : 50,
-            "Q" : 100,
-            "vehicle_assignment" : True,
-            "vehicle_capacity" : 25,
-            "re_optimization" : False,
-            "emissions_KM" : [.1, .3],
-            "test"  : True,
-        },
-    )
+    # run_ACO(
+    #     100,
+    #     cluster_data = True,
+    #     # random_data = False,
+    #     num_ants=200,
+    #     max_iter=100,
+    #     rho=0.1,
+    #     alpha=1.0,
+    #     beta=2.0,
+    #     seed=42,
+    #     env_configs = {
+    #         "horizon" : 50,
+    #         "Q" : 100,
+    #         "vehicle_assignment" : True,
+    #         "vehicle_capacity" : 25,
+    #         "re_optimization" : False,
+    #         "emissions_KM" : [.1, .3],
+    #         "test"  : True,
+    #     },
+    # )
     # game_experiments(
     #     100,
     #     EXP3,
@@ -1210,26 +1230,26 @@ if __name__ == "__main__":
     ####################################################################################
     #### Uniform experiments
     
-    run_ACO(
-        100,
-        # cluster_data = False,
-        random_data = True,
-        num_ants=50,
-        max_iter=100,
-        rho=0.1,
-        alpha=1.0,
-        beta=2.0,
-        seed=42,
-        env_configs = {
-            "horizon" : 100,
-            "Q" : 50,
-            "vehicle_assignment" : True,
-            "vehicle_capacity" : 25,
-            "re_optimization" : False,
-            "emissions_KM" : [.1, .1, .3, .3],
-            "test"  : True,
-        },
-    )
+    # run_ACO(
+    #     100,
+    #     # cluster_data = False,
+    #     random_data = True,
+    #     num_ants=200,
+    #     max_iter=100,
+    #     rho=0.1,
+    #     alpha=1.0,
+    #     beta=2.0,
+    #     seed=42,
+    #     env_configs = {
+    #         "horizon" : 100,
+    #         "Q" : 50,
+    #         "vehicle_assignment" : True,
+    #         "vehicle_capacity" : 25,
+    #         "re_optimization" : False,
+    #         "emissions_KM" : [.1, .1, .3, .3],
+    #         "test"  : True,
+    #     },
+    # )
     # game_experiments(
     #     100,
     #     EXP3,
@@ -1506,6 +1526,28 @@ if __name__ == "__main__":
     
     ############################################################################################
     #### Real experiments with different quantities
+    # run_ACO(
+    #     100,
+    #     # cluster_data = False,
+    #     # random_data = False,
+    #     num_ants=200,
+    #     max_iter=100,
+    #     rho=0.1,
+    #     alpha=1.0,
+    #     beta=2.0,
+    #     seed=42,
+    #     env_configs = {
+    #         "horizon" : 50,
+    #         "Q" : 50,
+    #         "vehicle_assignment" : True,
+    #         "vehicle_capacity" : 25,
+    #         "re_optimization" : False,
+    #         "different_quantities" : True,
+    #         "emissions_KM" : [.1, .1, .3, .3],
+    #         "test"  : True,
+    #     },
+    #     comment = '_different_quantities',
+    # )
     
     # game_experiments(
     #     100,
@@ -1809,19 +1851,20 @@ if __name__ == "__main__":
     # )
     
     # TSP different DoDs
-    # experiment_DoD(
-    #     100,
-    #     # DoDs = [1., .95, .9, .85, .8, .75, .65, .5],#[1., .95, .9, .85, .8, .75, .7, .65, .6]
-    #     DoDs = np.arange(0.05, .55, .05),
-    #     env_configs = {
-    #         "horizon" : 100,
-    #         "Q" : 50, 
-    #         "vehicle_capacity" : 20,
-    #         # "re_optimization" : False,
-    #         "re_optimization" : True,
-    #         "emissions_KM" : [.1, .1, .3, .3],
-    #         # "n_scenarios" : 500 ,
-    #         "test"  : True
-    #     },
-    #     RL_hidden_layers = [1024, 1024, 1024],
-    # )
+    experiment_DoD(
+        100,
+        # DoDs = [1., .95, .9, .85, .8, .75, .65, .5],#[1., .95, .9, .85, .8, .75, .7, .65, .6]
+        DoDs = np.arange(0.05, 1.05, .05),
+        env_configs = {
+            "horizon" : 100,
+            "Q" : 50, 
+            "vehicle_capacity" : 20,
+            # "re_optimization" : False,
+            "re_optimization" : True,
+            "emissions_KM" : [.1, .1, .3, .3],
+            # "n_scenarios" : 500 ,
+            "test"  : True
+        },
+        RL_hidden_layers = [1024, 1024, 1024],
+        RL_model = 'model_DQN_perturbed_Q_VRP4Q50_VA',
+    )

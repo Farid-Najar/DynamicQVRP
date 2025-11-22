@@ -196,6 +196,7 @@ def train_DQN(
     save = True,
     mask_geography_flag = False,
     mask_horizon_flag = False,
+    perturbe_Q = False,
 ):
     # BATCH_SIZE is the number of transitions sampled from the replay buffer
     # GAMMA is the discount factor as mentioned in the previous section
@@ -211,6 +212,9 @@ def train_DQN(
         # "mps" if torch.backends.mps.is_available() else
         "cpu"
     )
+    
+    if perturbe_Q:
+        Q = env.Q
     
     EPS_DECAY = EPS_DECAY*env.H # for adaptive : *(env.action_space.n-1)#num_episodes*env.H//2
     
@@ -340,6 +344,9 @@ def train_DQN(
     
     for i_episode in range(num_episodes):
         # Initialize the environment and get its state
+        if perturbe_Q:
+            aQ = np.random.normal(5, 10)
+            env.Q = Q + aQ
         state, _ = env.reset()
         if mask_geography_flag:
             state = mask_geography(state, env.E.shape[0])
