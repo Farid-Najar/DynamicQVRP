@@ -1860,7 +1860,7 @@ if __name__ == "__main__":
             "Q" : 50, 
             "vehicle_capacity" : 20,
             # "re_optimization" : False,
-            "re_optimization" : True,
+            # "re_optimization" : True,
             "emissions_KM" : [.1, .1, .3, .3],
             # "advantage_pollutant" : True,
             # "n_scenarios" : 500 ,

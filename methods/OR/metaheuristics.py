@@ -814,18 +814,23 @@ def generate_neighbor(current_solution):
     return new_solution
 
 @njit
-def generate_neighbor2(current_solution):
+def generate_neighbor2(current_solution, cap):
     """Generate neighboring solution using various operators"""
     new_solution = current_solution.copy()
-    n = len(current_solution)
-    non_empty = List()
-    for v in range(n):
-        if len(current_solution[v]):
-            non_empty.append(v)
+    # n = len(current_solution)
+    a = np.array([len(l) for l in current_solution])
+    
+    non_empty = np.where(a > 0)[0]
+    non_full = np.where(a < cap)[0]
+    # for v in range(n):
+    #     if len(current_solution[v]) < cap:
+    #         non_full.append(v)
+            
     non_empty = np.array(list(non_empty), dtype=np.int64)
     # Choose between different neighborhood operations
     rand_val = np.random.random()
-    
+    if len(non_full) == 0:
+        rand_val -= .601
     if rand_val < 0.3:  # Swap
         v1, v2 = np.random.choice(non_empty, size=2, replace = True)
         i1 = np.random.randint(0, len(current_solution[v1]))
@@ -836,8 +841,8 @@ def generate_neighbor2(current_solution):
         start, end = sorted(np.random.randint(0, len(current_solution[v1]), size=2))
         new_solution[v1][start:end+1] = new_solution[v1][start:end+1][::-1]
     else:  # Insert
-        v1 = np.random.choice(non_empty, replace = True)
-        v2 = np.random.randint(0, n)
+        v1 = np.random.choice(non_empty)
+        v2 = np.random.choice(non_full)
         pos = np.random.randint(0, len(current_solution[v1]))
         customer = new_solution[v1].pop(pos)
         insert_pos = np.random.randint(0, len(current_solution[v2])+1)
@@ -955,7 +960,7 @@ def simulated_annealing_vrp2(D, demands, capacity, initial_solution,
     T = initial_temp
     
     for i in range(max_iter):
-        new_solution = generate_neighbor2(current_solution)
+        new_solution = generate_neighbor2(current_solution, capacity)
         new_cost, oq, _ = calculate_cost2(new_solution, demands, dist_mat, capacity, 
                      depot, max_vehicles, Q, omit_penalty)
         # new_cost, new_vehicles, _ = calculate_total_cost(

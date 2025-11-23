@@ -345,7 +345,7 @@ def train_DQN(
     for i_episode in range(num_episodes):
         # Initialize the environment and get its state
         if perturbe_Q:
-            aQ = np.random.normal(5, 10)
+            aQ = np.random.normal(0, 10)
             env.Q = Q + aQ
         state, _ = env.reset()
         if mask_geography_flag:
