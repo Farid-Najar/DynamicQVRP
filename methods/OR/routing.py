@@ -497,7 +497,8 @@ def SA_routing2(env,# : DynamicQVRPEnv,
         
     emissions, oq, routes, assignment = SA_vrp(
         distance_matrix, env.Q, qs, env.max_capacity, emissions_KM, 
-        customers = customers, initial_solution = initial_solution, log = log,
+        customers = customers, initial_solution = initial_solution, 
+        log = log,
         SA_configs = dict(
           initial_temp=T_init,
           cooling_rate=lamb,

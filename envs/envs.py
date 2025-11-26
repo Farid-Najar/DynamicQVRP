@@ -872,7 +872,8 @@ class DynamicQVRPEnv(gym.Env):
         # TODO : implement quantity sampling
         
         # env.action_mask[:self.t+H] = True
-        return SA_routing2(env, offline_mode=True, **SA_configs)
+        # return SA_routing2(env, offline_mode=True, **SA_configs)
+        return SA_routing(env, offline_mode=True, **SA_configs)
     
     def offline_solution(self, assignment = None, *args, **kwargs):
         """Compute an offline solution for the environment.

@@ -244,6 +244,7 @@ def experiment_DoD(
         RL_hidden_layers = [512, 512, 512],
         RL_model = None,
         RL_name_comment = '',
+        DoD_path = 'results/DoDs',
     ):
     """Compares different methods implemented so far between them on the 
     same environment.
@@ -290,7 +291,7 @@ def experiment_DoD(
     
     for dod in DoDs:
         
-        path = f'results/DoDs/DoD{dod:.2f}/'
+        path = f'{DoD_path}/DoD{dod:.2f}/'
         try:
             os.mkdir(path)
         except :
@@ -303,14 +304,14 @@ def experiment_DoD(
             pickle.dump(env_configs, f)
 
         agents = {
-            # "greedy" : dict(
-            #     agentClass = GreedyAgent,
-            #     env_configs = env_configs,
-            #     episodes = episodes,
-            #     agent_configs = {},
-            #     save_results = True,
-            #     title = "res_greedy",
-            # ),
+            "greedy" : dict(
+                agentClass = GreedyAgent,
+                env_configs = env_configs,
+                episodes = episodes,
+                agent_configs = {},
+                save_results = True,
+                title = "res_greedy",
+            ),
             # "random" : dict(
             #     agentClass = Agent,
             #     env_configs = env_configs,
@@ -319,14 +320,14 @@ def experiment_DoD(
             #     save_results = True,
             #     title = "res_random",
             # ),
-            # "offline" : dict(
-            #     agentClass = OfflineAgent,
-            #     env_configs = env_configs,
-            #     episodes = episodes,
-            #     agent_configs = {"n_workers": 7},
-            #     save_results = True,
-            #     title = "res_offline",
-            # ),
+            "offline" : dict(
+                agentClass = OfflineAgent,
+                env_configs = env_configs,
+                episodes = episodes,
+                agent_configs = {"n_workers": 7},
+                save_results = True,
+                title = "res_offline",
+            ),
             # "MSA" : dict(
             #     agentClass = MSAAgent,
             #     env_configs = env_configs,
@@ -351,18 +352,7 @@ def experiment_DoD(
             #     save_results = True,
             #     title = "res_RL",
             # ),
-            # "RL_VA" : dict(
-            #     agentClass = DQNAgent,
-            #     env_configs = env_configs_DQN_VA,
-            #     episodes = episodes,
-            #     agent_configs = dict(
-            #         algo = RL_model,
-            #         hidden_layers = RL_hidden_layers, 
-            #     ),
-            #     save_results = True,
-            #     title = "res_RL_DQN_VA",
-            # ),
-            "RL_VA3" : dict(
+            "RL_VA" : dict(
                 agentClass = DQNAgent,
                 env_configs = env_configs_DQN_VA,
                 episodes = episodes,
@@ -371,8 +361,19 @@ def experiment_DoD(
                     hidden_layers = RL_hidden_layers, 
                 ),
                 save_results = True,
-                title = "res_RL_DQN_VA6",
+                title = "res_RL_DQN_VA",
             ),
+            # "RL_VA3" : dict(
+            #     agentClass = DQNAgent,
+            #     env_configs = env_configs_DQN_VA,
+            #     episodes = episodes,
+            #     agent_configs = dict(
+            #         algo = RL_model,
+            #         hidden_layers = RL_hidden_layers, 
+            #     ),
+            #     save_results = True,
+            #     title = "res_RL_DQN_VA6",
+            # ),
             # "RL_VA_as_OA" : dict(
             #     agentClass = RLAgent,
             #     env_configs = env_configs_DQN_VA_as_OA,
@@ -480,7 +481,7 @@ if __name__ == "__main__":
     # )
     
     
-    # VRP full dynamic with 4 vehicles Q = 50
+    # # VRP full dynamic with 4 vehicles Q = 50
     # experiment(
     #     100,
     #     env_configs = {
@@ -519,23 +520,23 @@ if __name__ == "__main__":
     # )
     
     # # VRP with 4 vehicles on uniform scenarios
-    # experiment(
-    #     100,
-    #     env_configs = {
-    #         "horizon" : 100,
-    #         "Q" : 50, 
-    #         "DoD" : 1.,
-    #         "vehicle_capacity" : 20,
-    #         "re_optimization" : True,
-    #         "emissions_KM" : [.1, .1, .3, .3],
-    #         # "n_scenarios" : 500,
-    #         "uniform_scenario" : True,
-    #         "test"  : True,
-    #         # "vehicle_assignment" : True,
-    #     },
-    #     RL_hidden_layers = [1024, 1024, 1024],
-    #     path = 'results/main/uniform/'
-    # )
+    experiment(
+        100,
+        env_configs = {
+            "horizon" : 100,
+            "Q" : 50, 
+            "DoD" : 1.,
+            "vehicle_capacity" : 20,
+            "re_optimization" : True,
+            "emissions_KM" : [.1, .1, .3, .3],
+            # "n_scenarios" : 500,
+            "uniform_scenario" : True,
+            "test"  : True,
+            # "vehicle_assignment" : True,
+        },
+        RL_hidden_layers = [1024, 1024, 1024],
+        path = 'results/main/uniform/'
+    )
     
     # VRP with 4 vehicles on real scenarios different quantities
     # experiment(
@@ -1851,21 +1852,22 @@ if __name__ == "__main__":
     # )
     
     # TSP different DoDs
-    experiment_DoD(
-        100,
-        # DoDs = [1., .95, .9, .85, .8, .75, .65, .5],#[1., .95, .9, .85, .8, .75, .7, .65, .6]
-        DoDs = np.arange(0.05, 1.05, .05),
-        env_configs = {
-            "horizon" : 100,
-            "Q" : 50, 
-            "vehicle_capacity" : 20,
-            # "re_optimization" : False,
-            # "re_optimization" : True,
-            "emissions_KM" : [.1, .1, .3, .3],
-            # "advantage_pollutant" : True,
-            # "n_scenarios" : 500 ,
-            "test"  : True
-        },
-        RL_hidden_layers = [1024, 1024, 1024],
-        # RL_model = 'DQN_perturbed_Q_VRP4Q50_VA',
-    )
+    # experiment_DoD(
+    #     100,
+    #     # DoDs = [1., .95, .9, .85, .8, .75, .65, .5],#[1., .95, .9, .85, .8, .75, .7, .65, .6]
+    #     DoDs = np.arange(0.05, 1.05, .05),
+    #     env_configs = {
+    #         "horizon" : 100,
+    #         "Q" : 50, 
+    #         "vehicle_capacity" : 20,
+    #         # "re_optimization" : False,
+    #         # "re_optimization" : True,
+    #         "emissions_KM" : [.2, .2, .2, .2],
+    #         # "advantage_pollutant" : True,
+    #         # "n_scenarios" : 500 ,
+    #         "test"  : True
+    #     },
+    #     RL_hidden_layers = [1024, 1024, 1024],
+    #     DoD_path='results/DoDs_homogeneous'
+    #     # RL_model = 'DQN_perturbed_Q_VRP4Q50_VA',
+    # )

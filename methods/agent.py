@@ -140,6 +140,7 @@ class OfflineAgent(Agent):
             
             res = dict()
             env.reset(initial_instance + i)
+            t0 = time()
             assignment, _, info = env.offline_solution(**SA_configs)
             episode_rewards = np.sum(
                 env.quantities[assignment.astype(bool) & env.is_O_allowed]
@@ -147,6 +148,7 @@ class OfflineAgent(Agent):
             actions = assignment[env.t:]
 
             res['a'] = actions
+            res['t'] = time() - t0
             res['r'] = episode_rewards
             res['info'] = [info]
             q.put((i, res))
@@ -156,6 +158,7 @@ class OfflineAgent(Agent):
         episode_rewards = np.zeros(n)
         actions = [[] for _ in range(n)]
         infos = [[] for _ in range(n)]
+        times = np.zeros(n)
         
         q = mp.Manager().Queue()
         
@@ -178,11 +181,12 @@ class OfflineAgent(Agent):
         while not q.empty():
             i, d = q.get()
             episode_rewards[i] = d["r"]
+            times[i] = d["t"]
             actions[i] = d["a"]
             infos[i] = d["info"]
             
         pbar.close()
-        return episode_rewards, actions, infos
+        return episode_rewards, actions, infos, times
     
 class GreedyAgent(Agent):
     

@@ -472,6 +472,8 @@ def calculate_cost(permutation, demands, distance_matrices, vehicle_capacity,
     # num_vehicles = distance_matrices.shape[0]
     total_distance = 0.0
     current_load = 0
+    assignment = np.zeros(len(demands), np.int64)
+    
     # vehicle_used = np.zeros(num_vehicles, dtype=np.bool)
     
     # current_route = np.zeros(len(permutation)+2, dtype=np.int64)
@@ -496,6 +498,8 @@ def calculate_cost(permutation, demands, distance_matrices, vehicle_capacity,
             distance_matrices[v, current_route[route_length], customer] +
             distance_matrices[v, customer, depot] )> Q:
             oq += demand#demands[customer]
+            assignment[customer] = 0
+            
             # print()
             # vehicle_assignments[customer] = -1
             # continue
@@ -520,6 +524,7 @@ def calculate_cost(permutation, demands, distance_matrices, vehicle_capacity,
             current_route[:] = 0
             current_route[0] = depot
             current_route[1] = customer
+            assignment[customer] = v+1
             total_distance += distance_matrices[v, depot, customer]
             route_length = 1
                 
@@ -528,6 +533,7 @@ def calculate_cost(permutation, demands, distance_matrices, vehicle_capacity,
             total_distance += distance_matrices[v, current_route[route_length], customer]
             route_length += 1
             current_route[route_length] = customer
+            assignment[customer] = v+1
             current_load += demand
             
             # vehicle_assignments[customer] = v
@@ -540,8 +546,7 @@ def calculate_cost(permutation, demands, distance_matrices, vehicle_capacity,
 
     penalty = omit_penalty*oq
 
-    # return total_distance + penalty#, oq
-    return total_distance + penalty, oq, routes
+    return total_distance + penalty, oq, routes, assignment[1:] # exclude the hub
 
 @njit
 def calculate_cost2(sol, demands, distance_matrices, vehicle_capacity, 
@@ -855,7 +860,8 @@ def generate_neighbor2(current_solution, cap):
 
 @njit
 def simulated_annealing_vrp(D, demands, capacity, initial_solution, 
-                            max_vehicles=5, initial_temp=10_000.0, cooling_rate=0.995,
+                             max_vehicles,
+                           initial_temp=10_000.0, cooling_rate=0.995,
                            max_iter=10_000, depot = 0,
                            Q = 100):
     """Numba-optimized SA for multi-vehicle VRP"""
@@ -872,7 +878,7 @@ def simulated_annealing_vrp(D, demands, capacity, initial_solution,
     # current_cost, current_vehicles, _ = calculate_total_cost(
     #     current_solution, demands, capacity, dist_mat, max_vehicles
     # )
-    current_cost, current_oq, _ = calculate_cost(current_solution, demands, dist_mat, capacity, 
+    current_cost, current_oq, _, assignment = calculate_cost(current_solution, demands, dist_mat, capacity, 
                      depot, max_vehicles, Q, omit_penalty)
     best_solution = current_solution.copy()
     best_cost = current_cost
@@ -887,7 +893,7 @@ def simulated_annealing_vrp(D, demands, capacity, initial_solution,
     
     for i in range(max_iter):
         new_solution = generate_neighbor(current_solution)
-        new_cost, oq, _ = calculate_cost(new_solution, demands, dist_mat, capacity, 
+        new_cost, oq, _, _ = calculate_cost(new_solution, demands, dist_mat, capacity, 
                      depot, max_vehicles, Q, omit_penalty)
         # new_cost, new_vehicles, _ = calculate_total_cost(
         #     new_solution, demands, capacity, dist_mat, max_vehicles
@@ -917,7 +923,7 @@ def simulated_annealing_vrp(D, demands, capacity, initial_solution,
     # print(best_solution.shape)
     best_costs, best_oq, best_routes, assignment = calculate_routes_and_assignment(
         best_solution, demands, dist_mat, capacity, 
-        depot, max_vehicles, Q, omit_penalty
+        depot, max_vehicles, Q, omit_penalty,
     )
     # _, _, best_routes = calculate_total_cost(
     #     best_solution, demands, capacity, dist_mat, max_vehicles
@@ -1075,7 +1081,6 @@ def simulated_annealing_tsp(D, demands, capacity, initial_solution,
     
     return best_routes, best_costs, best_oq, assignment
 
-# Example usage
 def SA_vrp(distance_matrix, Q, qs, capacity, emissions_KM, 
            customers = None, log = False,
            initial_solution = None,
@@ -1150,7 +1155,8 @@ def SA_vrp(distance_matrix, Q, qs, capacity, emissions_KM,
     
     # Run optimized SA
     routes, costs, oq, assignment = simulated_annealing_vrp(
-        D, demands, capacity, initial_solution, max_vehicles,
+        D, demands, capacity, initial_solution,
+        max_vehicles,
         Q = Q,
         **SA_configs,
     )
