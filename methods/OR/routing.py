@@ -252,7 +252,44 @@ def insertion(env, action = None, run_sa = False):
             
     assignment[env.t] = best
     return assignment, best_routes, best_info
+
+def insertion_MSA(env):
+    
+    remaining_demands = list(range(env.t, env.H))
+    # env = deepcopy(e)
+    assignment = env.assignment
+    if env.h == 0:
+        r, d, _ = _run(env, assignment)
+        eval_best = r if d else -np.inf
+        # best_info = deepcopy(info)
+    else:
+        d= True
+        eval_best = -np.inf
+    #     best_info = deepcopy(env.info)
+    # best_routes = deepcopy(env.routes)
+    while remaining_demands:
+        best_i = remaining_demands[0]
+        best = 0
         
+        for i in remaining_demands:
+            
+            a = assignment.copy()
+            # i = np.random.choice(remaining_demands)
+            for v in range(1, len(env.costs_KM) + 1):
+                a[i] = v
+                r, d, _ = _run(env, a)
+                
+                if r > eval_best and d:
+                    eval_best = r
+                    best = v
+                    # best_info = deepcopy(info)
+                    # best_routes = deepcopy(env.routes)
+                    best_i = i
+                    
+        assignment[best_i] = best
+        remaining_demands.remove(best_i)
+    return assignment, None, None
+              
 @njit
 def construct_initial_solution(j, q, a, V, max_capacity):
     # j, assignment, V, max_capacity

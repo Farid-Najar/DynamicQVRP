@@ -16,6 +16,8 @@ from stable_baselines3 import PPO, DQN
 
 from gymnasium import Env
 
+import os
+
 
 
 class Agent:
@@ -236,10 +238,10 @@ class MSAAgent(Agent):
         q = mp.Manager().Queue()
         score = np.zeros(self.env.action_space.n)
         
-        pool = mp.Pool(processes=6)
+        pool = mp.Pool(processes=60)
         # with mp.Pool(processes=6) as pool:
         for i in range(self.n_sample):
-            pool.apply_async(process, args=(deepcopy(env), i, q, ))
+            pool.apply_async(process, args=(env, i, q, ))
         # ps[4*i+3].start()
         pool.close()
         pool.join()

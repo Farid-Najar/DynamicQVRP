@@ -861,9 +861,10 @@ def generate_neighbor2(current_solution, cap):
 @njit
 def simulated_annealing_vrp(D, demands, capacity, initial_solution, 
                              max_vehicles,
-                           initial_temp=10_000.0, cooling_rate=0.995,
-                           max_iter=10_000, depot = 0,
-                           Q = 100):
+                             # is_MSA, is_0_allowed,
+                           initial_temp, cooling_rate,
+                           max_iter, depot,
+                           Q):
     """Numba-optimized SA for multi-vehicle VRP"""
     # numba.seed(seed)
     # np.random.seed(seed)
@@ -900,6 +901,11 @@ def simulated_annealing_vrp(D, demands, capacity, initial_solution,
         # )
         
         # Acceptance criteria with vehicle count consideration
+        # condition = True
+        # if is_MSA:
+        #     forbidden_rejection = np.sum(assignment[~is_0_allowed].astype(np.bool_))
+        #     condition = forbidden_rejection == 0
+        #     new_cost += forbidden_rejection*omit_penalty
         if (new_cost < current_cost or 
             np.exp((current_cost - new_cost)/T) > np.random.rand()):
             current_solution = new_solution
@@ -1083,6 +1089,7 @@ def simulated_annealing_tsp(D, demands, capacity, initial_solution,
 
 def SA_vrp(distance_matrix, Q, qs, capacity, emissions_KM, 
            customers = None, log = False,
+        #    is_MSA = False, is_0_allowed = None,
            initial_solution = None,
            SA_configs = dict(
               initial_temp=1_000,
@@ -1156,7 +1163,9 @@ def SA_vrp(distance_matrix, Q, qs, capacity, emissions_KM,
     # Run optimized SA
     routes, costs, oq, assignment = simulated_annealing_vrp(
         D, demands, capacity, initial_solution,
-        max_vehicles,
+        max_vehicles, 
+        # is_MSA = is_MSA, is_0_allowed = is_0_allowed,
+        depot = 0,
         Q = Q,
         **SA_configs,
     )

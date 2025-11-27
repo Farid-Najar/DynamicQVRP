@@ -80,7 +80,8 @@ def plot_curves(res, label, eval_every=200):
 
     Returns
     -------
-    None
+    y : numpy.ndarray
+        Array containing the mean evaluation results, with shape (num_evaluations,)
         Plots the learning curves with mean and confidence intervals
     """
     y = np.mean(res, 1)
@@ -94,6 +95,8 @@ def plot_curves(res, label, eval_every=200):
         alpha=0.2,
         # label = "95% ci"
     )
+    
+    return y
      
     
 def add_value_labels(ax, spacing=5):
@@ -193,7 +196,7 @@ def plot_gap_method(data : dict, method : str):
         },
     )
     plt.hlines(0, -0.5, len(gap), colors='red')
-    plt.title(f"methods/{method} ratio")
+    plt.title(f"methods/{method} gap")
     plt.show()
     
 def plot_gap_offline(data : dict):

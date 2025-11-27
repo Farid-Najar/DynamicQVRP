@@ -7,7 +7,7 @@ from numba import njit
 from sklearn.preprocessing import normalize
 
 
-from methods.OR.routing import SA_routing,SA_routing2, SA_routing3, insertion, _run
+from methods.OR.routing import SA_routing,SA_routing2, SA_routing3, insertion, insertion_MSA
 from utils.generate_scenarios import create_random_scenarios
 # from methods import VA_SA
 
@@ -411,6 +411,7 @@ class DynamicQVRPEnv(gym.Env):
         else:
             qs = np.ones((len(self.all_dests), K))
             
+        self.different_quantities = different_quantities
         self.max_capacity = vehicle_capacity
         self.total_capacity = vehicle_capacity*len(emissions_KM)
         DoD = 1-(self.total_capacity-DoD*self.total_capacity)/K
@@ -853,9 +854,12 @@ class DynamicQVRPEnv(gym.Env):
         np.random.seed(None)
         future_dests = np.random.choice(len(p), H, False, p)
         qs = np.ones(env.H, dtype=int)
-        C = (self.max_capacity -1) * len(self.emissions_KM) - env.H/2
-        c = (C*np.random.dirichlet(np.ones(env.H), size = (len(self.all_dests),))).astype(int)
-        qs += c
+        if self.different_quantities:
+            # TODO : implement a proper quantity sampling
+            C = (self.max_capacity -1) * len(self.emissions_KM) - env.H/2
+            c = (C*np.random.dirichlet(np.ones(env.H))).astype(int)
+            qs += c
+            
         future_qs = qs[-H:]
         # print(env.t, future_dests)
         env.dests[env.t+1 : env.t+H+1] = future_dests
@@ -869,11 +873,12 @@ class DynamicQVRPEnv(gym.Env):
             env.emissions_KM[v]*env.distance_matrix
             for v in range(len(env.emissions_KM))
         ])
-        # TODO : implement quantity sampling
+        
         
         # env.action_mask[:self.t+H] = True
         # return SA_routing2(env, offline_mode=True, **SA_configs)
-        return SA_routing(env, offline_mode=True, **SA_configs)
+        # return SA_routing2(env, offline_mode=True, is_MSA=True, **SA_configs)
+        return insertion_MSA(env)
     
     def offline_solution(self, assignment = None, *args, **kwargs):
         """Compute an offline solution for the environment.
