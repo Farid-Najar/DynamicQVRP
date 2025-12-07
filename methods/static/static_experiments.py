@@ -7,6 +7,7 @@ from methods.static.shortcut import multi_types
 from methods.static.SA_baseline import recuit, recuit_VA
 from methods.static.greedy_baseline import baseline
 from methods.static.aco import ACO_TOP
+from methods.static.gurobi import top_gurobi
 import multiprocess as mp
 import numpy as np
 import pickle
@@ -518,6 +519,87 @@ def run_ACO(
     # with open(f"res_compare_baseline_greedy_SA_{strategy.__name__}_Q{Q}_K{K}_n{n_simulation}_T{T}.pkl","wb") as f:
     with open(f"results/static/{real}res_ACO_K{env._env.H}_n{n_simulation}{comment}.pkl","wb") as f:
         pickle.dump(res, f)
+            
+
+def run_gurobi(
+    n_simulation = 1,
+    # strategy = LRI,
+    cluster_data = False,
+    random_data = False,
+    timeout=0.,
+    seed=42,
+    env_configs = dict(),
+    n_threads = 7,
+    comment = '',
+    ):
+    
+    real_data = False
+    if cluster_data:
+        env_configs['cluster_scenario'] = True
+    elif random_data:
+        env_configs['uniform_scenario'] = True
+    else:
+        real_data = True
+        
+    real = "real_" if real_data else "cluster_" if cluster_data else ""
+    
+    env = StaticQVRPEnv(obs_mode='game', **env_configs)
+
+    np.random.seed(seed)
+
+    def process(env, i, q):
+        t0 = time()
+        res = dict()
+
+        cost_matrices = env._env.cost_matrix
+        n_customers = cost_matrices.shape[1] - 1
+
+        Q = env._env.Q   # global total emission budget
+        Cap = env._env.max_capacity    # max stops per vehicle
+        routes, time, total_e = top_gurobi(
+            num_vehicles=cost_matrices.shape[0],
+            cost_matrices=cost_matrices,
+            q=env._env.quantities,
+            Q=Q,
+            Cap=Cap,
+            timeout=timeout,
+        )
+
+        reward = np.array([env._env.quantities[route[1:-1]].sum() for route in routes]).sum()
+        res['time'] = time() - t0
+        res['routes'] = routes
+        res['r'] = reward
+        res['emissions'] = total_e
+        oq = np.sum(env._env.quantities) - reward
+        res['oq'] = oq if total_e <= Q + 1e-5 else np.sum(env._env.quantities)
+        q.put((i, res))
+        print(f'Gurobi {i} done')
+        return
+        
+    q_G = mp.Manager().Queue()
+    
+    res_G = dict()
+    # env.reset(0)
+    # process(env, 0, q_G)
+    # print('test passed')
+    
+
+    pool =  mp.Pool(processes=n_threads)
+    for i in range(n_simulation):
+        _, info = env.reset(i)
+        pool.apply_async(process, args=(deepcopy(env), i, q_G,))
+    pool.close()
+    pool.join()
+        
+    print('all done !')
+    while not q_G.empty():
+        i, d = q_G.get()
+        res_G[i] = d
+    
+    
+    # with open(f"res_compare_baseline_greedy_SA_{strategy.__name__}_Q{Q}_K{K}_n{n_simulation}_T{T}.pkl","wb") as f:
+    with open(f"results/static/{real}res_Gurobi_K{env._env.H}_n{n_simulation}{comment}.pkl","wb") as f:
+        pickle.dump(res_G, f)
             
 
         

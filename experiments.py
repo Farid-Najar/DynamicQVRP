@@ -8,7 +8,7 @@ from envs import DynamicQVRPEnv
 
 from methods.static import (
     OA_experiments, run_SA_VA, RO_greedy_experiments, different_RO_freq,
-    run_RL_experiments, run_ACO
+    run_RL_experiments, run_ACO, run_gurobi,
     )
 
 from methods.static import game_experiments, EXP3, LRI, run_RL
@@ -482,23 +482,23 @@ if __name__ == "__main__":
     
     
     # # VRP full dynamic with 4 vehicles Q = 50
-    experiment(
-        100,
-        env_configs = {
-            "horizon" : 100,
-            "Q" : 50, 
-            "DoD" : 1.,
-            "vehicle_capacity" : 20,
-            "re_optimization" : True,
-            "emissions_KM" : [.1, .1, .3, .3],
-            "test"  : True,
-            # "n_scenarios" : 500,
-            # "vehicle_assignment" : True,
-        },
-        # RL_model='DQN_VRP4_VA',
-        RL_hidden_layers = [1024, 1024, 1024],
-        path = 'results/main/real/'
-    )
+    # experiment(
+    #     100,
+    #     env_configs = {
+    #         "horizon" : 100,
+    #         "Q" : 50, 
+    #         "DoD" : 1.,
+    #         "vehicle_capacity" : 20,
+    #         "re_optimization" : True,
+    #         "emissions_KM" : [.1, .1, .3, .3],
+    #         "test"  : True,
+    #         # "n_scenarios" : 500,
+    #         # "vehicle_assignment" : True,
+    #     },
+    #     # RL_model='DQN_VRP4_VA',
+    #     RL_hidden_layers = [1024, 1024, 1024],
+    #     path = 'results/main/real/'
+    # )
     
     # VRP with 2 vehicles on cluster scenarios
     # experiment(
@@ -584,6 +584,93 @@ if __name__ == "__main__":
     #         "re_optimization" : False,
     #         "emissions_KM" : [.1, .3],
     #         "test"  : True,
+    
+    ##############################################################################################
+    #### Small experiments
+    env_configs = dict(
+        obs_mode='action',
+        is_0_allowed=False,
+        # DQVRP Env kwargs
+        horizon = 20,
+        Q = 50,
+        vehicle_assignment = True,
+        test = True,
+        vehicle_capacity = 10,
+        re_optimization = False,
+        emissions_KM = [.1, .3],
+    )
+    
+    run_SA_VA(
+        100,
+        # real_data=True, 
+        T = 75_000,
+        T_init = 10_000,
+        lamb = 0.999,
+        env_configs = env_configs,
+    )
+    
+    run_ACO(
+        100,
+        # cluster_data = False,
+        # random_data = False,
+        num_ants=200,
+        max_iter=100,
+        rho=0.1,
+        alpha=1.0,
+        beta=2.0,
+        seed=42,
+        env_configs = env_configs,
+    )
+    
+    run_offline(
+        100,
+        env_configs = env_configs,
+        comment = "real_",
+    )
+    
+    run_gurobi(
+        100,
+        env_configs = env_configs,
+        # comment = "real_",
+    )
+    
+    ##############################################################################################
+    #### Real experiments
+    
+    # game_experiments(
+    #     100,
+    #     EXP3,
+    #     T = 10_000,
+    #     real_data=True,
+    #     log = False,
+    #     env_configs = env_configs,
+    # )
+    
+    # game_experiments(
+    #     100,
+    #     env_configs = {
+    #         "horizon" : 100,
+    #         "Q" : 50,
+    #         "vehicle_assignment" : True,
+    #         "vehicle_capacity" : 25,
+    #         "re_optimization" : False,
+    #         "emissions_KM" : [.1, .1, .3, .3],
+    #         "test"  : True,
+    #     },
+    # )
+    
+    # run_offline(
+    #     100,
+    #     env_configs = {
+    #         "horizon" : 100,
+    #         "Q" : 50,
+    #         "DoD" : 1.,
+    #         "vehicle_capacity" : 25,
+    #         "emissions_KM" : [.1, .1, .3, .3],
+    #         "test"  : True,
+    #     },
+    #     comment = "real_",
+    # )
     
     ##############################################################################################
     #### Real experiments
