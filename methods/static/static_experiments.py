@@ -529,7 +529,7 @@ def run_gurobi(
     timeout=0.,
     seed=42,
     env_configs = dict(),
-    n_threads = 7,
+    n_threads = 6,
     comment = '',
     ):
     
@@ -548,11 +548,10 @@ def run_gurobi(
     np.random.seed(seed)
 
     def process(env, i, q):
-        t0 = time()
+        # t0 = time()
         res = dict()
 
         cost_matrices = env._env.cost_matrix
-        n_customers = cost_matrices.shape[1] - 1
 
         Q = env._env.Q   # global total emission budget
         Cap = env._env.max_capacity    # max stops per vehicle
@@ -565,15 +564,15 @@ def run_gurobi(
             timeout=timeout,
         )
 
-        reward = np.array([env._env.quantities[route[1:-1]].sum() for route in routes]).sum()
-        res['time'] = time() - t0
+        reward = np.array([env._env.quantities[np.array(route[1:-1])-1].sum() for route in routes]).sum()
+        res['time'] = time#time() - t0
         res['routes'] = routes
         res['r'] = reward
         res['emissions'] = total_e
         oq = np.sum(env._env.quantities) - reward
         res['oq'] = oq if total_e <= Q + 1e-5 else np.sum(env._env.quantities)
         q.put((i, res))
-        print(f'Gurobi {i} done')
+        print(f'Gurobi {i} done : {res["oq"]}')
         return
         
     q_G = mp.Manager().Queue()
@@ -586,7 +585,7 @@ def run_gurobi(
 
     pool =  mp.Pool(processes=n_threads)
     for i in range(n_simulation):
-        _, info = env.reset(i)
+        env.reset(i)
         pool.apply_async(process, args=(deepcopy(env), i, q_G,))
     pool.close()
     pool.join()

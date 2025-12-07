@@ -134,7 +134,7 @@ class OfflineAgent(Agent):
     def run(self, n, initial_instance = 0):
         
         SA_configs = dict(
-            T_init = 10_000, lamb = .995,
+            T_init = 10_000, lamb = .995, fast = False,
         )
         
         def process(env, i, q):
@@ -238,7 +238,7 @@ class MSAAgent(Agent):
         q = mp.Manager().Queue()
         score = np.zeros(self.env.action_space.n)
         
-        pool = mp.Pool(processes=60)
+        pool = mp.Pool(processes=6)
         # with mp.Pool(processes=6) as pool:
         for i in range(self.n_sample):
             pool.apply_async(process, args=(env, i, q, ))

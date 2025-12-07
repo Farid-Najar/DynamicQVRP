@@ -506,7 +506,7 @@ def rand_neighbor(solution : np.ndarray, action_mask, allow_0, nb_changes = 1, n
     return new_solution
 
 def SA_routing2(env,# : DynamicQVRPEnv,
-               T_init = 1_000, lamb = .995, log = False, H = 50_000,
+               T_init = 1_000, lamb = .995, log = False, H = 50_000, fast = True,
                **kwargs
     ):
     
@@ -523,7 +523,7 @@ def SA_routing2(env,# : DynamicQVRPEnv,
         initial_solution = None
     
     # We adapt the hyper parameters for faster algorithms
-    max_iter = min(H, len(customers)*((len(env.emissions_KM)+1)//2)*1000)
+    max_iter = min(H, len(customers)*((len(env.emissions_KM)+1)//2)*1000) if fast else H
     # print(max_iter)
     T_init = min(T_init, len(customers)*100)
     

@@ -588,9 +588,6 @@ if __name__ == "__main__":
     ##############################################################################################
     #### Small experiments
     env_configs = dict(
-        obs_mode='action',
-        is_0_allowed=False,
-        # DQVRP Env kwargs
         horizon = 20,
         Q = 50,
         vehicle_assignment = True,
@@ -600,39 +597,88 @@ if __name__ == "__main__":
         emissions_KM = [.1, .3],
     )
     
-    run_SA_VA(
-        100,
-        # real_data=True, 
-        T = 75_000,
-        T_init = 10_000,
-        lamb = 0.999,
-        env_configs = env_configs,
-    )
+    # run_SA_VA(
+    #     100,
+    #     # real_data=True, 
+    #     T = 75_000,
+    #     T_init = 10_000,
+    #     lamb = 0.999,
+    #     env_configs = env_configs,
+    # )
     
-    run_ACO(
-        100,
-        # cluster_data = False,
-        # random_data = False,
-        num_ants=200,
-        max_iter=100,
-        rho=0.1,
-        alpha=1.0,
-        beta=2.0,
-        seed=42,
-        env_configs = env_configs,
-    )
+    # run_ACO(
+    #     100,
+    #     # cluster_data = False,
+    #     # random_data = False,
+    #     num_ants=200,
+    #     max_iter=100,
+    #     rho=0.1,
+    #     alpha=1.0,
+    #     beta=2.0,
+    #     seed=42,
+    #     env_configs = env_configs,
+    # )
     
-    run_offline(
-        100,
-        env_configs = env_configs,
-        comment = "real_",
-    )
+    # run_offline(
+    #     100,
+    #     env_configs = {
+    #         "horizon" : 20,
+    #         "Q" : 50,
+    #         "DoD" : 1.,
+    #         "vehicle_capacity" : 10,
+    #         "emissions_KM" : [.1, .3],
+    #         "test"  : True,
+    #     },
+    #     comment = "real_",
+    # )
     
     run_gurobi(
         100,
         env_configs = env_configs,
+        n_threads = 60,
         # comment = "real_",
     )
+    
+    # OA_experiments(
+    #     100,
+    #     # real_data=True, 
+    #     T = 50_000,
+    #     T_init = 10_000,
+    #     lamb = 0.999,
+    #     env_configs = env_configs,
+    # )
+    
+    # RO_greedy_experiments(
+    #     100,
+    #     # real_data=True, 
+    #     env_configs = dict(
+    #         horizon = 20,
+    #         Q = 50,
+    #         vehicle_assignment = True,
+    #         test = True,
+    #         vehicle_capacity = 10,
+    #         re_optimization = False,
+    #         emissions_KM = [.1, .3],
+    #         re_optimization_freq = 1,
+    #     ),
+    #     comment='_ReOptimizedEvery1'
+    # )
+    
+    # RO_greedy_experiments(
+    #     100,
+    #     # real_data=True, 
+    #     env_configs = dict(
+    #         horizon = 20,
+    #         Q = 50,
+    #         vehicle_assignment = True,
+    #         test = True,
+    #         vehicle_capacity = 10,
+    #         re_optimization = False,
+    #         emissions_KM = [.1, .3],
+    #         re_optimization_freq = 5,
+    #     ),
+    #     comment='_ReOptimizedEvery5'
+    # )
     
     ##############################################################################################
     #### Real experiments
