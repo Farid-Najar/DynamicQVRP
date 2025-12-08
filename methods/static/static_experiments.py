@@ -178,7 +178,7 @@ def OA_experiments(
         res['sol'] = a
         res['r'] = r_opt
         # res['oq'] = info['oq'] if d else len(action)
-        res['oq'] = len(a)
+        res['oq'] = env._env.quantities[a].sum()
         q.put((i, res))
         print(f'DP {i} done')
         return

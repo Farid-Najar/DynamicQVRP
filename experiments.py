@@ -597,6 +597,43 @@ if __name__ == "__main__":
         emissions_KM = [.1, .3],
     )
     
+    # run_RL(
+    #     steps = 1_000_000,
+    #     # steps = 500_000,
+    #     cluster_data=False,
+    #     random_data=False,
+    #     env_configs = {
+    #         "horizon" : 20,
+    #         "Q" : 50,
+    #         "vehicle_capacity" : 10,
+    #         "re_optimization" : False,
+    #         "emissions_KM" : [.1, .3],
+    #         "test"  : True,
+    #         "obs_mode" : "a+e",
+    #         "re_optimization_freq" : 10,
+    #         "change_instance" : True,
+    #     },
+    #     rewards_mode= 'aq', #'normalized_terminal', 
+    #     action_mode = "all_nodes",
+    #     # action_mode = "destinations",
+    # )
+    
+    # run_RL_experiments(
+    #     100,
+    #     env_configs = {
+    #         "horizon" : 20,
+    #         "Q" : 50,
+    #         "vehicle_capacity" : 10,
+    #         "re_optimization" : False,
+    #         "emissions_KM" : [.1, .3],
+    #         "test"  : True,
+    #         "re_optimization_freq" : 1,
+    #         "obs_mode" : "a+e",
+    #     },
+    #     log_dir = f'methods/static/ppo_mask/real_K20_rewardMode(aq)_obsMode(a+e)_actionMode(all_nodes)_steps(1000000)',
+    #     comment='_ReOptimizedEvery1' 
+    # )
+    
     # run_SA_VA(
     #     100,
     #     # real_data=True, 
@@ -641,14 +678,14 @@ if __name__ == "__main__":
     #     # comment = "real_",
     # )
     
-    OA_experiments(
-        100,
-        # real_data=True, 
-        T = 50_000,
-        T_init = 10_000,
-        lamb = 0.999,
-        env_configs = env_configs,
-    )
+    # OA_experiments(
+    #     100,
+    #     # real_data=True, 
+    #     T = 50_000,
+    #     T_init = 10_000,
+    #     lamb = 0.999,
+    #     env_configs = env_configs,
+    # )
     
     # RO_greedy_experiments(
     #     100,
@@ -1755,19 +1792,19 @@ if __name__ == "__main__":
     #     },
     #     comment = '_different_quantities',
     # )
-    # run_offline(
-    #     100,
-    #     env_configs = {
-    #         "horizon" : 50,
-    #         "Q" : 50,
-    #         "DoD" : 1.,
-    #         "vehicle_capacity" : 25,
-    #         "emissions_KM" : [.1, .1, .3, .3],
-    #         "test"  : True,
-    #         "different_quantities" : True,
-    #     },
-    #     comment = "different_quantities_",
-    # )
+    run_offline(
+        100,
+        env_configs = {
+            "horizon" : 50,
+            "Q" : 50,
+            "DoD" : 1.,
+            "vehicle_capacity" : 25,
+            "emissions_KM" : [.1, .1, .3, .3],
+            "test"  : True,
+            "different_quantities" : True,
+        },
+        comment = "different_quantities_",
+    )
     
     
     # run_RL(
