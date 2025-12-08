@@ -473,7 +473,6 @@ def calculate_cost(permutation, demands, distance_matrices, vehicle_capacity,
     total_distance = 0.0
     current_load = 0
     assignment = np.zeros(len(demands), np.int64)
-    
     # vehicle_used = np.zeros(num_vehicles, dtype=np.bool)
     
     # current_route = np.zeros(len(permutation)+2, dtype=np.int64)
@@ -514,7 +513,7 @@ def calculate_cost(permutation, demands, distance_matrices, vehicle_capacity,
             
             
             current_load = demand
-            if v+1 >= max_vehicles-1:
+            if v+1 >= max_vehicles:
                 # print(v)
                 oq += np.sum(demands[permutation[i:]])
                 # print(individual[i+1:])
@@ -671,7 +670,7 @@ def calculate_routes_and_assignment(permutation, demands, distance_matrices, veh
             
             
             current_load = demand
-            if v+1 >= max_vehicles-1:
+            if v+1 >= max_vehicles:
                 # print(v)
                 oq += np.sum(demands[permutation[i:]])
                 # print(individual[i+1:])
@@ -871,7 +870,6 @@ def simulated_annealing_vrp(D, demands, capacity, initial_solution,
     # Problem setup
     # customers = np.arange(1, n + 1)
     dist_mat = D#compute_distance_matrix(coords)
-    
     omit_penalty = 3*np.amax(D)
     
     # Initial solution
@@ -879,7 +877,7 @@ def simulated_annealing_vrp(D, demands, capacity, initial_solution,
     # current_cost, current_vehicles, _ = calculate_total_cost(
     #     current_solution, demands, capacity, dist_mat, max_vehicles
     # )
-    current_cost, current_oq, _, assignment = calculate_cost(current_solution, demands, dist_mat, capacity, 
+    current_cost, current_oq, _, _ = calculate_cost(current_solution, demands, dist_mat, capacity, 
                      depot, max_vehicles, Q, omit_penalty)
     best_solution = current_solution.copy()
     best_cost = current_cost
@@ -1097,7 +1095,6 @@ def SA_vrp(distance_matrix, Q, qs, capacity, emissions_KM,
               max_iter=50_000, 
             ),
     ):
-    
     # Problem parameters
     # em_factors = [.1, .1, .3, .3]
     # em_factors = [.1, .3]

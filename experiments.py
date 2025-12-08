@@ -625,6 +625,7 @@ if __name__ == "__main__":
     #         "horizon" : 20,
     #         "Q" : 50,
     #         "DoD" : 1.,
+    #         "vehicle_assignment" : False,
     #         "vehicle_capacity" : 10,
     #         "emissions_KM" : [.1, .3],
     #         "test"  : True,
@@ -632,21 +633,22 @@ if __name__ == "__main__":
     #     comment = "real_",
     # )
     
-    run_gurobi(
-        100,
-        env_configs = env_configs,
-        n_threads = 60,
-        # comment = "real_",
-    )
-    
-    # OA_experiments(
+    # run_gurobi(
     #     100,
-    #     # real_data=True, 
-    #     T = 50_000,
-    #     T_init = 10_000,
-    #     lamb = 0.999,
     #     env_configs = env_configs,
+    #     n_threads = 60,
+    #     timeout = 300,
+    #     # comment = "real_",
     # )
+    
+    OA_experiments(
+        100,
+        # real_data=True, 
+        T = 50_000,
+        T_init = 10_000,
+        lamb = 0.999,
+        env_configs = env_configs,
+    )
     
     # RO_greedy_experiments(
     #     100,
@@ -654,10 +656,10 @@ if __name__ == "__main__":
     #     env_configs = dict(
     #         horizon = 20,
     #         Q = 50,
-    #         vehicle_assignment = True,
+    #         vehicle_assignment = False,
     #         test = True,
     #         vehicle_capacity = 10,
-    #         re_optimization = False,
+    #         re_optimization = True,
     #         emissions_KM = [.1, .3],
     #         re_optimization_freq = 1,
     #     ),

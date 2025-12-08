@@ -54,6 +54,7 @@ def RO_greedy_experiments(
         # env.reset(i)
         # r_EG = EHEG(env, obs)
         rs = baseline(deepcopy(env))
+        
         a = rs['solution'].astype(int)
         
         # ac = np.where(a == 0)[0]
@@ -171,12 +172,13 @@ def OA_experiments(
         # env.reset(i)
         action = np.ones(env._env.H, dtype=np.int64)
         action[a] = 0
-        _, r_opt, *_, info = env.step(action)   
+        _, r_opt, d, _, info = env.step(action)   
         # res = GameLearning(game, T=T, strategy=strategy, log = log)
         res['time'] = time() - t0
         res['sol'] = a
         res['r'] = r_opt
-        res['oq'] = info['oq']
+        # res['oq'] = info['oq'] if d else len(action)
+        res['oq'] = len(a)
         q.put((i, res))
         print(f'DP {i} done')
         return
@@ -482,6 +484,7 @@ def run_ACO(
         routes, reward, total_e = aco.solve()
         # res = recuit_multiple(game, T_init = T_init, T_limit = T_limit, lamb = lamb, log=log, H=T)
         # a = np.where(action_SA == 0)[0]
+        reward = np.array([env._env.quantities[np.array(route[1:-1])-1].sum() for route in routes]).sum()
         
         res['time'] = time() - t0
         res['routes'] = routes

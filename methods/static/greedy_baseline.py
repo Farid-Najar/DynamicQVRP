@@ -24,7 +24,7 @@ def baseline(
     
     num_packages = env._env.H
     
-    action = np.ones(num_packages, dtype=bool)
+    action = np.ones(num_packages, dtype=int)
     rewards = np.zeros(num_packages)
     excess_emission = np.zeros(num_packages)
     infos = []#[dict() for _ in range(len(action))]
@@ -40,8 +40,9 @@ def baseline(
     
     # A = game.distance_matrix[x, y]@np.diag(1/q)
     # indices = np.flip(np.argsort(np.mean(A[1:, 1:] + np.max(A[1:, 1:])*np.eye(len(A[1:, 1:])), axis=1)))
-    _, r_best, d, _, info = env.step(action.astype(int), simulation = True)
+    _, r_best, d, _, info = env.step(action, simulation = True)
     emission = info['excess_emission']
+    # r_best = float('-inf') if d else r_best
     # o = info['omitted']
     
     indices = list(range(num_packages))
@@ -52,14 +53,15 @@ def baseline(
         rewards[t] = r_best
         
         if d:
+            print('done : ', t, emission)
             break
         
         r_best = float('-inf')
         
         for i in indices:
             a = action.copy()
-            a[i] = not a[i]
-            _, r,_, _, info = env.step(a.astype(int), simulation = True)#, time_budget, call_OR=(full_OR and t%OR_every == 0))
+            a[i] = 1 - a[i]
+            _, r,_, _, info = env.step(a, simulation = True)#, time_budget, call_OR=(full_OR and t%OR_every == 0))
             # action = np.ones(game.num_packages, dtype=bool)
             
             if r > r_best:
@@ -75,7 +77,11 @@ def baseline(
         # print(len(indices))
         indices.remove(ii)
         action = best.copy()
-        _, r_best, d, _, info = env.step(action.astype(int))
+        _, r_best, d, _, info = env.step(action)
+        r_best = float('-inf') if d else r_best
+        # if d:
+        #     break
+        # r_best = float('-inf') if d else r_best
 
         
         # infos.append(info)

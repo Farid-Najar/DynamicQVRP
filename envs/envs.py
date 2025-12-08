@@ -1502,7 +1502,7 @@ class StaticQVRPEnv(gym.Env):
         if not simulation:
             self.t += 1
         # action is an assignment
-        if self.re_optimization_freq > 0 and self.t%self.re_optimization_freq == 0:
+        if self.re_optimization_freq > 0 and (self.t+1)%self.re_optimization_freq == 0:
             # Calculate initial routes
             Q = self._env.Q
             self._env.Q = 1e10
@@ -1603,7 +1603,6 @@ class StaticQVRPEnv(gym.Env):
             
             
         info = self._get_obs(routes, action, info)
-        
         if self.obs_mode == 'game':
             alpha = np.zeros(self._env.H, dtype=int)
             for m in range(len(routes)):

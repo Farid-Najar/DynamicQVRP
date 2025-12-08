@@ -1,7 +1,7 @@
 import numpy as np
 from gurobipy import Model, GRB, quicksum
 
-def top_gurobi(num_agents, nodes, prizes, depot, max_length, timeout=0):
+def top_gurobi_2(num_agents, nodes, prizes, depot, max_length, timeout=0):
     num_nodes = len(nodes)
     nodes = np.array(nodes)
     depot = np.array(depot)
@@ -153,14 +153,20 @@ def top_gurobi(num_vehicles, cost_matrices, q, Q, Cap, timeout=0):
             f"capacity_{i}"
         )
         
-        # MTZ subtour elimination
-        for j in range(1, n_total):
-            for k in range(1, n_total):
+        # Sub-tour elimination constraints
+        for j in range(1, num_nodes + 1):
+            for k in range(1, num_nodes + 1):
                 if j != k:
-                    model.addConstr(
-                        u[i, j] - u[i, k] + n_total * x[i, j, k] <= n_total - 1,
-                        f"mtz_{i}_{j}_{k}"
-                    )
+                    model.addConstr(u[i, j] - u[i, k] + num_nodes * x[i, j, k] <= num_nodes - 1)
+        
+        # # MTZ subtour elimination
+        # for j in range(1, n_total):
+        #     for k in range(1, n_total):
+        #         if j != k:
+        #             model.addConstr(
+        #                 u[i, j] - u[i, k] + n_total * x[i, j, k] <= n_total - 1,
+        #                 f"mtz_{i}_{j}_{k}"
+        #             )
     
     # Global time budget constraint
     total_time = quicksum(
