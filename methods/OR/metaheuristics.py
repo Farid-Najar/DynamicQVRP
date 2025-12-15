@@ -1030,7 +1030,7 @@ def simulated_annealing_tsp(D, demands, capacity, initial_solution,
     # current_cost, current_vehicles, _ = calculate_total_cost(
     #     current_solution, demands, capacity, dist_mat, max_vehicles
     # )
-    current_cost, current_oq, _ = calculate_cost(current_solution, demands, dist_mat, capacity, 
+    current_cost, current_oq, _, _ = calculate_cost(current_solution, demands, dist_mat, capacity, 
                      depot, 1, Q, omit_penalty)
     best_solution = current_solution.copy()
     best_cost = current_cost
@@ -1045,7 +1045,7 @@ def simulated_annealing_tsp(D, demands, capacity, initial_solution,
     
     for i in range(max_iter):
         new_solution = generate_neighbor(current_solution)
-        new_cost, oq, _ = calculate_cost(new_solution, demands, dist_mat, capacity, 
+        new_cost, oq, _, _ = calculate_cost(new_solution, demands, dist_mat, capacity, 
                      depot, 1, Q, omit_penalty)
         # new_cost, new_vehicles, _ = calculate_total_cost(
         #     new_solution, demands, capacity, dist_mat, max_vehicles

@@ -153,6 +153,22 @@ def calculate_marginal_emission(routes, E, d):
     
     return marginal_costs
 
+@njit
+def knn_multiple_quantile(a, p, xi):
+    indices_sorted = np.argsort(a)
+    cum_weighted_sum = 0
+    cum_prob = 0
+    a_sorted = a[indices_sorted]
+    p_sorted = p[indices_sorted]
+    i = 0
+    distances = []
+    for prob in xi: 
+        while(cum_prob < prob):
+            cum_weighted_sum+= a_sorted[i]*p_sorted[i]
+            cum_prob += p_sorted[i]
+            i+= 1
+        distances.append(cum_weighted_sum/cum_prob)
+    return distances
 
 class DynamicQVRPEnv(gym.Env):
     """
@@ -443,7 +459,8 @@ class DynamicQVRPEnv(gym.Env):
         # * Change if obs change
         # self.observation_space = gym.spaces.Box(0, 1, (5+len(emissions_KM),), np.float64) 
         if vehicle_assignment:
-            dim_obs = 4 + 2*len(emissions_KM)# if not vehicle_assignment else 5 + len(emissions_KM) + len(self.emissions_KM)
+            # dim_obs = 3 + 3 + 2*len(emissions_KM)# if not vehicle_assignment else 5 + len(emissions_KM) + len(self.emissions_KM)
+            dim_obs = 1 + 3 + 2*len(emissions_KM)# if not vehicle_assignment else 5 + len(emissions_KM) + len(self.emissions_KM)
         else:
             dim_obs = 6
         self.observation_space = gym.spaces.Box(0, 1, (dim_obs,), np.float64)
@@ -634,10 +651,10 @@ class DynamicQVRPEnv(gym.Env):
         D_NA = self.D[self.NA, self.dests[self.t]]
         
         idx_NA = knn(D_NA, self.k_med)
+        # med_knn = np.median(D_NA[idx_NA])
         med_knn = np.median(p[idx_NA]*D_NA[idx_NA])
+        # med_knn = knn_multiple_quantile(D_NA,p,[0.01,0.05,0.25])
         # med_knn = np.mean(p[idx_NA]*D_NA[idx_NA])
-        # med_knn = np.median(knn(self.D[self.NA, self.dests[self.t]]/(p[self.NA] + 1e-8), self.k_med))
-        
         
         return min_knn, med_knn, cap
     
@@ -671,13 +688,9 @@ class DynamicQVRPEnv(gym.Env):
             *cap, # the percentage of capacity remained for each vehicle, dim = len(self.emissions_KM)
             remaining_demands,#, # the remaining demands to come
             *min_knn/(np.amax(self.D)*max(self.emissions_KM)), # The mean emissions of the k nearest neighbors in admitted dests, dim = len(self.emissions_KM)
-            med_knn/(np.amax(self.D)), # The mean of the k nearest neighbors in non activated dests
-            # med_knn/(np.max(self.D)/1e-8), # The mean of the k nearest neighbors in non activated dests
+            # *med_knn/(np.amax(self.D)), # The quantiles of the k nearest neighbors in non activated dests
+            med_knn/(np.amax(self.D)), # The median distance of the k nearest neighbors in non activated dests
             max(0, self.info["remained_quota"])/self.Q, # The remaining quota
-            # * the emissions have been removed from the observation
-            # Instead, it has directly been integrated into the distances
-            # See the _compute_min_med_cap method
-            # *self.emissions_KM, # emission of each vehicle, dim = len(self.emissions_KM)
             # * TODO : Maybe find better observations
         ])
         
