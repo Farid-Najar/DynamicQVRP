@@ -176,7 +176,7 @@ def top_gurobi(num_vehicles, cost_matrices, q, Q, Cap, timeout=0):
         for k in range(n_total)
         if j != k
     )
-    model.addConstr(total_time <= Q, "global_time_budget")
+    model.addConstr(total_time <= Q + 1e-5, "global_time_budget")
     
     # Each customer visited at most once
     for j in range(1, n_total):

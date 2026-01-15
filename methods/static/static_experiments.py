@@ -166,21 +166,26 @@ def OA_experiments(
             for m in range(len(env.initial_routes))
             ], dtype=np.int64
         )
+        # print(env.initial_routes)
         a = multi_types(env._env.distance_matrix, env.initial_routes, coeff, excess, quants)
+        # print(a+1)
         # a = dests[i_id][np.where(a_GTS == 0)].astype(int)
 
         # env.reset(i)
         action = np.ones(env._env.H, dtype=np.int64)
         action[a] = 0
-        _, r_opt, d, _, info = env.step(action)   
+        _, r_opt, d, _, info = env.step(action) 
+        # print(excess - info['excess_emission'])
+        # print(info)  
         # res = GameLearning(game, T=T, strategy=strategy, log = log)
         res['time'] = time() - t0
         res['sol'] = a
         res['r'] = r_opt
         # res['oq'] = info['oq'] if d else len(action)
-        res['oq'] = env._env.quantities[a].sum()
+        res['oq'] = env._env.quantities[a].sum() if d else env._env.quantities.sum()
+        # print(res['oq'])
         q.put((i, res))
-        print(f'DP {i} done')
+        # print(f'DP {i} done')
         return
         # res_dict = d
         
@@ -231,6 +236,9 @@ def OA_experiments(
     res_SA = dict()
     res_greedy = dict()
     
+    _, info = env.reset(0)
+    process_DP(env, 0, info, q_DP)
+    assert False
 
     pool =  mp.Pool(processes=n_threads)
     for i in range(n_simulation):
@@ -484,11 +492,15 @@ def run_ACO(
         routes, reward, total_e = aco.solve()
         # res = recuit_multiple(game, T_init = T_init, T_limit = T_limit, lamb = lamb, log=log, H=T)
         # a = np.where(action_SA == 0)[0]
-        reward = np.array([env._env.quantities[np.array(route[1:-1])-1].sum() for route in routes]).sum()
+        print(reward)
+        # print(routes)
+        # print(np.array(routes[0][1:-1])-1)
+        # reward = np.array([env._env.quantities[np.array(route[1:-1])-1].sum() for route in routes]).sum()
+        # print(reward)
         
         res['time'] = time() - t0
         res['routes'] = routes
-        res['r'] = reward
+        res['r'] = reward - 1
         oq = np.sum(env._env.quantities) - reward
         res['oq'] = oq if total_e <= Q + 1e-5 else np.sum(env._env.quantities)
         q.put((i, res))

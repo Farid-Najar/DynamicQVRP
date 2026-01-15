@@ -48,7 +48,7 @@ def compute_delta(cost_matrix, route, k):
 
 
 @njit
-def compute_smallest_cost(cost_matrix, route, excess, q): 
+def compute_smallest_cost(cost_matrix, route, q): 
     K = len(route) - 1
     cum_q = np.cumsum(q)
     
@@ -106,6 +106,7 @@ def value(value_tables, coeff, types, sol, excess):
         pol += value_tables[i][sol[i]]*coeff[i]
     # print('gain : ', gain)
     # print('pol : ', pol)
+    # print("excess ", pol - excess)
     return gain if pol - excess >= -1e-5 else 0.
 
 @njit
@@ -126,7 +127,7 @@ def best_combination(k, types, current_type, value_tables, #max_omitted
         sol[current_type] = k - total
         # print('sol : ', sol)
         val = value(value_tables,coeff,types,sol,excess)
-        # print("value : %f \n",val)
+        # print("value : ",val)
         if (val > max_val[0]):
             max_val[0] = val
             # print('max val : ', max_val)
@@ -134,7 +135,7 @@ def best_combination(k, types, current_type, value_tables, #max_omitted
             # for i in range(sol.shape[0]):
             #     max_sol[i] = sol[i]
             #max_sol =  sol
-            #print("solution trouvée : ",max_sol,"k : ",k,"index actif",current_type)    
+            # print("solution trouvée : ",max_sol,"k : ",k,"index actif",current_type)    
     else:    
         for i in range(min(k - total + 1,len(value_tables[0]))):
             sol[current_type] = i
@@ -198,7 +199,7 @@ def multi_types(cost_matrix, rtes, coef, excess, quants):
     # print('excess/coeff : ', excess/coeff)
     
     for i in range(types):
-        sol[i], values[i] = compute_smallest_cost(cost_matrix, routes[i], excess/coeff[i], q[i])
+        sol[i], values[i] = compute_smallest_cost(cost_matrix, routes[i], q[i])
         #extract the best combination of omission between the different types
         value_tables.append(values[i, :, -1])
         

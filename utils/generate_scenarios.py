@@ -55,12 +55,13 @@ def create_noised_random_scenarios(
 if __name__ == '__main__':
     
     create_random_scenarios(
-        d=20, n_scenarios=100,
-        comment='_test'
+        d=20, n_scenarios=100, p = np.ones(82),
+        comment='_essonne_test'
     )
     
     create_random_scenarios(
-        d=20, n_scenarios=500,
+        d=20, n_scenarios=500, p = np.ones(82),
+        comment='_essonne'
     )
     # create_random_scenarios(
     #     d=50, n_scenarios=100, p = np.ones(500),

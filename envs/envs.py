@@ -67,7 +67,7 @@ def generate_D(n, grid_size):
             D[j, i] = D[i, j]
     return D, coordx, coordy
 
-def load_data(cluster_scenario = False, uniform_scenario=False):
+def load_data(cluster_scenario = False, uniform_scenario=False, essonne_scenario=False):
     """Load distance matrix and coordinate data from files.
     
     Loads the distance matrix, x and y coordinates, and probability distribution
@@ -77,6 +77,12 @@ def load_data(cluster_scenario = False, uniform_scenario=False):
     ----------
     cluster_scenario : bool, default=False
         Whether to load data from the cluster scenario dataset
+        
+    uniform_scenario : bool, default=False
+        Whether to load data from the uniform scenario dataset
+        
+    essonne_scenario : bool, default=False
+        Whether to load data from the essonne scenario dataset
         
     Returns
     -------
@@ -88,7 +94,12 @@ def load_data(cluster_scenario = False, uniform_scenario=False):
         - probs is the probability distribution of destinations
     """
     
-    if cluster_scenario:
+    if essonne_scenario:
+        D = np.load('data/D_mondial_relay.npy')
+        coordx = None
+        coordy = None
+        return D, coordx, coordy, np.ones(D.shape[0])/D.shape[0]
+    elif cluster_scenario:
         D = np.load('data/clusters/D_cluster.npy')
         coordx = np.load('data/clusters/coordx_cluster.npy')
         coordy = np.load('data/clusters/coordy_cluster.npy')
@@ -293,6 +304,7 @@ class DynamicQVRPEnv(gym.Env):
                  different_quantities = False,
                  cluster_scenario = False,
                  uniform_scenario = False,
+                 essonne_scenario = False,
                  static_as_dynamic = False,
                  noise_horizon = 0., # Represents the percentage of the noise in horizon. in [0, 1]
                  retain_rate = 0.,
@@ -357,7 +369,7 @@ class DynamicQVRPEnv(gym.Env):
         
         K = horizon
         self.instance = -1
-        self.D, self.coordx, self.coordy, self.p = load_data(cluster_scenario, uniform_scenario)
+        self.D, self.coordx, self.coordy, self.p = load_data(cluster_scenario, uniform_scenario, essonne_scenario)
         
         self.emissions_KM = emissions_KM
         self.advantage_pollutant = advantage_pollutant
@@ -379,16 +391,17 @@ class DynamicQVRPEnv(gym.Env):
             scenario_comment = f"_{n_scenarios}" if n_scenarios is not None else ""
             noise_comment = f"noised_" if noised_p else ""
             uniforme = f"_uniforme" if uniforme_p_test else ""
+            essonne_comment = f"_essonne" if essonne_scenario else ""
             # with open(f'data/game_K{K}{retain_comment}.pkl', 'rb') as f:
             #     g = pickle.load(f)
             # routes = np.load(f'data/routes_K{K}{retain_comment}.npy')
             if test:
                 self.all_dests = np.load(
-                    f'data/{noise_comment}destinations_K{K}_100{uniforme}_test.npy'
+                    f'data/{noise_comment}destinations_K{K}_100{uniforme}{essonne_comment}_test.npy'
                 ).astype(int)
             else:
                 self.all_dests = np.load(
-                    f'data/destinations_K{K}{retain_comment}{scenario_comment}{uniforme}.npy'
+                    f'data/destinations_K{K}{retain_comment}{scenario_comment}{uniforme}{essonne_comment}.npy'
                 ).astype(int)
                 
         else:
@@ -652,7 +665,9 @@ class DynamicQVRPEnv(gym.Env):
         
         idx_NA = knn(D_NA, self.k_med)
         # med_knn = np.median(D_NA[idx_NA])
-        med_knn = np.median(p[idx_NA]*D_NA[idx_NA])
+        p = p[idx_NA]
+        p /= p.sum()
+        med_knn = np.median(p*D_NA[idx_NA])
         # med_knn = knn_multiple_quantile(D_NA,p,[0.01,0.05,0.25])
         # med_knn = np.mean(p[idx_NA]*D_NA[idx_NA])
         
@@ -1175,6 +1190,8 @@ def get_d_t(
 
         while k<len(routes[i]):
             if initial_solution[i][l] not in omitted:
+                # print(emissions.sum())
+                # print(routes)
                 # print(initial_solution[i, j])
                 emissions[i] += cost_matrix[i][#distance_matrix[
                     int(initial_solution[i, j]),

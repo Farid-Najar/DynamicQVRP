@@ -589,12 +589,13 @@ if __name__ == "__main__":
     #### Small experiments
     env_configs = dict(
         horizon = 20,
-        Q = 50,
+        Q = .5,
         vehicle_assignment = True,
         test = True,
         vehicle_capacity = 10,
         re_optimization = False,
         emissions_KM = [.1, .3],
+        essonne_scenario = True,
     )
     
     # run_RL(
@@ -604,13 +605,13 @@ if __name__ == "__main__":
     #     random_data=False,
     #     env_configs = {
     #         "horizon" : 20,
-    #         "Q" : 50,
+    #         "Q" : .5,
     #         "vehicle_capacity" : 10,
     #         "re_optimization" : False,
     #         "emissions_KM" : [.1, .3],
-    #         "test"  : True,
     #         "obs_mode" : "a+e",
     #         "re_optimization_freq" : 10,
+    #         "essonne_scenario" : True,
     #         "change_instance" : True,
     #     },
     #     rewards_mode= 'aq', #'normalized_terminal', 
@@ -622,11 +623,12 @@ if __name__ == "__main__":
     #     100,
     #     env_configs = {
     #         "horizon" : 20,
-    #         "Q" : 50,
+    #         "Q" : .5,
     #         "vehicle_capacity" : 10,
     #         "re_optimization" : False,
     #         "emissions_KM" : [.1, .3],
     #         "test"  : True,
+    #         "essonne_scenario" : True,
     #         "re_optimization_freq" : 1,
     #         "obs_mode" : "a+e",
     #     },
@@ -660,11 +662,12 @@ if __name__ == "__main__":
     #     100,
     #     env_configs = {
     #         "horizon" : 20,
-    #         "Q" : 50,
+    #         "Q" : .5,
     #         "DoD" : 1.,
     #         "vehicle_assignment" : False,
     #         "vehicle_capacity" : 10,
     #         "emissions_KM" : [.1, .3],
+    #         "essonne_scenario" : True,
     #         "test"  : True,
     #     },
     #     comment = "real_",
@@ -673,31 +676,41 @@ if __name__ == "__main__":
     # run_gurobi(
     #     100,
     #     env_configs = env_configs,
-    #     n_threads = 60,
+    #     n_threads = 6,
     #     timeout = 300,
     #     # comment = "real_",
     # )
     
-    # OA_experiments(
-    #     100,
-    #     # real_data=True, 
-    #     T = 50_000,
-    #     T_init = 10_000,
-    #     lamb = 0.999,
-    #     env_configs = env_configs,
-    # )
+    OA_experiments(
+        100,
+        # real_data=True, 
+        T = 50_000,
+        T_init = 10_000,
+        lamb = 0.999,
+        env_configs = dict(
+            horizon = 20,
+            Q = .5,
+            vehicle_assignment = False,
+            test = True,
+            vehicle_capacity = 5,
+            # emissions_KM = [.1, .3],
+            emissions_KM = [.3],
+            essonne_scenario = True,
+        ),
+    )
     
     # RO_greedy_experiments(
     #     100,
     #     # real_data=True, 
     #     env_configs = dict(
     #         horizon = 20,
-    #         Q = 50,
+    #         Q = .5,
     #         vehicle_assignment = False,
     #         test = True,
     #         vehicle_capacity = 10,
     #         re_optimization = True,
     #         emissions_KM = [.1, .3],
+    #         essonne_scenario = True,
     #         re_optimization_freq = 1,
     #     ),
     #     comment='_ReOptimizedEvery1'
@@ -1792,19 +1805,19 @@ if __name__ == "__main__":
     #     },
     #     comment = '_different_quantities',
     # )
-    run_offline(
-        100,
-        env_configs = {
-            "horizon" : 50,
-            "Q" : 50,
-            "DoD" : 1.,
-            "vehicle_capacity" : 25,
-            "emissions_KM" : [.1, .1, .3, .3],
-            "test"  : True,
-            "different_quantities" : True,
-        },
-        comment = "different_quantities_",
-    )
+    # run_offline(
+    #     100,
+    #     env_configs = {
+    #         "horizon" : 50,
+    #         "Q" : 50,
+    #         "DoD" : 1.,
+    #         "vehicle_capacity" : 25,
+    #         "emissions_KM" : [.1, .1, .3, .3],
+    #         "test"  : True,
+    #         "different_quantities" : True,
+    #     },
+    #     comment = "different_quantities_",
+    # )
     
     
     # run_RL(
