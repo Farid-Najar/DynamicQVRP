@@ -166,9 +166,10 @@ def OA_experiments(
             for m in range(len(env.initial_routes))
             ], dtype=np.int64
         )
-        # print(env.initial_routes)
+        print(env.initial_routes)
+        print(excess)
         a = multi_types(env._env.distance_matrix, env.initial_routes, coeff, excess, quants)
-        # print(a+1)
+        print(a+1)
         # a = dests[i_id][np.where(a_GTS == 0)].astype(int)
 
         # env.reset(i)
@@ -183,7 +184,7 @@ def OA_experiments(
         res['r'] = r_opt
         # res['oq'] = info['oq'] if d else len(action)
         res['oq'] = env._env.quantities[a].sum() if d else env._env.quantities.sum()
-        # print(res['oq'])
+        print(res['oq'])
         q.put((i, res))
         # print(f'DP {i} done')
         return
@@ -236,16 +237,16 @@ def OA_experiments(
     res_SA = dict()
     res_greedy = dict()
     
-    _, info = env.reset(0)
-    process_DP(env, 0, info, q_DP)
-    assert False
+    # _, info = env.reset(0)
+    # process_DP(env, 0, info, q_DP)
+    # assert False
 
     pool =  mp.Pool(processes=n_threads)
     for i in range(n_simulation):
         _, info = env.reset(i)
         pool.apply_async(process_DP, args=(deepcopy(env), i, info, q_DP,))
-        pool.apply_async(process_multiple_SA, args=(deepcopy(env), i, q_SA,))
-        pool.apply_async(process_greedy, args=(deepcopy(env), i, q_greedy,))
+        # pool.apply_async(process_multiple_SA, args=(deepcopy(env), i, q_SA,))
+        # pool.apply_async(process_greedy, args=(deepcopy(env), i, q_greedy,))
     pool.close()
     pool.join()
 

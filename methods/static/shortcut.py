@@ -25,23 +25,20 @@ class Table:
 @njit
 def compute_delta(cost_matrix, route, k):
     #compute the difference in cost when removing elements in the tour
-    delta = np.zeros((len(route), k+1), dtype=np.float64)#malloc(t.length*sizeof(float*));
+    delta = np.zeros((len(route), k+1), dtype=np.float64)
     
-    # observation[int(self.initial_routes[m, j])-1] = self.initial_routes[m, j-1] + self.initial_routes[m, j+1] -(
-    #                             costs_matrix[m, int(self.initial_routes[m, j-2]), int(self.initial_routes[m, j+2])]
-    #                     )
     #no need for delta[0]
     for i in range(2, len(route)):
         current_vertex = route[i]
-        sum = cost_matrix[current_vertex, route[i-1]]
+        # sum = cost_matrix[current_vertex, route[i-1]]
+        sum = cost_matrix[route[i-1], current_vertex]
         # //printf("\n Removing before vertex %d :",i);
         for j in range(1, min(k+1,i)):
             if(route[i-j]):#//the vertex is not 0, hence can be removed
                 sum += cost_matrix[route[i-j-1], route[i-j]]
                 delta[i, j] = sum - cost_matrix[route[i-j-1], current_vertex]
-                # //printf("(%d,%f)  ", j ,delta[i][j]);
-            else:#//the vertex is 0, we cannot remove
-                delta[i][j] = -1 #//special value to escape from the computation
+            else:# the vertex is 0, we cannot remove
+                delta[i][j] = -1 # special value to escape from the computation
                 break
     #print(delta)
     return delta
@@ -77,7 +74,7 @@ def compute_smallest_cost(cost_matrix, route, q):
                 if delta[i][j] == -1:
                     break
                 oq = q[i-j: i].sum() # when it sums the empty slice, it is zero
-                if k>=oq: #it is possible to omit thiq quantity without removing more than k
+                if k>=oq: #it is possible to omit this quantity without removing more than k
                     val = delta[i, j] + values[k-oq, i-j-1]
                     if(val > values[k, i]):
                         values[k, i] = val
@@ -85,15 +82,6 @@ def compute_smallest_cost(cost_matrix, route, q):
                 else:
                     break
         
-    # // //print for debugging
-    # // for(int i = 0; i <= tab.max_omitted; i++){
-    # //     printf("\n Number of ommited packages %d, gain %f",i,tab.values[i][t.length -1]);
-    # // }
-    # // int *s = get_solution(tab,t.length);
-    # // printf("Position of packages omitted in the solution: ");
-    # // for(int i = 0; i < tab.max_omitted; i++){
-    # //     printf("%d ",s[i]);
-    # // }
     return sol, values#, max_omitted
 
 @njit
@@ -101,13 +89,14 @@ def value(value_tables, coeff, types, sol, excess):
     #evaluate the value and pollution of a solution
     gain = 0.
     pol = 0.
+    print(value_tables)
     for i in range(types):
         gain += value_tables[i][sol[i]]
         pol += value_tables[i][sol[i]]*coeff[i]
     # print('gain : ', gain)
     # print('pol : ', pol)
     # print("excess ", pol - excess)
-    return gain if pol - excess >= -1e-5 else 0.
+    return gain if pol - excess >= 1e-5 else 0.
 
 @njit
 def best_combination(k, types, current_type, value_tables, #max_omitted
@@ -233,12 +222,7 @@ def multi_types(cost_matrix, rtes, coef, excess, quants):
     # print('max sol tables : ', max_sol)
     
     final_sol = get_solution_multiple_types(sol, max_sol, routes, types, q)
-    # printf("best solution of value: %f\n",*max_val);
-    # for i in range(types):
-    #     print(max_sol[i], "packages omitted in tour ", i, " : ", end='')
-    #     for j in range(max_sol[i]):
-    #         print(final_sol[i][j]," ", end='')
-    #     print()
+    # print(final_sol)
         
     # print(final_sol)
     a = np.array([

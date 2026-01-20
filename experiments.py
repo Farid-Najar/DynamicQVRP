@@ -692,9 +692,9 @@ if __name__ == "__main__":
             Q = .5,
             vehicle_assignment = False,
             test = True,
-            vehicle_capacity = 5,
-            # emissions_KM = [.1, .3],
-            emissions_KM = [.3],
+            vehicle_capacity = 10,
+            emissions_KM = [.1, .3],
+            # emissions_KM = [.3],
             essonne_scenario = True,
         ),
     )
