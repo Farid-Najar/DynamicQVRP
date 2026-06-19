@@ -181,6 +181,23 @@ def knn_multiple_quantile(a, p, xi):
         distances.append(cum_weighted_sum/cum_prob)
     return distances
 
+def order_by_mean_distance(dests, dist_matrix) -> np.ndarray:
+    selected = [dests[0]]
+    n = dist_matrix.shape[0]
+    mask = np.zeros(n, dtype=bool)
+    mask[dests[1:]] = True
+    
+    while np.any(mask):
+        available = np.where(mask)[0]
+        # Vectorized mean calculation: (available x selected) submatrix -> mean along rows
+        mean_dists = dist_matrix[np.ix_(available, selected)].mean(axis=1)
+        best_idx = available[np.argmin(mean_dists)]
+        
+        selected.append(int(best_idx))
+        mask[best_idx] = False
+        
+    return np.array(selected)
+
 class DynamicQVRPEnv(gym.Env):
     """
     DynamicQVRPEnv is a custom Gymnasium environment for the Dynamic Vehicle Routing Problem 
@@ -511,6 +528,10 @@ class DynamicQVRPEnv(gym.Env):
         self.noised_H = self.H + int(np.random.normal(0, self.noise_horizon*self.H))
         
         self.dests = self.all_dests[self.instance]
+        
+        # if self.static_as_dynamic:
+        #     self.dests = order_by_mean_distance(self.dests, self.D)
+        
         self.quantities = self.qs[self.instance]
         
         self.remained_capacity = self.total_capacity
@@ -667,7 +688,9 @@ class DynamicQVRPEnv(gym.Env):
         # med_knn = np.median(D_NA[idx_NA])
         p = p[idx_NA]
         p /= p.sum()
-        med_knn = np.median(p*D_NA[idx_NA])
+        data = D_NA[idx_NA]
+        # med_knn = np.median(p*D_NA[idx_NA])
+        med_knn = np.quantile(data, 0.5, weights=p, method="inverted_cdf")
         # med_knn = knn_multiple_quantile(D_NA,p,[0.01,0.05,0.25])
         # med_knn = np.mean(p[idx_NA]*D_NA[idx_NA])
         
